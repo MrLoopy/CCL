@@ -11,4 +11,6 @@ ${FPGA_PATH2EMU_BIN}/app_${XCL_EMULATION_MODE} \
 mv *.csv ${FPGA_PATH2EMU_SUM}/
 mv *.run_summary ${FPGA_PATH2EMU_SUM}/
 
+# move xilinx-files only if they are present
+find . -maxdepth 1 -type f -iname 'xilinx*' -exec mv -t ${FPGA_PATH2EMU_SUM}/ {} \+
 

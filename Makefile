@@ -71,9 +71,9 @@ VV = v++
 # Compile with G++
 TARGET: ${OBJDIR}/host.o ${OBJDIR}/kernels.o ${OBJDIR}/kernels.xo ${BINDIR}/kernels.xclbin all
 	$(CC) $(CFLAGS) ${OBJDIR}/host.o ${OBJDIR}/kernels.o -o ${BINDIR}/${EXE} $(LDFLAGS)
-	@rm -rf ${FPGA_PATH2EMU}/_x .Xil
-	@mv _x ${FPGA_PATH2EMU}/
-	@mv *.log $(LOGDIR)/
+#	@rm -rf ${FPGA_PATH2EMU}/_x .Xil
+#	@mv _x ${FPGA_PATH2EMU}/
+#	@mv *.log $(LOGDIR)/
 
 ${OBJDIR}/kernels.o: ${SRCDIR}/kernels.cpp
 	$(CC) $(CFLAGS) -c ${SRCDIR}/kernels.cpp -o ${OBJDIR}/kernels.o

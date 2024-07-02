@@ -56,8 +56,9 @@ CFLAGS  := -g -Wno-unknown-pragmas \
 	   -O0 \
 	   -I$(ARGPARS)/include \
 	   -I${INCDIR} \
-	   -I${XILINX_HLS}/include \
+	   -isystem ${XILINX_HLS}/include \
 	   -I${XILINX_XRT}/include $(ROOTCFLAGS) #-g -Wall
+#	    -I${XILINX_HLS}/include \
 
 # For V++
 VV = v++
@@ -71,9 +72,6 @@ VV = v++
 # Compile with G++
 TARGET: ${OBJDIR}/host.o ${OBJDIR}/kernels.o ${OBJDIR}/kernels.xo ${BINDIR}/kernels.xclbin all
 	$(CC) $(CFLAGS) ${OBJDIR}/host.o ${OBJDIR}/kernels.o -o ${BINDIR}/${EXE} $(LDFLAGS)
-#	@rm -rf ${FPGA_PATH2EMU}/_x .Xil
-#	@mv _x ${FPGA_PATH2EMU}/
-#	@mv *.log $(LOGDIR)/
 
 ${OBJDIR}/kernels.o: ${SRCDIR}/kernels.cpp
 	$(CC) $(CFLAGS) -c ${SRCDIR}/kernels.cpp -o ${OBJDIR}/kernels.o
@@ -87,6 +85,9 @@ ${BINDIR}/kernels.xclbin: ${OBJDIR}/kernels.xo
 	       	--platform ${FPGA_PLATFORM} \
 	       	--config ${FPGA_PATH2CONF}/u280.cfg \
 	       	${OBJDIR}/kernels.xo -o ${BINDIR}/kernels.xclbin
+	@rm -rf ${FPGA_PATH2EMU}/_x .Xil
+	@mv _x ${FPGA_PATH2EMU}/
+	@mv *.log $(LOGDIR)/
 
 ${OBJDIR}/kernels.xo: ${FPGA_PATH2SRC}/kernels.cpp
 	$(VV) -g -c -t ${XCL_EMULATION_MODE} \
@@ -102,4 +103,4 @@ all:
 #	@mv -f _x $(HOMEDIR)/vpp_out
 
 clean:
-	@rm -rf *.log out/* _x xilinx* *.csv xrt.run_summary *.str *.jou
+	@rm -rf *.log out/* _x xilinx* *.csv xrt.run_summary *.str *.jou .Xil

@@ -1,4 +1,6 @@
 out/
+_x/
+.Xil/
 *.log
 *.exe
 *.xo

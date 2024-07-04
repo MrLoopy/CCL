@@ -4,6 +4,7 @@
 for VAR in "${!FPGA_PATH2EMU_@}"; do mkdir -p ${!VAR}; done
 
 echo "[INFO] Running test for mode: ${XCL_EMULATION_MODE}"
+export EMCONFIG_PATH=${FPGA_PATH2CONF}
 ${FPGA_PATH2EMU_BIN}/app_${XCL_EMULATION_MODE} \
   --xclbin ${FPGA_PATH2EMU_BIN}/kernels.xclbin \
   --treename ${XCL_EMULATION_MODE} \

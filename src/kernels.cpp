@@ -4,7 +4,7 @@
 #include <hls_stream.h>
 
 // Custom includes
-#include <iostream>
+// #include <iostream>
 #include "kernels.hpp"
 
 
@@ -26,32 +26,10 @@ static void read_input_float(float* in, hls::stream<float>& inStream, int size) 
       inStream << in[i];
     }
 }
-static void write_result(unsigned int* out, hls::stream<unsigned int>& outStream, int size) {
-  for (int i = 0; i < size; i++) {
-    out[i] = outStream.read();
-  }
-}
-
 static void write_labels(unsigned int* out, int m_labels[MAX_NODES], int size) {
   for (int i = 0; i < size; i++) {
     out[i] = m_labels[i];
   }
-}
-static void write_info(node_information out[MAX_NODES], node_information m_info[MAX_NODES]) {
-  for (int i = 0; i < MAX_NODES; i++) {
-    out[i] = m_info[i];
-  }
-}
-static void write_graph(int* out, int outStream[MAX_NODES][MAX_CONNECTIONS]) {
-  std::cout << "[KERNEL]\t\tInside Graph-write and can_start is true: " << std::endl;
-  int acc = 0;
-  for (int i = 0; i < MAX_NODES; i++) {
-    for (int j = 0; j < MAX_CONNECTIONS; j++) {
-      out[acc] = outStream[i][j];
-      acc++;
-    }
-  }
-  std::cout << "[KERNEL]\t\tOutside Graph-write and can_start is false: " << std::endl;
 }
 
 static void filter_memory(hls::stream<unsigned int>& edge_from_stream, hls::stream<unsigned int>& edge_to_stream,hls::stream<float>& scores_stream, int m_num_edges, int m_graph[MAX_NODES][MAX_CONNECTIONS], node_information m_info[MAX_NODES]) {
@@ -72,29 +50,6 @@ static void filter_memory(hls::stream<unsigned int>& edge_from_stream, hls::stre
         m_graph[to][m_info[to].connections] = from;
         m_info[to].connections++;
       }
-    }
-    int times = 11;
-    std::cout << "[KERNEL]\t\t";
-    for (int i = 0; i < times; i++){
-      std::cout << i << "  ";
-    }
-    std::cout << std::endl;
-    std::cout << "[      ]\t\t";
-    for (int i = 0; i < times; i++){
-      std::cout << m_info[i].connections << "  ";
-    }
-    std::cout << std::endl;
-    std::cout << "[      ]\t\t";
-    for (int i = 0; i < times; i++){
-      std::cout << "---";
-    }
-    std::cout << std::endl;
-    for (int i = 0; i < 5; i++){
-      std::cout << "[      ]\t\t";
-      for (int j = 0; j < times; j++){
-        std::cout << m_graph[j][i] << "  ";
-      }
-      std::cout << std::endl;
     }
 }
 
@@ -144,56 +99,23 @@ static void compute_core(int m_graph[MAX_NODES][MAX_CONNECTIONS], node_informati
       }
 
       // after component is fully set up, we can export the labels from it
-      std::cout << "[      ]\t\tlabel added: "<< current_label << "  - ";
       for (int i = 0; i < current_component_size; i++){
         m_labels[component[i]] = current_label;
-        std::cout << component[i] << "  ";
       }
-      std::cout << std::endl;
       current_label++;
     }
   }
-  // print first labels
-  std::cout << "[KERNEL]\t\tfirst labels: ";
-  for (int i = 0; i < 15; i++){
-    std::cout << m_labels[i] << "  ";
-  }
-  std::cout << std::endl;
 }
-
-/* static void compute_operation(hls::stream<unsigned int>& edge_from, hls::stream<unsigned int>& edge_to, hls::stream<float>& scores, hls::stream<unsigned int>& labels, int n_edges, int n_nodes){
-  // Auto-pipeline is going to apply pipeline to this loop
-  const float cutoff = 0.5;
-  const int ref_labels[11] = {1,1,2,2,2,2,1,0,0,2,1};
-  int from, to;
-  float score;
-    
-    // input loop
-    for (int i = 0; i < n_edges; i++) {
-  #pragma HLS LOOP_TRIPCOUNT min = c_size_e max = c_size_e
-      from = edge_from.read();
-      to = edge_to.read();
-      score = scores.read();
-    }
-    // output loop
-    for (int i = 0; i < n_nodes; i++) {
-  #pragma HLS LOOP_TRIPCOUNT min = c_size_n max = c_size_n
-      labels << ref_labels[i];
-    }
-} */
 
 extern "C" {
   void CCL(unsigned int* in_edge_from, unsigned int* in_edge_to, float* in_scores, unsigned int* out_labels, int num_edges, int num_nodes) {
     static hls::stream<unsigned int> inStream_edge_from("input_stream1");
     static hls::stream<unsigned int> inStream_edge_to("input_stream2");
     static hls::stream<float> inStream_score("input_stream3");
-    static hls::stream<unsigned int> outStream_labels("output_stream");
     
     #pragma HLS INTERFACE m_axi port = in_edge_from   bundle=gmem0
     #pragma HLS INTERFACE m_axi port = in_edge_from   bundle=gmem1
     #pragma HLS INTERFACE m_axi port = in_scores      bundle=gmem2
-    // #pragma HLS INTERFACE m_axi port = out_node_info  bundle=gmem0
-    // #pragma HLS INTERFACE m_axi port = out_graph      bundle=gmem1
     #pragma HLS INTERFACE m_axi port = out_labels   bundle=gmem0
 
     static int graph_connections[MAX_NODES][MAX_CONNECTIONS];
@@ -212,17 +134,9 @@ extern "C" {
 
     filter_memory(inStream_edge_from, inStream_edge_to, inStream_score, num_edges, graph_connections, graph_info);
 
-    // write_info(out_node_info, graph_info);
-    // write_graph(out_graph, graph_connections);
-
-
     compute_core(graph_connections, graph_info, num_nodes, labels);
 
-    // compute_operation(inStream_edge_from, inStream_edge_to, inStream_score, outStream_labels, num_edges, num_nodes);
-    
     write_labels(out_labels, labels, num_nodes);
-
-    // write_result(out_labels, outStream_labels, num_nodes);
   }
 }
 

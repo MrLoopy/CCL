@@ -155,9 +155,13 @@ int main (int argc, char ** argv){
   size_t size_edges_byte = sizeof(int) * num_edges;     // size of edge_from and edge_to -> int
   size_t size_scores_byte = sizeof(float) * num_edges;  // size of scores -> float
   size_t size_labels_byte = sizeof(int) * num_nodes;    // size of labels -> int
+  // size_t size_node_info_byte = sizeof(node_information) * MAX_NODES;
+  // size_t size_graph_byte = sizeof(int) * MAX_NODES * MAX_CONNECTIONS;
   std::cout << "[INFO] Size of egdes:  " << size_edges_byte << " Bytes" << std::endl;
   std::cout << "[    ] Size of scores: " << size_scores_byte << " Bytes" << std::endl;
   std::cout << "[    ] Size of labels: " << size_labels_byte << " Bytes" << std::endl;
+  // std::cout << "[    ] Size of n_info: " << size_node_info_byte << " Bytes" << std::endl;
+  // std::cout << "[    ] Size of graph: " << size_graph_byte << " Bytes" << std::endl;
 
   //
   // Define Kernel Function to be executed on Device
@@ -171,15 +175,19 @@ int main (int argc, char ** argv){
   auto buffer_in_edge_from  = xrt::bo(targetDevice, size_edges_byte, krnl.group_id(0));
   auto buffer_in_edge_to    = xrt::bo(targetDevice, size_edges_byte, krnl.group_id(1));
   auto buffer_in_scores     = xrt::bo(targetDevice, size_scores_byte, krnl.group_id(2));
+  // auto buffer_out_node_info = xrt::bo(targetDevice, size_node_info_byte, krnl.group_id(3));
+  // auto buffer_out_graph     = xrt::bo(targetDevice, size_graph_byte, krnl.group_id(4));
   auto buffer_out_labels    = xrt::bo(targetDevice, size_labels_byte, krnl.group_id(3));
 
-  auto map_in_edge_from  = buffer_in_edge_from.map<int*>();
-  auto map_in_edge_to    = buffer_in_edge_to.map<int*>();
-  auto map_in_scores     = buffer_in_scores.map<float*>();
+  auto map_in_edge_from   = buffer_in_edge_from.map<int*>();
+  auto map_in_edge_to     = buffer_in_edge_to.map<int*>();
+  auto map_in_scores      = buffer_in_scores.map<float*>();
+  // auto map_out_node_info  = buffer_out_node_info.map<node_information*>();
+  // auto map_out_graph      = buffer_out_graph.map<int*>();
   auto map_out_labels    = buffer_out_labels.map<int*>();
 
   //set to const 0 for output only -> necessary?
-  std::fill(map_out_labels, map_out_labels + num_nodes, 0);
+  // std::fill(map_out_labels, map_out_labels + num_nodes, 0);
 
   //
   // Fill input buffers with test data from CSV
@@ -211,11 +219,45 @@ int main (int argc, char ** argv){
   //
   std::cout << "[INFO] Read back data from Kernel" << std::endl;
   buffer_out_labels.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+  // buffer_out_node_info.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+  // buffer_out_graph.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
 
   //
   // Validate results
   //
   std::cout << "[INFO] Validate results" << std::endl;
+  
+  /* int graph[MAX_NODES][MAX_CONNECTIONS];
+  int acc = 0;
+  for (int i = 0; i < MAX_NODES; i++) {
+    for (int j = 0; j < MAX_CONNECTIONS; j++) {
+      graph[i][j] = map_out_graph[acc];
+      acc++;
+    }
+  }
+  int node = 0;
+  for(int row = 0; row < 19 ; row++){
+    for(int col = 0; col < 20 ; col++){
+      switch(row){
+        case 0:
+          std::cout << map_out_node_info[node].connections << "\t";
+          break;
+        case 1:
+          std::cout << map_out_node_info[node].processed << "\t";
+          break;
+        case 2:
+          std::cout << "- - - -" << "\t";
+          break;
+        default:
+          std::cout << graph[node][row-3] << "\t";
+          break;
+      }
+      node++;
+    }
+    node -= 20;
+    std::cout << std::endl;
+  } */
+
   bool correct = true;
   for(int i = 0; i < num_nodes ; i++){
     // std::cout << "[    ] i: " << i << " expected: " << ref_labels[i] << " got: " << map_out_labels[i] << std::endl;

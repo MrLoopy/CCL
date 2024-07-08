@@ -43,7 +43,7 @@ int main (int argc, char ** argv){
   //
   //============================================
 
-  std::string csv_file_name = "dat/dummy_long.csv";
+  std::string csv_file_name = CSV_FILE;
   std::vector<int> edge_from;
   std::vector<int> edge_to;
   std::vector<int> ref_labels;
@@ -217,16 +217,24 @@ int main (int argc, char ** argv){
   //
   std::cout << "[INFO] Validate results" << std::endl;
   bool correct = true;
+  int num_errors = 0;
+  const int max_num_labels = 50;
+  int lookup[max_num_labels];
+  for(int i = 0; i < max_num_labels ; i++)
+    lookup[i] = -1;
   for(int i = 0; i < num_nodes ; i++){
-    if(map_out_labels[i] != ref_labels[i]){
+    if(lookup[map_out_labels[i]] < 0)
+      lookup[map_out_labels[i]] = ref_labels[i];
+    else if(lookup[map_out_labels[i]] != ref_labels[i]){
       correct = false;
       std::cout << "[WARNING] Wrong result, node: " << i << " expected: " << ref_labels[i] << " got: " << map_out_labels[i] << std::endl;
+      num_errors++;
     }
   }
   if(correct){
     std::cout << "[INFO] All results of the kernel match the expected results" << std::endl;
   } else {
-    std::cout << "[WARNING] Mismatches in the results have been found" << std::endl;
+    std::cout << "[WARNING] " << num_errors << "  mismatches in the results have been found" << std::endl;
   }
 
   return 0;

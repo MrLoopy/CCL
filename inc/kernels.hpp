@@ -2,12 +2,11 @@
 #define KERNELS_H
 
 
-#define DATA_SIZE 1
-#define NUM_EDGES 24
-#define NUM_NODES 11
 #define MAX_NODES 110
 #define MAX_CONNECTIONS 16
 #define MAX_COMPONENT_SIZE 20
+#define MAX_COMPONENT_NODES 100
+#define CSV_FILE "dat/dummy_long.csv"
 
 struct node_information{
   bool processed = false;

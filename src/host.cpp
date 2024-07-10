@@ -176,7 +176,7 @@ int main (int argc, char ** argv){
   auto map_in_edge_from   = buffer_in_edge_from.map<int*>();
   auto map_in_edge_to     = buffer_in_edge_to.map<int*>();
   auto map_in_scores      = buffer_in_scores.map<float*>();
-  auto map_out_labels    = buffer_out_labels.map<int*>();
+  auto map_out_labels     = buffer_out_labels.map<int*>();
 
   //set to const 0 for output only -> necessary?
   std::fill(map_out_labels, map_out_labels + num_nodes, -1);
@@ -232,9 +232,11 @@ int main (int argc, char ** argv){
     }
   }
   if(correct){
+    std::cout << "[    ]\n[INFO] TEST PASSED\n[    ]" << std::endl;
     std::cout << "[INFO] All results of the kernel match the expected results" << std::endl;
   } else {
-    std::cout << "[WARNING] " << num_errors << "  mismatches in the results have been found" << std::endl;
+    std::cout << "[       ]\n[WARNING] TEST FAILED\n[       ]" << std::endl;
+    std::cout << "[WARNING] " << num_errors << "  mismatches in the results have been found\n[       ]" << std::endl;
   }
 
   return 0;

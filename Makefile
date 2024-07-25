@@ -5,7 +5,7 @@
 #======================
 
 # Binary name
-EXE=app_${XCL_EMULATION_MODE}
+EXE=app_${XCL_EMULATION_MODE_CHANGED}
 
 # Directories to include
 HOMEDIR := ${FPGA_PATH2EMU}
@@ -81,7 +81,7 @@ ${OBJDIR}/host.o: ${SRCDIR}/host.cpp
 
 # Compile with V++
 ${BINDIR}/kernels.xclbin: ${OBJDIR}/kernels.xo
-	$(VV) -g -l -t ${XCL_EMULATION_MODE} \
+	$(VV) -g -l -t ${XCL_EMULATION_MODE_CHANGED} \
 	       	--platform ${FPGA_PLATFORM} \
 	       	--config ${FPGA_PATH2CONF}/u280.cfg \
 	       	${OBJDIR}/kernels.xo -o ${BINDIR}/kernels.xclbin
@@ -90,7 +90,7 @@ ${BINDIR}/kernels.xclbin: ${OBJDIR}/kernels.xo
 	@mv *.log $(LOGDIR)/
 
 ${OBJDIR}/kernels.xo: ${FPGA_PATH2SRC}/kernels.cpp
-	$(VV) -g -c -t ${XCL_EMULATION_MODE} \
+	$(VV) -g -c -t ${XCL_EMULATION_MODE_CHANGED} \
 	       	--platform ${FPGA_PLATFORM} \
 	       	--config ${FPGA_PATH2CONF}/u280.cfg \
 	       	-k CCL \

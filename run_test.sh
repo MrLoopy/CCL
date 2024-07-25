@@ -3,11 +3,11 @@
 # Make sure all directories needed for this run exist
 for VAR in "${!FPGA_PATH2EMU_@}"; do mkdir -p ${!VAR}; done
 
-echo "[INFO] Running test for mode: ${XCL_EMULATION_MODE}"
+echo "[INFO] Running test for mode: ${XCL_EMULATION_MODE_CHANGED}"
 export EMCONFIG_PATH=${FPGA_PATH2CONF}
-${FPGA_PATH2EMU_BIN}/app_${XCL_EMULATION_MODE} \
+${FPGA_PATH2EMU_BIN}/app_${XCL_EMULATION_MODE_CHANGED} \
   --xclbin ${FPGA_PATH2EMU_BIN}/kernels.xclbin \
-  --treename ${XCL_EMULATION_MODE} \
+#  --treename ${XCL_EMULATION_MODE_CHANGED} \
 
 mv *.csv ${FPGA_PATH2EMU_SUM}/
 mv *.run_summary ${FPGA_PATH2EMU_SUM}/

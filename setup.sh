@@ -9,18 +9,18 @@
 #
 #==============================
 
-if [ -z ${XCL_EMULATION_MODE} ]; then
-  export XCL_EMULATION_MODE=sw_emu
+if [ -z ${XCL_EMULATION_MODE_CHANGED} ]; then
+  export XCL_EMULATION_MODE_CHANGED=sw_emu
 fi
 if [ -z ${FPGA_RETURNTYPE} ]; then
   export FPGA_RETURNTYPE=float
 fi
 
 # Change name
-IFS='_' read -ra __XCL_EMULATION_MODE__ <<< "${XCL_EMULATION_MODE}"
-export FPGA_EMULATION_MODE="${__XCL_EMULATION_MODE__[0]}"
-if [ "${#__XCL_EMULATION_MODE__[@]}" -eq 2 ]; then
-  export FPGA_EMULATION_MODE="${__XCL_EMULATION_MODE__[1]}_${__XCL_EMULATION_MODE__[0]}"
+IFS='_' read -ra __XCL_EMULATION_MODE_CHANGED__ <<< "${XCL_EMULATION_MODE_CHANGED}"
+export FPGA_EMULATION_MODE="${__XCL_EMULATION_MODE_CHANGED__[0]}"
+if [ "${#__XCL_EMULATION_MODE_CHANGED__[@]}" -eq 2 ]; then
+  export FPGA_EMULATION_MODE="${__XCL_EMULATION_MODE_CHANGED__[1]}_${__XCL_EMULATION_MODE_CHANGED__[0]}"
 fi
 
 # Set the platform
@@ -101,7 +101,7 @@ function set_mode {
   if [ $# -eq 0 ]; then
     echo "[ERROR] No identifier has been provided. Please name one [sw_emu/hw_emu/hw]."
   elif [[ "$1" == "sw_emu" || "$1" == "hw_emu" || "$1" == "hw" ]]; then
-    export XCL_EMULATION_MODE=${1}
+    export XCL_EMULATION_MODE_CHANGED=${1}
     source ${SCRIPTPATH}/setup.sh
   else
     echo "[ERROR] Argument '${1}' not valid [sw_mode/hw_mode/hw]."
@@ -143,8 +143,8 @@ source $FINN_XILINX_PATH/xrt/setup.sh > /dev/null 2>&1
 #==============================
 
 # Show some config details to the user
-# echo "[${BOLDTXT}INFO${NORMTXT}] Emulation mode: ${BOLDTXT}${XCL_EMULATION_MODE}${NORMTXT}; return type ${BOLDTXT}${FPGA_RETURNTYPE}${NORMTXT}"
-echo "[${BOLDTXT}INFO${NORMTXT}] Emulation mode: ${BOLDTXT}${XCL_EMULATION_MODE}${NORMTXT}"
+# echo "[${BOLDTXT}INFO${NORMTXT}] Emulation mode: ${BOLDTXT}${XCL_EMULATION_MODE_CHANGED}${NORMTXT}; return type ${BOLDTXT}${FPGA_RETURNTYPE}${NORMTXT}"
+echo "[${BOLDTXT}INFO${NORMTXT}] Emulation mode: ${BOLDTXT}${XCL_EMULATION_MODE_CHANGED}${NORMTXT}"
 
 # Tell other scripts that setup.sh was called 
 export FPGA_ENV_INIT=true

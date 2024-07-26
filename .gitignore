@@ -7,4 +7,5 @@ _x/
 *.xclbin
 *summary
 xilinx*
-
+vivado*
+.ipcache/

@@ -44,11 +44,11 @@ int main (int argc, char ** argv){
   //============================================
 
   std::string csv_file_name = CSV_FILE;
-  std::vector<int> edge_from;
-  std::vector<int> edge_to;
-  std::vector<int> ref_labels;
+  std::vector<unsigned int> edge_from;
+  std::vector<unsigned int> edge_to;
+  std::vector<unsigned int> ref_labels;
   std::vector<float> scores;
-  int num_edges, num_nodes;
+  unsigned int num_edges, num_nodes;
   // float cutoff = 0.5;
 
   // create an input file stream from the csv-file
@@ -58,10 +58,10 @@ int main (int argc, char ** argv){
   // read an control the headers
   if(csv_file.good()){
     std::string line, field_0, field_1, field_2, field_3, word;
-    int num_0 = 0;
-    int num_1 = 0;
-    int num_2 = 0;
-    int num_3 = 0;
+    unsigned int num_0 = 0;
+    unsigned int num_1 = 0;
+    unsigned int num_2 = 0;
+    unsigned int num_3 = 0;
 
     // read first line
     std::getline(csv_file, line);
@@ -152,9 +152,9 @@ int main (int argc, char ** argv){
   //
   // Calculate size of vector in bytes
   //
-  size_t size_edges_byte = sizeof(int) * num_edges;     // size of edge_from and edge_to -> int
+  size_t size_edges_byte = sizeof(unsigned int) * num_edges;     // size of edge_from and edge_to -> int
   size_t size_scores_byte = sizeof(float) * num_edges;  // size of scores -> float
-  size_t size_labels_byte = sizeof(int) * num_nodes;    // size of labels -> int
+  size_t size_labels_byte = sizeof(unsigned int) * num_nodes;    // size of labels -> int
   std::cout << "[INFO] Size of egdes:  " << size_edges_byte << " Bytes" << std::endl;
   std::cout << "[    ] Size of scores: " << size_scores_byte << " Bytes" << std::endl;
   std::cout << "[    ] Size of labels: " << size_labels_byte << " Bytes" << std::endl;
@@ -173,10 +173,10 @@ int main (int argc, char ** argv){
   auto buffer_in_scores     = xrt::bo(targetDevice, size_scores_byte, krnl.group_id(2));
   auto buffer_out_labels    = xrt::bo(targetDevice, size_labels_byte, krnl.group_id(3));
 
-  auto map_in_edge_from   = buffer_in_edge_from.map<int*>();
-  auto map_in_edge_to     = buffer_in_edge_to.map<int*>();
+  auto map_in_edge_from   = buffer_in_edge_from.map<unsigned int*>();
+  auto map_in_edge_to     = buffer_in_edge_to.map<unsigned int*>();
   auto map_in_scores      = buffer_in_scores.map<float*>();
-  auto map_out_labels     = buffer_out_labels.map<int*>();
+  auto map_out_labels     = buffer_out_labels.map<unsigned int*>();
 
   //set to const 0 for output only -> necessary?
   std::fill(map_out_labels, map_out_labels + num_nodes, -1);
@@ -185,7 +185,7 @@ int main (int argc, char ** argv){
   // Fill input buffers with test data from CSV
   //
   std::cout << "[INFO] Fill input Buffers with data from CSV-file" << std::endl;
-  for(int i = 0; i < num_edges ; i++){
+  for(unsigned int i = 0; i < num_edges ; i++){
     map_in_edge_from[i] = edge_from[i];
     map_in_edge_to[i] = edge_to[i];
     map_in_scores[i] = scores[i];    
@@ -219,13 +219,16 @@ int main (int argc, char ** argv){
   bool correct = true;
   int num_errors = 0;
   const int max_num_labels = 50;
-  int lookup[max_num_labels];
-  for(int i = 0; i < max_num_labels ; i++)
-    lookup[i] = -1;
-  for(int i = 0; i < num_nodes ; i++){
-    if(lookup[map_out_labels[i]] < 0)
-      lookup[map_out_labels[i]] = ref_labels[i];
-    else if(lookup[map_out_labels[i]] != ref_labels[i]){
+  unsigned int lookupU[max_num_labels];
+  bool lookupB[max_num_labels];
+  for(unsigned int i = 0; i < max_num_labels ; i++)
+    lookupB[i] = false;
+  for(unsigned int i = 0; i < num_nodes ; i++){
+    if(!lookupB[map_out_labels[i]]){
+      lookupU[map_out_labels[i]] = ref_labels[i];
+      lookupB[map_out_labels[i]] = true;
+    }
+    else if(lookupU[map_out_labels[i]] != ref_labels[i]){
       correct = false;
       std::cout << "[WARNING] Wrong result, node: " << i << " expected: " << ref_labels[i] << " got: " << map_out_labels[i] << std::endl;
       num_errors++;

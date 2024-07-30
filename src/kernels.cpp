@@ -18,9 +18,21 @@ static void read_input_float(float* in, hls::stream<float>& inStream, int size) 
     }
 }
 
-static void write_labels(unsigned int* out, int m_labels[MAX_NODES], int size) {
+// static void write_labels(unsigned int* out, int m_labels[MAX_NODES], int size) {
+//   for (int i = 0; i < size; i++) {
+//     out[i] = m_labels[i];
+//   }
+// }
+
+static void queue_components(int m_labels[MAX_NODES], hls::stream<unsigned int>& outStream, int size) {
   for (int i = 0; i < size; i++) {
-    out[i] = m_labels[i];
+    outStream << m_labels[i];
+  }
+}
+
+static void write_labels(unsigned int* out, hls::stream<unsigned int>& outStream, int size) {
+  for (int i = 0; i < size; i++) {
+    out[i] = outStream.read();
   }
 }
 
@@ -28,6 +40,7 @@ static void filter_memory(hls::stream<unsigned int>& edge_from_stream, hls::stre
   const float cutoff = 0.5;
   int from, to;
   float score;
+  node_information temp_graph_info[MAX_NODES];
   for (int i = 0; i < m_num_edges; i++) {
     // read nodes and score of current edge
     from = edge_from_stream.read();
@@ -36,12 +49,15 @@ static void filter_memory(hls::stream<unsigned int>& edge_from_stream, hls::stre
     // check if score > cutoff -> true edge
     if(score > cutoff){
       // add to-node to from-list and increase from-counter
-      m_graph[from][m_info[from].connections] = to;
-      m_info[from].connections++;
+      m_graph[from][temp_graph_info[from].connections] = to;
+      temp_graph_info[from].connections++;
       // add from-node to to-list and increase to-counter
-      m_graph[to][m_info[to].connections] = from;
-      m_info[to].connections++;
+      m_graph[to][temp_graph_info[to].connections] = from;
+      temp_graph_info[to].connections++;
     }
+  }
+  for (int i = 0; i < MAX_NODES; i++) {
+    m_info[i].connections = temp_graph_info[i].connections;
   }
 }
 
@@ -79,6 +95,9 @@ static void compute_core(int m_graph[MAX_NODES][MAX_CONNECTIONS], node_informati
       while (current_component_size != processed_nodes){
         // get next node of the component that has not yet been processed
         next_node = component[processed_nodes];
+        // Check if this node has already been processed by other core that works on the same track
+        // if(m_info[next_node].processed)
+          // Conflict handler -> transfer current component from one core to the other
         // add all connections of current node to component if not already processed <- to many fills for highly connected components?
         for (int i = 0; i < m_info[next_node].connections; i++){
           if(!m_info[m_graph[next_node][i]].processed && current_component_size < MAX_COMPONENT_SIZE){
@@ -100,68 +119,41 @@ static void compute_core(int m_graph[MAX_NODES][MAX_CONNECTIONS], node_informati
   }
 }
 
-// static void dummy_core(hls::stream<unsigned int>& edge_from_stream, hls::stream<unsigned int>& edge_to_stream, hls::stream<float>& scores_stream, int m_num_edges){
-//   int from, to;
-//   float score;
-//   for (int i = 0; i < m_num_edges; i++) {
-//     from = edge_from_stream.read();
-//     to = edge_to_stream.read();
-//     score = scores_stream.read();
-//   }
-// }
-// static void dummy_write(unsigned int* out, int size) {
-//   unsigned int ref[MAX_NODES] = {1,1,2,2,2,2,1,0,0,2,1,0};
-//   for (int i = 0; i < size; i++) {
-//     out[i] = ref[i];
-//   }
-// }
-
-// static void wrap_read(unsigned int* in_from, unsigned int* in_to, float* in_score, hls::stream<unsigned int>& edge_from_stream, hls::stream<unsigned int>& edge_to_stream, hls::stream<float>& scores_stream, int m_num_edges){
-//   #pragma HLS dataflow
-//   read_input_int(in_from, edge_from_stream, m_num_edges);
-//   read_input_int(in_to, edge_to_stream, m_num_edges);
-//   read_input_float(in_score, scores_stream, m_num_edges);
-// }
-// static void wrap_dummy(hls::stream<unsigned int>& edge_from_stream, hls::stream<unsigned int>& edge_to_stream, hls::stream<float>& scores_stream, unsigned int * m_out_labels, int m_num_edges, int m_num_nodes){
-//   #pragma HLS dataflow
-//   dummy_core(edge_from_stream, edge_to_stream, scores_stream, m_num_edges);
-//   dummy_write(m_out_labels, m_num_nodes);
-// }
-
 extern "C" {
   void CCL(unsigned int* in_edge_from, unsigned int* in_edge_to, float* in_scores, unsigned int* out_labels, int num_edges, int num_nodes) {
-    static hls::stream<unsigned int> inStream_edge_from("input_stream1");
-    static hls::stream<unsigned int> inStream_edge_to("input_stream2");
-    static hls::stream<float> inStream_score("input_stream3");
+    static hls::stream<unsigned int> inStream_edge_from("input_stream_from");
+    static hls::stream<unsigned int> inStream_edge_to("input_stream_to");
+    static hls::stream<float> inStream_score("input_stream_score");
+    static hls::stream<unsigned int> outStream_labels("output_stream_labels");
     
     #pragma HLS INTERFACE m_axi port = in_edge_from   bundle=gmem0
     #pragma HLS INTERFACE m_axi port = in_edge_from   bundle=gmem1
     #pragma HLS INTERFACE m_axi port = in_scores      bundle=gmem2
-    #pragma HLS INTERFACE m_axi port = out_labels     bundle=gmem0
+    #pragma HLS INTERFACE m_axi port = out_labels     bundle=gmem3
 
     static int graph_connections[MAX_NODES][MAX_CONNECTIONS];
     static node_information graph_info[MAX_NODES];
     static int labels[MAX_NODES];
-    #pragma HLS bind_storage variable=graph_connections type=RAM_T2P impl=bram
-    #pragma HLS bind_storage variable=graph_info type=RAM_T2P impl=bram
-    #pragma HLS bind_storage variable=labels type=RAM_T2P impl=bram
+    #pragma HLS STREAM variable=graph_connections type=pipo
+    #pragma HLS STREAM variable=graph_info type=pipo
+    #pragma HLS STREAM variable=labels type=pipo
+    // #pragma HLS bind_storage variable=graph_connections type=RAM_T2P impl=bram
+    // #pragma HLS bind_storage variable=graph_info type=RAM_T2P impl=bram
+    // #pragma HLS bind_storage variable=labels type=RAM_T2P impl=bram
 
     #pragma HLS dataflow
     // dataflow pragma instruct compiler to run all functions in parallel -> problem because graph needs to be finished, before computation can start
     read_input_int(in_edge_from, inStream_edge_from, num_edges);
     read_input_int(in_edge_to, inStream_edge_to, num_edges);
     read_input_float(in_scores, inStream_score, num_edges);
-    // wrap_read(in_edge_from, in_edge_to, in_scores, inStream_edge_from, inStream_edge_to, inStream_score, num_edges);
-
-    // dummy_core(inStream_edge_from, inStream_edge_to, inStream_score, num_edges);
-    // dummy_write(out_labels, num_nodes);
-    // wrap_dummy(inStream_edge_from, inStream_edge_to, inStream_score, out_labels, num_edges, num_nodes);
 
     filter_memory(inStream_edge_from, inStream_edge_to, inStream_score, num_edges, graph_connections, graph_info);
 
     compute_core(graph_connections, graph_info, num_nodes, labels);
 
-    write_labels(out_labels, labels, num_nodes);
+    queue_components(labels, outStream_labels, num_nodes);
+
+    write_labels(out_labels, outStream_labels, num_nodes);
   }
 }
 

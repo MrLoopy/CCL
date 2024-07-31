@@ -2,11 +2,17 @@
 #define KERNELS_H
 
 
-#define MAX_NODES 12
-#define MAX_CONNECTIONS 4
-#define MAX_COMPONENT_SIZE 8
-#define MAX_COMPONENT_NODES 10
+#define MAX_TOTAL_NODES 330000
+#define MAX_EDGES 16
+#define MAX_COMPONENT_SIZE 100
+#define MAX_TRUE_NODES 33000
 #define CSV_FILE "dat/dummy.csv"
+// #define CSV_FILE "dat/dummy_long.csv"
+// #define CSV_FILE "dat/event005001514.csv"
+// #define MAX_NODES 12
+// #define MAX_CONNECTIONS 4
+// #define MAX_COMPONENT_SIZE 8
+// #define MAX_COMPONENT_NODES 10
 
 struct node_information{
   bool processed = false;

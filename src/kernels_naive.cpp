@@ -18,13 +18,7 @@ static void read_input_float(float* in, hls::stream<float>& inStream, unsigned i
     }
 }
 
-// static void write_labels(unsigned int* out, unsigned int m_labels[MAX_NODES], unsigned int size) {
-//   for (unsigned int i = 0; i < size; i++) {
-//     out[i] = m_labels[i];
-//   }
-// }
-
-static void queue_components(unsigned int m_labels[MAX_NODES], hls::stream<unsigned int>& outStream, unsigned int size) {
+static void queue_components(unsigned int m_labels[MAX_TOTAL_NODES], hls::stream<unsigned int>& outStream, unsigned int size) {
   for (unsigned int i = 0; i < size; i++) {
     outStream << m_labels[i];
   }
@@ -36,11 +30,11 @@ static void write_labels(unsigned int* out, hls::stream<unsigned int>& outStream
   }
 }
 
-static void filter_memory(hls::stream<unsigned int>& edge_from_stream, hls::stream<unsigned int>& edge_to_stream, hls::stream<float>& scores_stream, unsigned int m_num_edges, unsigned int m_graph[MAX_NODES][MAX_CONNECTIONS], node_information m_info[MAX_NODES]) {
+static void filter_memory(hls::stream<unsigned int>& edge_from_stream, hls::stream<unsigned int>& edge_to_stream, hls::stream<float>& scores_stream, unsigned int m_num_edges, unsigned int m_graph[MAX_TOTAL_NODES][MAX_EDGES], node_information m_info[MAX_TOTAL_NODES]) {
   const float cutoff = 0.5;
   unsigned int from, to;
   float score;
-  node_information temp_graph_info[MAX_NODES];
+  node_information temp_graph_info[MAX_TOTAL_NODES];
   for (unsigned int i = 0; i < m_num_edges; i++) {
     // read nodes and score of current edge
     from = edge_from_stream.read();
@@ -56,12 +50,12 @@ static void filter_memory(hls::stream<unsigned int>& edge_from_stream, hls::stre
       temp_graph_info[to].connections++;
     }
   }
-  for (unsigned int i = 0; i < MAX_NODES; i++) {
+  for (unsigned int i = 0; i < MAX_TOTAL_NODES; i++) {
     m_info[i].connections = temp_graph_info[i].connections;
   }
 }
 
-static void compute_core(unsigned int m_graph[MAX_NODES][MAX_CONNECTIONS], node_information m_info[MAX_NODES], unsigned int m_num_nodes, unsigned int m_labels[MAX_NODES]){
+static void compute_core(unsigned int m_graph[MAX_TOTAL_NODES][MAX_EDGES], node_information m_info[MAX_TOTAL_NODES], unsigned int m_num_nodes, unsigned int m_labels[MAX_TOTAL_NODES]){
 
   unsigned int current_label = 1;
   unsigned int component[MAX_COMPONENT_SIZE];
@@ -131,25 +125,24 @@ extern "C" {
     #pragma HLS INTERFACE m_axi port = in_scores      bundle=gmem2
     #pragma HLS INTERFACE m_axi port = out_labels     bundle=gmem3
 
-    static unsigned int graph_connections[MAX_NODES][MAX_CONNECTIONS];
-    static node_information graph_info[MAX_NODES];
-    static unsigned int labels[MAX_NODES];
+    static unsigned int graph[MAX_TOTAL_NODES][MAX_EDGES];
+    static node_information graph_connections[MAX_TOTAL_NODES];
+    static unsigned int labels[MAX_TOTAL_NODES];
+    #pragma HLS STREAM variable=graph type=pipo
     #pragma HLS STREAM variable=graph_connections type=pipo
-    #pragma HLS STREAM variable=graph_info type=pipo
     #pragma HLS STREAM variable=labels type=pipo
+    // #pragma HLS bind_storage variable=graph type=RAM_T2P impl=bram
     // #pragma HLS bind_storage variable=graph_connections type=RAM_T2P impl=bram
-    // #pragma HLS bind_storage variable=graph_info type=RAM_T2P impl=bram
     // #pragma HLS bind_storage variable=labels type=RAM_T2P impl=bram
 
     #pragma HLS dataflow
-    // dataflow pragma instruct compiler to run all functions in parallel -> problem because graph needs to be finished, before computation can start
     read_input_int(in_edge_from, inStream_edge_from, num_edges);
     read_input_int(in_edge_to, inStream_edge_to, num_edges);
     read_input_float(in_scores, inStream_score, num_edges);
 
-    filter_memory(inStream_edge_from, inStream_edge_to, inStream_score, num_edges, graph_connections, graph_info);
+    filter_memory(inStream_edge_from, inStream_edge_to, inStream_score, num_edges, graph, graph_connections);
 
-    compute_core(graph_connections, graph_info, num_nodes, labels);
+    compute_core(graph, graph_connections, num_nodes, labels);
 
     queue_components(labels, outStream_labels, num_nodes);
 

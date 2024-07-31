@@ -35,7 +35,7 @@ int main (int argc, char ** argv){
   //============================================
 
   // Pass commandline arguments
-  Args args(argc, argv, "FPGA studies");
+  Args args(argc, argv, "hls_ccl");
 
   //============================================
   //

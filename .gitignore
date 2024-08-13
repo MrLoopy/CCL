@@ -9,3 +9,5 @@ _x/
 xilinx*
 vivado*
 .ipcache/
+condor*
+nohup.out

@@ -1,0 +1,93 @@
+===============================================================================
+Version:    v++ v2023.1 (64-bit)
+Build:      SW Build 3860322 on 2023-05-04-06:32:48
+Copyright:  Copyright 1986-2023 Xilinx, Inc. All Rights Reserved.
+Created:    Wed Aug 14 13:06:26 2024
+===============================================================================
+
+-------------------------------------------------------------------------------
+Design Name:             kernels
+Target Device:           xilinx:u280:gen3x16_xdma_1:202211.1
+Target Clock:            300.000000MHz
+Total number of kernels: 1
+-------------------------------------------------------------------------------
+
+Kernel Summary
+Kernel Name  Type  Target              OpenCL Library  Compute Units
+-----------  ----  ------------------  --------------  -------------
+CCL          c     fpga0:OCL_REGION_0  kernels         1
+
+
+-------------------------------------------------------------------------------
+OpenCL Binary:     kernels
+Kernels mapped to: clc_region
+
+Timing Information (MHz)
+Compute Unit  Kernel Name  Module Name                                Target Frequency  Estimated Frequency
+------------  -----------  -----------------------------------------  ----------------  -------------------
+CCL           CCL          entry_proc                                 300.300293        821.692688
+CCL           CCL          read_input_int_Pipeline_VITIS_LOOP_11_1    300.300293        411.015198
+CCL           CCL          read_input_int                             300.300293        411.015198
+CCL           CCL          read_input_int_1                           300.300293        411.015198
+CCL           CCL          read_input_float                           300.300293        411.015198
+CCL           CCL          filter_memory_Pipeline_1                   300.300293        836.120422
+CCL           CCL          filter_memory_Pipeline_VITIS_LOOP_38_1     300.300293        481.695587
+CCL           CCL          filter_memory_Pipeline_VITIS_LOOP_53_2     300.300293        418.060211
+CCL           CCL          filter_memory                              300.300293        418.060211
+CCL           CCL          compute_core_Pipeline_VITIS_LOOP_62_1      300.300293        775.193848
+CCL           CCL          compute_core_Pipeline_VITIS_LOOP_79_3      300.300293        775.193848
+CCL           CCL          compute_core_Pipeline_VITIS_LOOP_96_5      300.300293        499.251129
+CCL           CCL          compute_core_Pipeline_VITIS_LOOP_108_6     300.300293        561.4823
+CCL           CCL          compute_core                               300.300293        465.766174
+CCL           CCL          queue_components_Pipeline_VITIS_LOOP_22_1  300.300293        414.421875
+CCL           CCL          queue_components                           300.300293        411.015198
+CCL           CCL          write_labels_Pipeline_VITIS_LOOP_28_1      300.300293        411.015198
+CCL           CCL          write_labels                               300.300293        411.015198
+CCL           CCL          CCL                                        300.300293        411.015198
+
+Latency Information
+Compute Unit  Kernel Name  Module Name                                Start Interval  Best (cycles)  Avg (cycles)  Worst (cycles)  Best (absolute)  Avg (absolute)  Worst (absolute)
+------------  -----------  -----------------------------------------  --------------  -------------  ------------  --------------  ---------------  --------------  ----------------
+CCL           CCL          entry_proc                                 0               0              0             0               0 ns             0 ns            0 ns
+CCL           CCL          read_input_int_Pipeline_VITIS_LOOP_11_1    undef           undef          undef         undef           undef            undef           undef
+CCL           CCL          read_input_int                             undef           undef          undef         undef           undef            undef           undef
+CCL           CCL          read_input_int_1                           undef           undef          undef         undef           undef            undef           undef
+CCL           CCL          read_input_float                           undef           undef          undef         undef           undef            undef           undef
+CCL           CCL          filter_memory_Pipeline_1                   513             513            513           513             1.710 us         1.710 us        1.710 us
+CCL           CCL          filter_memory_Pipeline_VITIS_LOOP_38_1     undef           undef          undef         undef           undef            undef           undef
+CCL           CCL          filter_memory_Pipeline_VITIS_LOOP_53_2     514             514            514           514             1.713 us         1.713 us        1.713 us
+CCL           CCL          filter_memory                              undef           undef          undef         undef           undef            undef           undef
+CCL           CCL          compute_core_Pipeline_VITIS_LOOP_62_1      130             130            130           130             0.433 us         0.433 us        0.433 us
+CCL           CCL          compute_core_Pipeline_VITIS_LOOP_79_3      130             130            130           130             0.433 us         0.433 us        0.433 us
+CCL           CCL          compute_core_Pipeline_VITIS_LOOP_96_5      undef           undef          undef         undef           undef            undef           undef
+CCL           CCL          compute_core_Pipeline_VITIS_LOOP_108_6     undef           undef          undef         undef           undef            undef           undef
+CCL           CCL          compute_core                               undef           undef          undef         undef           undef            undef           undef
+CCL           CCL          queue_components_Pipeline_VITIS_LOOP_22_1  undef           undef          undef         undef           undef            undef           undef
+CCL           CCL          queue_components                           undef           undef          undef         undef           undef            undef           undef
+CCL           CCL          write_labels_Pipeline_VITIS_LOOP_28_1      undef           undef          undef         undef           undef            undef           undef
+CCL           CCL          write_labels                               undef           undef          undef         undef           undef            undef           undef
+CCL           CCL          CCL                                        undef           undef          undef         undef           undef            undef           undef
+
+Area Information
+Compute Unit  Kernel Name  Module Name                                FF    LUT   DSP  BRAM  URAM
+------------  -----------  -----------------------------------------  ----  ----  ---  ----  ----
+CCL           CCL          entry_proc                                 3     46    0    0     0
+CCL           CCL          read_input_int_Pipeline_VITIS_LOOP_11_1    70    146   0    0     0
+CCL           CCL          read_input_int                             208   673   0    0     0
+CCL           CCL          read_input_int_1                           373   197   0    0     0
+CCL           CCL          read_input_float                           373   197   0    0     0
+CCL           CCL          filter_memory_Pipeline_1                   11    65    0    0     0
+CCL           CCL          filter_memory_Pipeline_VITIS_LOOP_38_1     244   384   0    0     0
+CCL           CCL          filter_memory_Pipeline_VITIS_LOOP_53_2     23    79    0    0     0
+CCL           CCL          filter_memory                              320   688   0    1     0
+CCL           CCL          compute_core_Pipeline_VITIS_LOOP_62_1      10    64    0    0     0
+CCL           CCL          compute_core_Pipeline_VITIS_LOOP_79_3      10    64    0    0     0
+CCL           CCL          compute_core_Pipeline_VITIS_LOOP_96_5      81    226   0    0     0
+CCL           CCL          compute_core_Pipeline_VITIS_LOOP_108_6     35    122   0    0     0
+CCL           CCL          compute_core                               541   1123  0    0     0
+CCL           CCL          queue_components_Pipeline_VITIS_LOOP_22_1  35    133   0    0     0
+CCL           CCL          queue_components                           40    190   0    0     0
+CCL           CCL          write_labels_Pipeline_VITIS_LOOP_28_1      70    148   0    0     0
+CCL           CCL          write_labels                               238   691   0    0     0
+CCL           CCL          CCL                                        5774  7845  0    21    0
+-------------------------------------------------------------------------------

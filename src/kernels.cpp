@@ -36,12 +36,18 @@ static void write_labels(unsigned int* out, hls::stream<unsigned int>& outStream
 static void filter_memory(hls::stream<unsigned int>& edge_from_stream, hls::stream<unsigned int>& edge_to_stream, hls::stream<float>& scores_stream,
                           unsigned int m_num_edges, unsigned int m_graph[MAX_TRUE_NODES][MAX_EDGES], unsigned int m_connections[MAX_TRUE_NODES],
                           unsigned int m_lookup[MAX_TOTAL_NODES], unsigned int& m_graph_size) {
-  const float cutoff = 0.5;
-  unsigned int from_large, to_large, from_small, to_small;
-  float score;
+
+  unsigned int temp_lookup[MAX_TOTAL_NODES];
+  for (unsigned int i = 0; i < MAX_TOTAL_NODES; i++)
+    temp_lookup[i] = 0;
   unsigned int temp_connections[MAX_TRUE_NODES];
   for (unsigned int i = 0; i < MAX_TRUE_NODES; i++)
     temp_connections[i] = false;
+  m_graph_size = 1;
+
+  const float cutoff = 0.5;
+  unsigned int from_large, to_large, from_small, to_small;
+  float score;
   for (unsigned int i = 0; i < m_num_edges; i++) {
     // read nodes and score of current edge
     from_large = edge_from_stream.read();
@@ -50,21 +56,21 @@ static void filter_memory(hls::stream<unsigned int>& edge_from_stream, hls::stre
     // check if score > cutoff -> true edge
     if(score > cutoff){
       // fill lookup and determain from_small and to_small
-      if(m_lookup[from_large] == 0){
+      if(temp_lookup[from_large] == 0){
         from_small = m_graph_size;
-        m_lookup[from_large] = m_graph_size;
+        temp_lookup[from_large] = m_graph_size;
         m_graph_size++;
       }
       else{
-        from_small = m_lookup[from_large];
+        from_small = temp_lookup[from_large];
       }
-      if(m_lookup[to_large] == 0){
+      if(temp_lookup[to_large] == 0){
         to_small = m_graph_size;
-        m_lookup[to_large] = m_graph_size;
+        temp_lookup[to_large] = m_graph_size;
         m_graph_size++;
       }
       else{
-        to_small = m_lookup[to_large];
+        to_small = temp_lookup[to_large];
       }
 
       // add to-node to from-list and increase from-counter
@@ -75,9 +81,10 @@ static void filter_memory(hls::stream<unsigned int>& edge_from_stream, hls::stre
       temp_connections[to_small]++;
     }
   }
-  for (unsigned int i = 0; i < MAX_TRUE_NODES; i++) {
+  for (unsigned int i = 0; i < MAX_TOTAL_NODES; i++)
+    m_lookup[i] = temp_lookup[i];
+  for (unsigned int i = 0; i < MAX_TRUE_NODES; i++)
     m_connections[i] = temp_connections[i];
-  }
 }
 
 static void compute_core(unsigned int m_graph[MAX_TRUE_NODES][MAX_EDGES], unsigned int m_connections[MAX_TRUE_NODES], unsigned int m_num_nodes,
@@ -167,9 +174,8 @@ extern "C" {
     // #pragma HLS bind_storage variable=labels type=RAM_T2P impl=bram
     // #pragma HLS bind_storage variable=lookup type=RAM_T2P impl=bram
 
-    for (unsigned int i = 0; i < MAX_TOTAL_NODES; i++)
-      lookup[i] = 0;
-    static unsigned int graph_size = 1;
+    static unsigned int graph_size;
+    #pragma HLS STREAM variable=graph_size type=pipo
 
     #pragma HLS dataflow
     read_input_int(in_edge_from, inStream_edge_from, num_edges);

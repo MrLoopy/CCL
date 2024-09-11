@@ -1,0 +1,440 @@
+g++ -g -Wno-unknown-pragmas -pthread -std=c++17 -Wall -O0 -I/home/linker/hls_ccl/ext/CLI11/include -I/home/linker/hls_ccl/inc -isystem /opt/xilinx/Vitis_HLS/2023.1/include -I/opt/xilinx/xrt/include   -c /home/linker/hls_ccl/src/host.cpp -o /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/obj/host.o
+g++ -g -Wno-unknown-pragmas -pthread -std=c++17 -Wall -O0 -I/home/linker/hls_ccl/ext/CLI11/include -I/home/linker/hls_ccl/inc -isystem /opt/xilinx/Vitis_HLS/2023.1/include -I/opt/xilinx/xrt/include   -c /home/linker/hls_ccl/src/kernels.cpp -o /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/obj/kernels.o
+v++ -g -c -t hw \
+        --platform xilinx_u280_gen3x16_xdma_1_202211_1 \
+        --config /home/linker/hls_ccl/conf/u280.cfg \
+        -k CCL \
+        -I /home/linker/hls_ccl/inc /home/linker/hls_ccl/src/kernels.cpp -o /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/obj/kernels.xo
+Option Map File Used: '/opt/xilinx/Vitis/2023.1/data/vitis/vpp/optMap.xml'
+INFO: [v++ 82-4274] Default memory will be used for trace offload
+
+****** v++ v2023.1 (64-bit)
+  **** SW Build 3860322 on 2023-05-04-06:32:48
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2023 Advanced Micro Devices, Inc. All Rights Reserved.
+
+INFO: [v++ 60-1306] Additional information associated with this v++ compile can be found at:
+        Reports: /home/linker/hls_ccl/_x/reports/kernels
+        Log files: /home/linker/hls_ccl/_x/logs/kernels
+Running Dispatch Server on port: 8005
+INFO: [v++ 60-1548] Creating build summary session with primary output /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/obj/kernels.xo.compile_summary, at Wed Sep 11 12:56:11 2024
+INFO: [v++ 60-1315] Creating rulecheck session with output '/home/linker/hls_ccl/_x/reports/kernels/v++_compile_kernels_guidance.html', at Wed Sep 11 12:56:11 2024
+INFO: [v++ 60-895]   Target platform: /opt/xilinx/platforms/xilinx_u280_gen3x16_xdma_1_202211_1/xilinx_u280_gen3x16_xdma_1_202211_1.xpfm
+INFO: [v++ 60-1578]   This platform contains Xilinx Shell Archive '/opt/xilinx/platforms/xilinx_u280_gen3x16_xdma_1_202211_1/hw/hw.xsa'
+INFO: [v++ 74-78] Compiler Version string: 2023.1
+INFO: [v++ 60-585] Compiling for hardware target
+INFO: [v++ 60-423]   Target device: xilinx_u280_gen3x16_xdma_1_202211_1
+INFO: [v++ 60-242] Creating kernel: 'CCL'
+
+===>The following messages were generated while  performing high-level synthesis for kernel: CCL Log file: /home/linker/hls_ccl/_x/kernels/CCL/vitis_hls.log :
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_11_1'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 3, loop 'VITIS_LOOP_11_1'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_11_1'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 74, loop 'VITIS_LOOP_11_1'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_16_1'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 74, loop 'VITIS_LOOP_16_1'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_41_1'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 1, loop 'VITIS_LOOP_41_1'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_44_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 1, loop 'VITIS_LOOP_44_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_51_3'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 6, Depth = 81, loop 'VITIS_LOOP_51_3'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_84_4'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 3, loop 'VITIS_LOOP_84_4'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_86_5'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 3, loop 'VITIS_LOOP_86_5'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_95_1'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 1, loop 'VITIS_LOOP_95_1'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_98_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 1, loop 'VITIS_LOOP_98_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_115_4'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 1, loop 'VITIS_LOOP_115_4'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_133_6'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 2, loop 'VITIS_LOOP_133_6'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_136_7'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 3, loop 'VITIS_LOOP_136_7'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_148_8'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 2, loop 'VITIS_LOOP_148_8'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_22_1'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 77, loop 'VITIS_LOOP_22_1'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_31_1'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 3, loop 'VITIS_LOOP_31_1'
+INFO: [v++ 200-790] **** Loop Constraint Status: All loop constraints were satisfied.
+INFO: [v++ 200-789] **** Estimated Fmax: 411.00 MHz
+INFO: [v++ 60-594] Finished kernel compilation
+INFO: [v++ 60-244] Generating system estimate report...
+INFO: [v++ 60-1092] Generated system estimate report: /home/linker/hls_ccl/_x/reports/kernels/system_estimate_kernels.xtxt
+INFO: [v++ 60-586] Created /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/obj/kernels.xo
+INFO: [v++ 60-2343] Use the vitis_analyzer tool to visualize and navigate the relevant reports. Run the following command. 
+    vitis_analyzer /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/obj/kernels.xo.compile_summary 
+INFO: [v++ 60-791] Total elapsed time: 0h 1m 12s
+INFO: [v++ 60-1653] Closing dispatch client.
+v++ -g -l -t hw \
+        --platform xilinx_u280_gen3x16_xdma_1_202211_1 \
+        --config /home/linker/hls_ccl/conf/u280.cfg \
+        /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/obj/kernels.xo -o /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/bin/kernels.xclbin
+Option Map File Used: '/opt/xilinx/Vitis/2023.1/data/vitis/vpp/optMap.xml'
+INFO: [v++ 82-4274] Default memory will be used for trace offload
+
+****** v++ v2023.1 (64-bit)
+  **** SW Build 3860322 on 2023-05-04-06:32:48
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2023 Advanced Micro Devices, Inc. All Rights Reserved.
+
+INFO: [v++ 60-1306] Additional information associated with this v++ link can be found at:
+        Reports: /home/linker/hls_ccl/_x/reports/link
+        Log files: /home/linker/hls_ccl/_x/logs/link
+Running Dispatch Server on port: 12997
+INFO: [v++ 60-1548] Creating build summary session with primary output /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/bin/kernels.xclbin.link_summary, at Wed Sep 11 12:57:25 2024
+INFO: [v++ 60-1315] Creating rulecheck session with output '/home/linker/hls_ccl/_x/reports/link/v++_link_kernels_guidance.html', at Wed Sep 11 12:57:25 2024
+INFO: [v++ 60-895]   Target platform: /opt/xilinx/platforms/xilinx_u280_gen3x16_xdma_1_202211_1/xilinx_u280_gen3x16_xdma_1_202211_1.xpfm
+INFO: [v++ 60-1578]   This platform contains Xilinx Shell Archive '/opt/xilinx/platforms/xilinx_u280_gen3x16_xdma_1_202211_1/hw/hw.xsa'
+INFO: [v++ 74-78] Compiler Version string: 2023.1
+INFO: [v++ 82-4274] Default memory will be used for trace offload
+INFO: [v++ 60-629] Linking for hardware target
+INFO: [v++ 60-423]   Target device: xilinx_u280_gen3x16_xdma_1_202211_1
+INFO: [v++ 60-1332] Run 'run_link' status: Not started
+INFO: [v++ 60-1443] [12:57:27] Run run_link: Step system_link: Started
+INFO: [v++ 60-1453] Command Line: system_link --xo /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/obj/kernels.xo -keep -memory-for-trace DDR[0] --config /home/linker/hls_ccl/_x/link/int/syslinkConfig.ini --xpfm /opt/xilinx/platforms/xilinx_u280_gen3x16_xdma_1_202211_1/xilinx_u280_gen3x16_xdma_1_202211_1.xpfm --target hw --output_dir /home/linker/hls_ccl/_x/link/int --temp_dir /home/linker/hls_ccl/_x/link/sys_link
+INFO: [v++ 60-1454] Run Directory: /home/linker/hls_ccl/_x/link/run_link
+INFO: [SYSTEM_LINK 82-70] Extracting xo v3 file /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/obj/kernels.xo
+INFO: [SYSTEM_LINK 82-53] Creating IP database /home/linker/hls_ccl/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml
+INFO: [SYSTEM_LINK 82-38] [12:57:28] build_xd_ip_db started: /opt/xilinx/Vitis/2023.1/bin/build_xd_ip_db -ip_search 0  -sds-pf /home/linker/hls_ccl/_x/link/sys_link/hw.hpfm -clkid 0 -ip /home/linker/hls_ccl/_x/link/sys_link/iprepo/xilinx_com_hls_CCL_1_0,CCL -o /home/linker/hls_ccl/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml
+INFO: [SYSTEM_LINK 82-37] [12:57:33] build_xd_ip_db finished successfully
+Time (s): cpu = 00:00:05 ; elapsed = 00:00:05 . Memory (MB): peak = 443.875 ; gain = 0.000 ; free physical = 33049 ; free virtual = 188373
+INFO: [SYSTEM_LINK 82-51] Create system connectivity graph
+INFO: [SYSTEM_LINK 82-102] Applying explicit connections to the system connectivity graph: /home/linker/hls_ccl/_x/link/sys_link/cfgraph/cfgen_cfgraph.xml
+INFO: [SYSTEM_LINK 82-38] [12:57:33] cfgen started: /opt/xilinx/Vitis/2023.1/bin/cfgen  -nk CCL:1:CCL -sp CCL.in_edge_from:HBM[0] -sp CCL.in_edge_to:HBM[1] -sp CCL.in_scores:HBM[2] -sp CCL.out_labels:HBM[3] -sp CCL.io_graph:HBM[4] -sp CCL.io_lookup:HBM[5] -dpa_mem_offload true -dmclkid 0 -r /home/linker/hls_ccl/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml -o /home/linker/hls_ccl/_x/link/sys_link/cfgraph/cfgen_cfgraph.xml
+INFO: [CFGEN 83-0] Kernel Specs: 
+INFO: [CFGEN 83-0]   kernel: CCL, num: 1  {CCL}
+INFO: [CFGEN 83-0] Port Specs: 
+INFO: [CFGEN 83-0]   kernel: CCL, k_port: in_edge_from, sptag: HBM[0]
+INFO: [CFGEN 83-0]   kernel: CCL, k_port: in_edge_to, sptag: HBM[1]
+INFO: [CFGEN 83-0]   kernel: CCL, k_port: in_scores, sptag: HBM[2]
+INFO: [CFGEN 83-0]   kernel: CCL, k_port: out_labels, sptag: HBM[3]
+INFO: [CFGEN 83-0]   kernel: CCL, k_port: io_graph, sptag: HBM[4]
+INFO: [CFGEN 83-0]   kernel: CCL, k_port: io_lookup, sptag: HBM[5]
+INFO: [SYSTEM_LINK 82-37] [12:57:37] cfgen finished successfully
+Time (s): cpu = 00:00:04 ; elapsed = 00:00:04 . Memory (MB): peak = 443.875 ; gain = 0.000 ; free physical = 33040 ; free virtual = 188364
+INFO: [SYSTEM_LINK 82-52] Create top-level block diagram
+INFO: [SYSTEM_LINK 82-38] [12:57:37] cf2bd started: /opt/xilinx/Vitis/2023.1/bin/cf2bd  --linux --trace_buffer 1024 --input_file /home/linker/hls_ccl/_x/link/sys_link/cfgraph/cfgen_cfgraph.xml --ip_db /home/linker/hls_ccl/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml --cf_name dr --working_dir /home/linker/hls_ccl/_x/link/sys_link/_sysl/.xsd --temp_dir /home/linker/hls_ccl/_x/link/sys_link --output_dir /home/linker/hls_ccl/_x/link/int --target_bd ulp.bd
+INFO: [CF2BD 82-31] Launching cf2xd: cf2xd -linux -trace-buffer 1024 -i /home/linker/hls_ccl/_x/link/sys_link/cfgraph/cfgen_cfgraph.xml -r /home/linker/hls_ccl/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml -o dr.xml
+INFO: [CF2BD 82-28] cf2xd finished successfully
+INFO: [CF2BD 82-31] Launching cf_xsd: cf_xsd -disable-address-gen -bd ulp.bd -dn dr -dp /home/linker/hls_ccl/_x/link/sys_link/_sysl/.xsd
+INFO: [CF2BD 82-28] cf_xsd finished successfully
+INFO: [SYSTEM_LINK 82-37] [12:57:39] cf2bd finished successfully
+Time (s): cpu = 00:00:02 ; elapsed = 00:00:02 . Memory (MB): peak = 443.875 ; gain = 0.000 ; free physical = 33029 ; free virtual = 188359
+INFO: [v++ 60-1441] [12:57:39] Run run_link: Step system_link: Completed
+Time (s): cpu = 00:00:11 ; elapsed = 00:00:12 . Memory (MB): peak = 449.898 ; gain = 0.000 ; free physical = 33092 ; free virtual = 188421
+INFO: [v++ 60-1443] [12:57:39] Run run_link: Step cf2sw: Started
+INFO: [v++ 60-1453] Command Line: cf2sw -sdsl /home/linker/hls_ccl/_x/link/int/sdsl.dat -rtd /home/linker/hls_ccl/_x/link/int/cf2sw.rtd -nofilter /home/linker/hls_ccl/_x/link/int/cf2sw_full.rtd -xclbin /home/linker/hls_ccl/_x/link/int/xclbin_orig.xml -o /home/linker/hls_ccl/_x/link/int/xclbin_orig.1.xml
+INFO: [v++ 60-1454] Run Directory: /home/linker/hls_ccl/_x/link/run_link
+INFO: [v++ 60-1441] [12:57:41] Run run_link: Step cf2sw: Completed
+Time (s): cpu = 00:00:02 ; elapsed = 00:00:02 . Memory (MB): peak = 449.898 ; gain = 0.000 ; free physical = 33090 ; free virtual = 188420
+INFO: [v++ 60-1443] [12:57:41] Run run_link: Step rtd2_system_diagram: Started
+INFO: [v++ 60-1453] Command Line: rtd2SystemDiagram
+INFO: [v++ 60-1454] Run Directory: /home/linker/hls_ccl/_x/link/run_link
+INFO: [v++ 60-1441] [12:57:42] Run run_link: Step rtd2_system_diagram: Completed
+Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.17 . Memory (MB): peak = 449.898 ; gain = 0.000 ; free physical = 33068 ; free virtual = 188398
+INFO: [v++ 60-1443] [12:57:42] Run run_link: Step vpl: Started
+INFO: [v++ 60-1453] Command Line: vpl -t hw -f xilinx_u280_gen3x16_xdma_1_202211_1 -s -g --remote_ip_cache /home/linker/hls_ccl/.ipcache --trace_memory DDR[0] --output_dir /home/linker/hls_ccl/_x/link/int --log_dir /home/linker/hls_ccl/_x/logs/link --report_dir /home/linker/hls_ccl/_x/reports/link --config /home/linker/hls_ccl/_x/link/int/vplConfig.ini -k /home/linker/hls_ccl/_x/link/int/kernel_info.dat --webtalk_flag Vitis --temp_dir /home/linker/hls_ccl/_x/link --no-info --iprepo /home/linker/hls_ccl/_x/link/int/xo/ip_repo/xilinx_com_hls_CCL_1_0 --messageDb /home/linker/hls_ccl/_x/link/run_link/vpl.pb /home/linker/hls_ccl/_x/link/int/dr.bd.tcl
+INFO: [v++ 60-1454] Run Directory: /home/linker/hls_ccl/_x/link/run_link
+
+****** vpl v2023.1 (64-bit)
+  **** SW Build 3860322 on 2023-05-04-06:32:48
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2023 Advanced Micro Devices, Inc. All Rights Reserved.
+
+INFO: [VPL 60-839] Read in kernel information from file '/home/linker/hls_ccl/_x/link/int/kernel_info.dat'.
+INFO: [VPL 74-78] Compiler Version string: 2023.1
+INFO: [VPL 60-423]   Target device: xilinx_u280_gen3x16_xdma_1_202211_1
+INFO: [VPL 60-1032] Extracting hardware platform to /home/linker/hls_ccl/_x/link/vivado/vpl/.local/hw_platform
+[12:57:50] Run vpl: Step create_project: Started
+Creating Vivado project.
+[12:57:53] Run vpl: Step create_project: Completed
+[12:57:53] Run vpl: Step create_bd: Started
+[12:58:10] Run vpl: Step create_bd: Completed
+[12:58:10] Run vpl: Step update_bd: Started
+[12:59:26] Run vpl: Step update_bd: RUNNING...
+WARNING: [VPL-1] Memory profiling was requested on DDR[0] which is unused. No monitoring will be added on this memory.
+WARNING: [VPL-1] Memory profiling was requested on DDR[1] which is unused. No monitoring will be added on this memory.
+WARNING: [VPL-1] Profiling of HBM is not supported.
+WARNING: [VPL-1] Memory profiling was requested on HOST[0] which is unused. No monitoring will be added on this memory.
+WARNING: [VPL-1] Memory profiling was requested on PLRAM[0] which is unused. No monitoring will be added on this memory.
+WARNING: [VPL-1] Memory profiling was requested on PLRAM[1] which is unused. No monitoring will be added on this memory.
+WARNING: [VPL-1] Memory profiling was requested on PLRAM[2] which is unused. No monitoring will be added on this memory.
+WARNING: [VPL-1] Memory profiling was requested on PLRAM[3] which is unused. No monitoring will be added on this memory.
+WARNING: [VPL-1] Memory profiling was requested on PLRAM[4] which is unused. No monitoring will be added on this memory.
+WARNING: [VPL-1] Memory profiling was requested on PLRAM[5] which is unused. No monitoring will be added on this memory.
+WARNING: [VPL-1] The use of profile options turned on trace, which uses a memory resource in one SLR; however kernels or compute units could potentially be located in multiple SLRs. This may impact timing due to SLR crossing. To improve timing, please consider implementing trace memory in every SLRs used via the linker option: --profile.trace_memory <memory>:<SLR>. SLRs present on the design : SLR0 SLR1 SLR2
+[12:59:30] Run vpl: Step update_bd: Completed
+[12:59:30] Run vpl: Step generate_target: Started
+[13:00:45] Run vpl: Step generate_target: RUNNING...
+[13:01:02] Run vpl: Step generate_target: Completed
+[13:01:02] Run vpl: Step config_hw_runs: Started
+[13:01:04] Run vpl: Step config_hw_runs: Completed
+[13:01:04] Run vpl: Step synth: Started
+[13:01:35] Block-level synthesis in progress, 0 of 9 jobs complete, 8 jobs running.
+[13:02:05] Block-level synthesis in progress, 2 of 9 jobs complete, 6 jobs running.
+[13:02:35] Block-level synthesis in progress, 7 of 9 jobs complete, 1 job running.
+[13:03:05] Block-level synthesis in progress, 7 of 9 jobs complete, 2 jobs running.
+[13:03:35] Block-level synthesis in progress, 8 of 9 jobs complete, 1 job running.
+[13:04:05] Block-level synthesis in progress, 8 of 9 jobs complete, 1 job running.
+[13:04:36] Top-level synthesis in progress.
+[13:05:06] Top-level synthesis in progress.
+[13:05:26] Run vpl: Step synth: Completed
+[13:05:26] Run vpl: Step impl: Started
+[13:13:29] Finished 2nd of 6 tasks (FPGA linking synthesized kernels to platform). Elapsed time: 00h 15m 46s 
+
+[13:13:29] Starting logic optimization..
+[13:13:29] Phase 1 Generate And Synthesize MIG Cores
+[13:17:00] Phase 2 Generate And Synthesize Debug Cores
+[13:18:31] Phase 3 Retarget
+[13:18:31] Phase 4 Constant propagation
+[13:19:01] Phase 5 Sweep
+[13:20:02] Phase 6 BUFG optimization
+[13:20:32] Phase 7 Shift Register Optimization
+[13:20:32] Phase 8 Post Processing Netlist
+[13:21:32] Finished 3rd of 6 tasks (FPGA logic optimization). Elapsed time: 00h 08m 03s 
+
+[13:21:32] Starting logic placement..
+[13:22:02] Phase 1 Placer Initialization
+[13:22:02] Phase 1.1 Placer Initialization Netlist Sorting
+[13:25:03] Phase 1.2 IO Placement/ Clock Placement/ Build Placer Device
+[13:26:04] Phase 1.3 Build Placer Netlist Model
+[13:28:05] Phase 1.4 Constrain Clocks/Macros
+[13:28:35] Phase 2 Global Placement
+[13:28:35] Phase 2.1 Floorplanning
+[13:29:05] Phase 2.1.1 Partition Driven Placement
+[13:29:05] Phase 2.1.1.1 PBP: Partition Driven Placement
+[13:29:35] Phase 2.1.1.2 PBP: Clock Region Placement
+[13:30:06] Phase 2.1.1.3 PBP: Discrete Incremental
+[13:30:36] Phase 2.1.1.4 PBP: Compute Congestion
+[13:30:36] Phase 2.1.1.5 PBP: Macro Placement
+[13:30:36] Phase 2.1.1.6 PBP: UpdateTiming
+[13:31:06] Phase 2.1.1.7 PBP: Add part constraints
+[13:31:06] Phase 2.2 Physical Synthesis After Floorplan
+[13:31:36] Phase 2.3 Update Timing before SLR Path Opt
+[13:31:36] Phase 2.4 Post-Processing in Floorplanning
+[13:31:36] Phase 2.5 Global Placement Core
+[13:41:12] Phase 2.5.1 UpdateTiming Before Physical Synthesis
+[13:41:42] Phase 2.5.2 Physical Synthesis In Placer
+[13:44:14] Phase 3 Detail Placement
+[13:44:14] Phase 3.1 Commit Multi Column Macros
+[13:44:14] Phase 3.2 Commit Most Macros & LUTRAMs
+[13:45:44] Phase 3.3 Small Shape DP
+[13:45:44] Phase 3.3.1 Small Shape Clustering
+[13:45:44] Phase 3.3.2 Flow Legalize Slice Clusters
+[13:45:44] Phase 3.3.3 Slice Area Swap
+[13:46:15] Phase 3.3.3.1 Slice Area Swap Initial
+[13:46:45] Phase 3.4 Place Remaining
+[13:47:15] Phase 3.5 Re-assign LUT pins
+[13:47:15] Phase 3.6 Pipeline Register Optimization
+[13:47:15] Phase 3.7 Fast Optimization
+[13:48:46] Phase 4 Post Placement Optimization and Clean-Up
+[13:48:46] Phase 4.1 Post Commit Optimization
+[13:49:47] Phase 4.1.1 Post Placement Optimization
+[13:49:47] Phase 4.1.1.1 BUFG Insertion
+[13:49:47] Phase 1 Physical Synthesis Initialization
+[13:50:17] Phase 4.1.1.2 BUFG Replication
+[13:50:17] Phase 4.1.1.3 Post Placement Timing Optimization
+[13:52:48] Phase 4.1.1.4 Replication
+[13:53:49] Phase 4.2 Post Placement Cleanup
+[13:54:19] Phase 4.3 Placer Reporting
+[13:54:19] Phase 4.3.1 Print Estimated Congestion
+[13:54:19] Phase 4.4 Final Placement Cleanup
+[14:01:53] Finished 4th of 6 tasks (FPGA logic placement). Elapsed time: 00h 40m 21s 
+
+[14:01:53] Starting logic routing..
+[14:02:54] Phase 1 Build RT Design
+[14:04:25] Phase 2 Router Initialization
+[14:04:25] Phase 2.1 Fix Topology Constraints
+[14:04:25] Phase 2.2 Pre Route Cleanup
+[14:04:55] Phase 2.3 Global Clock Net Routing
+[14:05:26] Phase 2.4 Update Timing
+[14:06:57] Phase 2.5 Update Timing for Bus Skew
+[14:06:57] Phase 2.5.1 Update Timing
+[14:07:57] Phase 3 Initial Routing
+[14:07:57] Phase 3.1 Global Routing
+[14:07:57] Phase 3.1.1 SLL Assignment
+[14:08:58] Phase 4 Rip-up And Reroute
+[14:08:58] Phase 4.1 Global Iteration 0
+[14:14:00] Phase 4.2 Global Iteration 1
+[14:16:02] Phase 4.3 Global Iteration 2
+[14:16:32] Phase 5 Delay and Skew Optimization
+[14:16:32] Phase 5.1 Delay CleanUp
+[14:16:32] Phase 5.1.1 Update Timing
+[14:17:02] Phase 5.1.2 Update Timing
+[14:17:33] Phase 5.1.3 Update Timing
+[14:18:03] Phase 5.2 Clock Skew Optimization
+[14:18:33] Phase 6 Post Hold Fix
+[14:18:33] Phase 6.1 Hold Fix Iter
+[14:18:33] Phase 6.1.1 Update Timing
+[14:19:03] Phase 7 Leaf Clock Prog Delay Opt
+[14:27:08] Phase 7.1 Delay CleanUp
+[14:27:08] Phase 7.1.1 Update Timing
+[14:27:08] Phase 7.1.2 Update Timing
+[14:27:38] Phase 7.1.3 Update Timing
+[14:28:39] Phase 7.2 Hold Fix Iter
+[14:28:39] Phase 7.2.1 Update Timing
+[14:30:10] Phase 8 Route finalize
+[14:30:10] Phase 9 Verifying routed nets
+[14:30:10] Phase 10 Depositing Routes
+[14:30:40] Phase 11 Resolve XTalk
+[14:31:10] Phase 12 Post Router Timing
+[14:31:10] Phase 12.1 Update Timing
+[14:32:11] Phase 13 Physical Synthesis in Router
+[14:32:11] Phase 13.1 Physical Synthesis Initialization
+[14:33:11] Phase 13.2 Critical Path Optimization
+[14:34:42] Finished 5th of 6 tasks (FPGA routing). Elapsed time: 00h 32m 48s 
+
+[14:34:42] Starting bitstream generation..
+[14:34:42] Phase 14 Post-Route Event Processing
+[14:42:47] Creating bitmap...
+[14:49:21] Writing bitstream ./level0_i_ulp_my_rm_partial.bit...
+[14:49:21] Finished 6th of 6 tasks (FPGA bitstream generation). Elapsed time: 00h 14m 38s 
+Check VPL, containing 15 checks, has run: 0 errors, 2 warning violations, 1 advisory violation
+WARNING: [PROFILING-04] You did not specify more than one SLR for tracing. This could impact timing.
+WARNING: [AUTO-FREQ-SCALING-04] One or more timing paths failed timing requirements. The kernel clock ulp_ucs/aclk_kernel_00 has an original frequency equal to 300.000000 MHz. The frequency has been automatically changed to 180.6 MHz to enable proper functionality. The clock Id is 0.
+ADVISORY: [AUTO-FREQ-SCALING-08] For clock hbm_aclk, the auto scaled frequency 465.5 MHz exceeds the original specified frequency. The compiler will select the original specified frequency of 450.0 MHz.
+[14:49:48] Run vpl: Step impl: Completed
+[14:49:48] Run vpl: FINISHED. Run Status: impl Complete!
+INFO: [v++ 60-1441] [14:49:48] Run run_link: Step vpl: Completed
+Time (s): cpu = 00:00:54 ; elapsed = 01:52:07 . Memory (MB): peak = 449.898 ; gain = 0.000 ; free physical = 27782 ; free virtual = 183973
+INFO: [v++ 60-1443] [14:49:48] Run run_link: Step rtdgen: Started
+INFO: [v++ 60-1453] Command Line: rtdgen
+INFO: [v++ 60-1454] Run Directory: /home/linker/hls_ccl/_x/link/run_link
+INFO: [v++ 60-991] clock name 'ulp_ucs/aclk_kernel_01' (clock ID '1') is being mapped to clock name 'KERNEL_CLK' in the xclbin
+INFO: [v++ 60-991] clock name 'ulp_ucs/aclk_kernel_00' (clock ID '0') is being mapped to clock name 'DATA_CLK' in the xclbin
+INFO: [v++ 60-991] clock name 'hbm_aclk' (clock ID '') is being mapped to clock name 'hbm_aclk' in the xclbin
+INFO: [v++ 60-1230] The compiler selected the following frequencies for the runtime controllable kernel clock(s) and scalable system clock(s): System (SYSTEM) clock: hbm_aclk = 450, Kernel (KERNEL) clock: ulp_ucs/aclk_kernel_01 = 500, Kernel (DATA) clock: ulp_ucs/aclk_kernel_00 = 180
+INFO: [v++ 60-1453] Command Line: cf2sw -force-enable-memory DDR[0] -a /home/linker/hls_ccl/_x/link/int/address_map.xml -sdsl /home/linker/hls_ccl/_x/link/int/sdsl.dat -xclbin /home/linker/hls_ccl/_x/link/int/xclbin_orig.xml -rtd /home/linker/hls_ccl/_x/link/int/kernels.rtd -o /home/linker/hls_ccl/_x/link/int/kernels.xml
+INFO: [v++ 60-1652] Cf2sw returned exit code: 0
+INFO: [v++ 60-1441] [14:49:50] Run run_link: Step rtdgen: Completed
+Time (s): cpu = 00:00:02 ; elapsed = 00:00:02 . Memory (MB): peak = 449.898 ; gain = 0.000 ; free physical = 27765 ; free virtual = 183957
+INFO: [v++ 60-1443] [14:49:50] Run run_link: Step xclbinutil: Started
+INFO: [v++ 60-1453] Command Line: xclbinutil --add-section DEBUG_IP_LAYOUT:JSON:/home/linker/hls_ccl/_x/link/int/debug_ip_layout.rtd --add-section BITSTREAM:RAW:/home/linker/hls_ccl/_x/link/int/partial.bit --force --target hw --key-value SYS:dfx_enable:true --add-section :JSON:/home/linker/hls_ccl/_x/link/int/kernels.rtd --append-section :JSON:/home/linker/hls_ccl/_x/link/int/appendSection.rtd --add-section CLOCK_FREQ_TOPOLOGY:JSON:/home/linker/hls_ccl/_x/link/int/kernels_xml.rtd --add-section BUILD_METADATA:JSON:/home/linker/hls_ccl/_x/link/int/kernels_build.rtd --add-section EMBEDDED_METADATA:RAW:/home/linker/hls_ccl/_x/link/int/kernels.xml --add-section SYSTEM_METADATA:RAW:/home/linker/hls_ccl/_x/link/int/systemDiagramModelSlrBaseAddress.json --key-value SYS:PlatformVBNV:xilinx_u280_gen3x16_xdma_1_202211_1 --output /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/bin/kernels.xclbin
+INFO: [v++ 60-1454] Run Directory: /home/linker/hls_ccl/_x/link/run_link
+XRT Build Version: 2.15.225 (2023.1)
+       Build Date: 2023-05-03 10:13:19
+          Hash ID: adf27adb3cfadc6e4c41d6db814159f1329b24f3
+Creating a default 'in-memory' xclbin image.
+
+Section: 'DEBUG_IP_LAYOUT'(9) was successfully added.
+Size   : 1304 bytes
+Format : JSON
+File   : '/home/linker/hls_ccl/_x/link/int/debug_ip_layout.rtd'
+
+Section: 'BITSTREAM'(0) was successfully added.
+Size   : 64987010 bytes
+Format : RAW
+File   : '/home/linker/hls_ccl/_x/link/int/partial.bit'
+
+Section: 'MEM_TOPOLOGY'(6) was successfully added.
+Format : JSON
+File   : 'mem_topology'
+
+Section: 'IP_LAYOUT'(8) was successfully added.
+Format : JSON
+File   : 'ip_layout'
+
+Section: 'CONNECTIVITY'(7) was successfully added.
+Format : JSON
+File   : 'connectivity'
+
+Section: 'CLOCK_FREQ_TOPOLOGY'(11) was successfully added.
+Size   : 410 bytes
+Format : JSON
+File   : '/home/linker/hls_ccl/_x/link/int/kernels_xml.rtd'
+
+Section: 'BUILD_METADATA'(14) was successfully added.
+Size   : 3844 bytes
+Format : JSON
+File   : '/home/linker/hls_ccl/_x/link/int/kernels_build.rtd'
+
+Section: 'EMBEDDED_METADATA'(2) was successfully added.
+Size   : 18131 bytes
+Format : RAW
+File   : '/home/linker/hls_ccl/_x/link/int/kernels.xml'
+
+Section: 'SYSTEM_METADATA'(22) was successfully added.
+Size   : 34305 bytes
+Format : RAW
+File   : '/home/linker/hls_ccl/_x/link/int/systemDiagramModelSlrBaseAddress.json'
+
+Section: 'PARTITION_METADATA'(20) was successfully appended to.
+Format : JSON
+File   : 'partition_metadata'
+
+Section: 'IP_LAYOUT'(8) was successfully appended to.
+Format : JSON
+File   : 'ip_layout'
+Successfully wrote (65077077 bytes) to the output file: /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/bin/kernels.xclbin
+Leaving xclbinutil.
+INFO: [v++ 60-1441] [14:49:51] Run run_link: Step xclbinutil: Completed
+Time (s): cpu = 00:00:00.03 ; elapsed = 00:00:00.09 . Memory (MB): peak = 449.898 ; gain = 0.000 ; free physical = 27702 ; free virtual = 183956
+INFO: [v++ 60-1443] [14:49:51] Run run_link: Step xclbinutilinfo: Started
+INFO: [v++ 60-1453] Command Line: xclbinutil --quiet --force --info /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/bin/kernels.xclbin.info --input /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/bin/kernels.xclbin
+INFO: [v++ 60-1454] Run Directory: /home/linker/hls_ccl/_x/link/run_link
+INFO: [v++ 60-1441] [14:49:51] Run run_link: Step xclbinutilinfo: Completed
+Time (s): cpu = 00:00:00.31 ; elapsed = 00:00:00.34 . Memory (MB): peak = 449.898 ; gain = 0.000 ; free physical = 27708 ; free virtual = 183961
+INFO: [v++ 60-1443] [14:49:51] Run run_link: Step generate_sc_driver: Started
+INFO: [v++ 60-1453] Command Line: 
+INFO: [v++ 60-1454] Run Directory: /home/linker/hls_ccl/_x/link/run_link
+INFO: [v++ 60-1441] [14:49:51] Run run_link: Step generate_sc_driver: Completed
+Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 449.898 ; gain = 0.000 ; free physical = 27708 ; free virtual = 183961
+Check POST-VPL, containing 1 checks, has run: 0 errors
+INFO: [v++ 60-244] Generating system estimate report...
+INFO: [v++ 60-1092] Generated system estimate report: /home/linker/hls_ccl/_x/reports/link/system_estimate_kernels.xtxt
+INFO: [v++ 60-586] Created /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/bin/kernels.ltx
+INFO: [v++ 60-586] Created /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/bin/kernels.xclbin
+INFO: [v++ 60-1307] Run completed. Additional information can be found in:
+        Guidance: /home/linker/hls_ccl/_x/reports/link/v++_link_kernels_guidance.html
+        Timing Report: /home/linker/hls_ccl/_x/reports/link/imp/impl_1_hw_bb_locked_timing_summary_routed.rpt
+        Vivado Log: /home/linker/hls_ccl/_x/logs/link/vivado.log
+        Steps Log File: /home/linker/hls_ccl/_x/logs/link/link.steps.log
+
+INFO: [v++ 60-2343] Use the vitis_analyzer tool to visualize and navigate the relevant reports. Run the following command. 
+    vitis_analyzer /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/bin/kernels.xclbin.link_summary 
+INFO: [v++ 60-791] Total elapsed time: 1h 52m 36s
+INFO: [v++ 60-1653] Closing dispatch client.
+g++ -g -Wno-unknown-pragmas -pthread -std=c++17 -Wall -O0 -I/home/linker/hls_ccl/ext/CLI11/include -I/home/linker/hls_ccl/inc -isystem /opt/xilinx/Vitis_HLS/2023.1/include -I/opt/xilinx/xrt/include   /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/obj/host.o /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/obj/kernels.o -o /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/bin/app_hw -Itemp -lxrt_coreutil -L./home/linker/hls_ccl/inc -L/opt/xilinx/Vitis_HLS/2023.1/lib -L/opt/xilinx/xrt/lib
+
+#################################################################################################################################################################################################################################################################################################################################
+#################################################################################################################################################################################################################################################################################################################################
+#################################################################################################################################################################################################################################################################################################################################
+Run:
+#################################################################################################################################################################################################################################################################################################################################
+
+
+[INFO] Running test for mode: hw
+[INFO] Commandline arguments:
+[    ] XCL bibnary file/home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/bin/kernels.xclbin
+[    ] Input files
+[INFO] CSV-file has correct format
+[INFO] Number of edges: 24 number of nodes: 11
+[INFO] Opening the target device: 0
+[INFO] Loading XCLbin: /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/bin/kernels.xclbin
+[INFO] Size of egdes:  96 Bytes
+[    ] Size of scores: 96 Bytes
+[    ] Size of labels: 44 Bytes
+[INFO] Allocate Buffer in Global Memory
+[INFO] Fill input Buffers with data from CSV-file
+[INFO] Synchronize input buffer data to device global memory
+[INFO] Execute Kernel
+XRT build version: 2.15.225
+Build hash: adf27adb3cfadc6e4c41d6db814159f1329b24f3
+Build date: 2023-05-03 10:13:19
+Git branch: 2023.1
+PID: 2005180
+UID: 1004
+[Wed Sep 11 12:50:49 2024 GMT]
+HOST: fpga-dittmeier
+EXE: /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/bin/app_hw
+[XRT] WARNING: Kernel CCL has no compute units with connectivity required for global argument at index 3. The argument is allocated in bank 5, the compute unit is connected to bank 4. Allocating local copy of argument buffer in connected bank.
+[XRT] WARNING: Reverting to host copy of buffers (failed to launch execution buffer: Invalid argument)
+terminate called after throwing an instance of 'xrt_core::system_error'
+  what():  No host side buffer in destination buffer: Invalid argument
+./run_test.sh: line 25: 2005180 Aborted                 (core dumped) ${FPGA_PATH2EMU_BIN}/app_${XCL_EMULATION_MODE_CHANGED} --xclbin ${FPGA_PATH2EMU_BIN}/kernels.xclbin
+
+

@@ -166,6 +166,7 @@ extern "C" {
     static unsigned int labels[MAX_TRUE_NODES];
     static unsigned int lookup[MAX_TOTAL_NODES];
     #pragma HLS STREAM variable=graph type=pipo
+    #pragma HLS array_partition variable=graph type=block factor=4 dim=1
     #pragma HLS STREAM variable=graph_connections type=pipo
     #pragma HLS STREAM variable=labels type=pipo
     #pragma HLS STREAM variable=lookup type=pipo

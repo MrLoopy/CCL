@@ -158,7 +158,11 @@ int main (int argc, char ** argv){
   std::cout << "[INFO] Size of egdes:  " << size_edges_byte << " Bytes" << std::endl;
   std::cout << "[    ] Size of scores: " << size_scores_byte << " Bytes" << std::endl;
   std::cout << "[    ] Size of labels: " << size_labels_byte << " Bytes" << std::endl;
-
+  // ##########################
+  size_t size_graph_byte = sizeof(unsigned int) * MAX_TRUE_NODES * MAX_EDGES;
+  size_t size_lookup_byte = sizeof(unsigned int) * MAX_TOTAL_NODES;
+  // ##########################
+  
   //
   // Define Kernel Function to be executed on Device
   //
@@ -177,9 +181,19 @@ int main (int argc, char ** argv){
   auto map_in_edge_to     = buffer_in_edge_to.map<unsigned int*>();
   auto map_in_scores      = buffer_in_scores.map<float*>();
   auto map_out_labels     = buffer_out_labels.map<unsigned int*>();
+  // ##########################
+  auto buffer_inout_graph = xrt::bo(targetDevice, size_graph_byte, krnl.group_id(4));
+  auto map_inout_graph    = buffer_inout_graph.map<unsigned int*>();
+  auto buffer_inout_lookup = xrt::bo(targetDevice, size_lookup_byte, krnl.group_id(4));
+  auto map_inout_lookup    = buffer_inout_lookup.map<unsigned int*>();
+  // ##########################
 
   //set to const 0 for output only -> necessary?
   std::fill(map_out_labels, map_out_labels + num_nodes, -1);
+  // ##########################
+  std::fill(map_inout_graph, map_inout_graph + MAX_TRUE_NODES * MAX_EDGES, 0);
+  std::fill(map_inout_lookup, map_inout_lookup + MAX_TOTAL_NODES, 0);
+  // ##########################
 
   //
   // Fill input buffers with test data from CSV
@@ -198,12 +212,16 @@ int main (int argc, char ** argv){
   buffer_in_edge_from.sync(XCL_BO_SYNC_BO_TO_DEVICE);
   buffer_in_edge_to.sync(XCL_BO_SYNC_BO_TO_DEVICE);
   buffer_in_scores.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+  // ##########################
+  buffer_inout_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+  buffer_inout_lookup.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+  // ##########################
 
   //
   // Execute Kernel
   //
   std::cout << "[INFO] Execute Kernel" << std::endl;
-  auto run = krnl(buffer_in_edge_from, buffer_in_edge_to, buffer_in_scores, buffer_out_labels, num_edges, num_nodes);
+  auto run = krnl(buffer_in_edge_from, buffer_in_edge_to, buffer_in_scores, buffer_inout_graph, buffer_inout_lookup, buffer_out_labels, num_edges, num_nodes);
   run.wait();
 
   //

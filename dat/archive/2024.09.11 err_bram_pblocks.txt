@@ -1,0 +1,880 @@
+g++ -g -Wno-unknown-pragmas -pthread -std=c++17 -Wall -O0 -I/home/linker/hls_ccl/ext/CLI11/include -I/home/linker/hls_ccl/inc -isystem /opt/xilinx/Vitis_HLS/2023.1/include -I/opt/xilinx/xrt/include   -c /home/linker/hls_ccl/src/host.cpp -o /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/obj/host.o
+#g++ -g -Wno-unknown-pragmas -pthread -std=c++17 -Wall -O0 -I/home/linker/hls_ccl/ext/CLI11/include -I/home/linker/hls_ccl/inc -isystem /opt/xilinx/Vitis_HLS/2023.1/include -I/opt/xilinx/xrt/include   -c /home/linker/hls_ccl/src/kernels.cpp -o /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/obj/kernels.o
+v++ -g -c -t hw \
+        --platform xilinx_u280_gen3x16_xdma_1_202211_1 \
+        --config /home/linker/hls_ccl/conf/u280.cfg \
+        -k CCL \
+        -I /home/linker/hls_ccl/inc /home/linker/hls_ccl/src/kernels.cpp -o /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/obj/kernels.xo
+Option Map File Used: '/opt/xilinx/Vitis/2023.1/data/vitis/vpp/optMap.xml'
+INFO: [v++ 82-4274] Default memory will be used for trace offload
+
+****** v++ v2023.1 (64-bit)
+  **** SW Build 3860322 on 2023-05-04-06:32:48
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2023 Advanced Micro Devices, Inc. All Rights Reserved.
+
+INFO: [v++ 60-1306] Additional information associated with this v++ compile can be found at:
+        Reports: /home/linker/hls_ccl/_x/reports/kernels
+        Log files: /home/linker/hls_ccl/_x/logs/kernels
+Running Dispatch Server on port: 3781
+INFO: [v++ 60-1548] Creating build summary session with primary output /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/obj/kernels.xo.compile_summary, at Wed Sep 11 11:29:29 2024
+INFO: [v++ 60-1315] Creating rulecheck session with output '/home/linker/hls_ccl/_x/reports/kernels/v++_compile_kernels_guidance.html', at Wed Sep 11 11:29:29 2024
+INFO: [v++ 60-895]   Target platform: /opt/xilinx/platforms/xilinx_u280_gen3x16_xdma_1_202211_1/xilinx_u280_gen3x16_xdma_1_202211_1.xpfm
+INFO: [v++ 60-1578]   This platform contains Xilinx Shell Archive '/opt/xilinx/platforms/xilinx_u280_gen3x16_xdma_1_202211_1/hw/hw.xsa'
+INFO: [v++ 74-78] Compiler Version string: 2023.1
+INFO: [v++ 60-585] Compiling for hardware target
+INFO: [v++ 60-423]   Target device: xilinx_u280_gen3x16_xdma_1_202211_1
+INFO: [v++ 60-242] Creating kernel: 'CCL'
+
+===>The following messages were generated while  performing high-level synthesis for kernel: CCL Log file: /home/linker/hls_ccl/_x/kernels/CCL/vitis_hls.log :
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_11_1'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 3, loop 'VITIS_LOOP_11_1'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_11_1'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 74, loop 'VITIS_LOOP_11_1'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_16_1'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 74, loop 'VITIS_LOOP_16_1'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_41_1'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 1, loop 'VITIS_LOOP_41_1'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_44_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 1, loop 'VITIS_LOOP_44_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_51_3'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 6, Depth = 81, loop 'VITIS_LOOP_51_3'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_84_4'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 3, loop 'VITIS_LOOP_84_4'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_86_5'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 3, loop 'VITIS_LOOP_86_5'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_95_1'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 1, loop 'VITIS_LOOP_95_1'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_98_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 1, loop 'VITIS_LOOP_98_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_115_4'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 1, loop 'VITIS_LOOP_115_4'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_133_6'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 2, loop 'VITIS_LOOP_133_6'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_136_7'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 3, loop 'VITIS_LOOP_136_7'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_148_8'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 2, loop 'VITIS_LOOP_148_8'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_22_1'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 5, loop 'VITIS_LOOP_22_1'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_31_1'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 3, loop 'VITIS_LOOP_31_1'
+INFO: [v++ 200-790] **** Loop Constraint Status: All loop constraints were satisfied.
+INFO: [v++ 200-789] **** Estimated Fmax: 411.00 MHz
+INFO: [v++ 60-594] Finished kernel compilation
+INFO: [v++ 60-244] Generating system estimate report...
+INFO: [v++ 60-1092] Generated system estimate report: /home/linker/hls_ccl/_x/reports/kernels/system_estimate_kernels.xtxt
+INFO: [v++ 60-586] Created /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/obj/kernels.xo
+INFO: [v++ 60-2343] Use the vitis_analyzer tool to visualize and navigate the relevant reports. Run the following command. 
+    vitis_analyzer /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/obj/kernels.xo.compile_summary 
+INFO: [v++ 60-791] Total elapsed time: 0h 1m 9s
+INFO: [v++ 60-1653] Closing dispatch client.
+v++ -g -l -t hw \
+        --platform xilinx_u280_gen3x16_xdma_1_202211_1 \
+        --config /home/linker/hls_ccl/conf/u280.cfg \
+        /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/obj/kernels.xo -o /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/bin/kernels.xclbin
+Option Map File Used: '/opt/xilinx/Vitis/2023.1/data/vitis/vpp/optMap.xml'
+INFO: [v++ 82-4274] Default memory will be used for trace offload
+
+****** v++ v2023.1 (64-bit)
+  **** SW Build 3860322 on 2023-05-04-06:32:48
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2023 Advanced Micro Devices, Inc. All Rights Reserved.
+
+INFO: [v++ 60-1306] Additional information associated with this v++ link can be found at:
+        Reports: /home/linker/hls_ccl/_x/reports/link
+        Log files: /home/linker/hls_ccl/_x/logs/link
+Running Dispatch Server on port: 24469
+INFO: [v++ 60-1548] Creating build summary session with primary output /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/bin/kernels.xclbin.link_summary, at Wed Sep 11 11:30:39 2024
+INFO: [v++ 60-1315] Creating rulecheck session with output '/home/linker/hls_ccl/_x/reports/link/v++_link_kernels_guidance.html', at Wed Sep 11 11:30:39 2024
+INFO: [v++ 60-895]   Target platform: /opt/xilinx/platforms/xilinx_u280_gen3x16_xdma_1_202211_1/xilinx_u280_gen3x16_xdma_1_202211_1.xpfm
+INFO: [v++ 60-1578]   This platform contains Xilinx Shell Archive '/opt/xilinx/platforms/xilinx_u280_gen3x16_xdma_1_202211_1/hw/hw.xsa'
+INFO: [v++ 74-78] Compiler Version string: 2023.1
+INFO: [v++ 82-4274] Default memory will be used for trace offload
+INFO: [v++ 60-629] Linking for hardware target
+INFO: [v++ 60-423]   Target device: xilinx_u280_gen3x16_xdma_1_202211_1
+INFO: [v++ 60-1332] Run 'run_link' status: Not started
+INFO: [v++ 60-1443] [11:30:42] Run run_link: Step system_link: Started
+INFO: [v++ 60-1453] Command Line: system_link --xo /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/obj/kernels.xo -keep -memory-for-trace DDR[0] --config /home/linker/hls_ccl/_x/link/int/syslinkConfig.ini --xpfm /opt/xilinx/platforms/xilinx_u280_gen3x16_xdma_1_202211_1/xilinx_u280_gen3x16_xdma_1_202211_1.xpfm --target hw --output_dir /home/linker/hls_ccl/_x/link/int --temp_dir /home/linker/hls_ccl/_x/link/sys_link
+INFO: [v++ 60-1454] Run Directory: /home/linker/hls_ccl/_x/link/run_link
+INFO: [SYSTEM_LINK 82-70] Extracting xo v3 file /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/obj/kernels.xo
+INFO: [SYSTEM_LINK 82-53] Creating IP database /home/linker/hls_ccl/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml
+INFO: [SYSTEM_LINK 82-38] [11:30:43] build_xd_ip_db started: /opt/xilinx/Vitis/2023.1/bin/build_xd_ip_db -ip_search 0  -sds-pf /home/linker/hls_ccl/_x/link/sys_link/hw.hpfm -clkid 0 -ip /home/linker/hls_ccl/_x/link/sys_link/iprepo/xilinx_com_hls_CCL_1_0,CCL -o /home/linker/hls_ccl/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml
+INFO: [SYSTEM_LINK 82-37] [11:30:47] build_xd_ip_db finished successfully
+Time (s): cpu = 00:00:04 ; elapsed = 00:00:05 . Memory (MB): peak = 443.875 ; gain = 0.000 ; free physical = 28515 ; free virtual = 188276
+INFO: [SYSTEM_LINK 82-51] Create system connectivity graph
+INFO: [SYSTEM_LINK 82-102] Applying explicit connections to the system connectivity graph: /home/linker/hls_ccl/_x/link/sys_link/cfgraph/cfgen_cfgraph.xml
+INFO: [SYSTEM_LINK 82-38] [11:30:47] cfgen started: /opt/xilinx/Vitis/2023.1/bin/cfgen  -nk CCL:1:CCL -sp CCL.in_edge_from:HBM[0] -sp CCL.in_edge_to:HBM[1] -sp CCL.in_scores:HBM[2] -sp CCL.out_labels:HBM[3] -sp CCL.io_graph:HBM[4] -dpa_mem_offload true -dmclkid 0 -r /home/linker/hls_ccl/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml -o /home/linker/hls_ccl/_x/link/sys_link/cfgraph/cfgen_cfgraph.xml
+INFO: [CFGEN 83-0] Kernel Specs: 
+INFO: [CFGEN 83-0]   kernel: CCL, num: 1  {CCL}
+INFO: [CFGEN 83-0] Port Specs: 
+INFO: [CFGEN 83-0]   kernel: CCL, k_port: in_edge_from, sptag: HBM[0]
+INFO: [CFGEN 83-0]   kernel: CCL, k_port: in_edge_to, sptag: HBM[1]
+INFO: [CFGEN 83-0]   kernel: CCL, k_port: in_scores, sptag: HBM[2]
+INFO: [CFGEN 83-0]   kernel: CCL, k_port: out_labels, sptag: HBM[3]
+INFO: [CFGEN 83-0]   kernel: CCL, k_port: io_graph, sptag: HBM[4]
+INFO: [SYSTEM_LINK 82-37] [11:30:51] cfgen finished successfully
+Time (s): cpu = 00:00:04 ; elapsed = 00:00:04 . Memory (MB): peak = 443.875 ; gain = 0.000 ; free physical = 28507 ; free virtual = 188268
+INFO: [SYSTEM_LINK 82-52] Create top-level block diagram
+INFO: [SYSTEM_LINK 82-38] [11:30:51] cf2bd started: /opt/xilinx/Vitis/2023.1/bin/cf2bd  --linux --trace_buffer 1024 --input_file /home/linker/hls_ccl/_x/link/sys_link/cfgraph/cfgen_cfgraph.xml --ip_db /home/linker/hls_ccl/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml --cf_name dr --working_dir /home/linker/hls_ccl/_x/link/sys_link/_sysl/.xsd --temp_dir /home/linker/hls_ccl/_x/link/sys_link --output_dir /home/linker/hls_ccl/_x/link/int --target_bd ulp.bd
+INFO: [CF2BD 82-31] Launching cf2xd: cf2xd -linux -trace-buffer 1024 -i /home/linker/hls_ccl/_x/link/sys_link/cfgraph/cfgen_cfgraph.xml -r /home/linker/hls_ccl/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml -o dr.xml
+INFO: [CF2BD 82-28] cf2xd finished successfully
+INFO: [CF2BD 82-31] Launching cf_xsd: cf_xsd -disable-address-gen -bd ulp.bd -dn dr -dp /home/linker/hls_ccl/_x/link/sys_link/_sysl/.xsd
+INFO: [CF2BD 82-28] cf_xsd finished successfully
+INFO: [SYSTEM_LINK 82-37] [11:30:53] cf2bd finished successfully
+Time (s): cpu = 00:00:02 ; elapsed = 00:00:02 . Memory (MB): peak = 443.875 ; gain = 0.000 ; free physical = 28493 ; free virtual = 188259
+INFO: [v++ 60-1441] [11:30:53] Run run_link: Step system_link: Completed
+Time (s): cpu = 00:00:11 ; elapsed = 00:00:11 . Memory (MB): peak = 449.898 ; gain = 0.000 ; free physical = 28555 ; free virtual = 188322
+INFO: [v++ 60-1443] [11:30:53] Run run_link: Step cf2sw: Started
+INFO: [v++ 60-1453] Command Line: cf2sw -sdsl /home/linker/hls_ccl/_x/link/int/sdsl.dat -rtd /home/linker/hls_ccl/_x/link/int/cf2sw.rtd -nofilter /home/linker/hls_ccl/_x/link/int/cf2sw_full.rtd -xclbin /home/linker/hls_ccl/_x/link/int/xclbin_orig.xml -o /home/linker/hls_ccl/_x/link/int/xclbin_orig.1.xml
+INFO: [v++ 60-1454] Run Directory: /home/linker/hls_ccl/_x/link/run_link
+INFO: [v++ 60-1441] [11:30:55] Run run_link: Step cf2sw: Completed
+Time (s): cpu = 00:00:02 ; elapsed = 00:00:03 . Memory (MB): peak = 449.898 ; gain = 0.000 ; free physical = 28569 ; free virtual = 188336
+INFO: [v++ 60-1443] [11:30:55] Run run_link: Step rtd2_system_diagram: Started
+INFO: [v++ 60-1453] Command Line: rtd2SystemDiagram
+INFO: [v++ 60-1454] Run Directory: /home/linker/hls_ccl/_x/link/run_link
+INFO: [v++ 60-1441] [11:30:56] Run run_link: Step rtd2_system_diagram: Completed
+Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.16 . Memory (MB): peak = 449.898 ; gain = 0.000 ; free physical = 28552 ; free virtual = 188319
+INFO: [v++ 60-1443] [11:30:56] Run run_link: Step vpl: Started
+INFO: [v++ 60-1453] Command Line: vpl -t hw -f xilinx_u280_gen3x16_xdma_1_202211_1 -s -g --remote_ip_cache /home/linker/hls_ccl/.ipcache --trace_memory DDR[0] --output_dir /home/linker/hls_ccl/_x/link/int --log_dir /home/linker/hls_ccl/_x/logs/link --report_dir /home/linker/hls_ccl/_x/reports/link --config /home/linker/hls_ccl/_x/link/int/vplConfig.ini -k /home/linker/hls_ccl/_x/link/int/kernel_info.dat --webtalk_flag Vitis --temp_dir /home/linker/hls_ccl/_x/link --no-info --iprepo /home/linker/hls_ccl/_x/link/int/xo/ip_repo/xilinx_com_hls_CCL_1_0 --messageDb /home/linker/hls_ccl/_x/link/run_link/vpl.pb /home/linker/hls_ccl/_x/link/int/dr.bd.tcl
+INFO: [v++ 60-1454] Run Directory: /home/linker/hls_ccl/_x/link/run_link
+
+****** vpl v2023.1 (64-bit)
+  **** SW Build 3860322 on 2023-05-04-06:32:48
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2023 Advanced Micro Devices, Inc. All Rights Reserved.
+
+INFO: [VPL 60-839] Read in kernel information from file '/home/linker/hls_ccl/_x/link/int/kernel_info.dat'.
+INFO: [VPL 74-78] Compiler Version string: 2023.1
+INFO: [VPL 60-423]   Target device: xilinx_u280_gen3x16_xdma_1_202211_1
+INFO: [VPL 60-1032] Extracting hardware platform to /home/linker/hls_ccl/_x/link/vivado/vpl/.local/hw_platform
+[11:31:04] Run vpl: Step create_project: Started
+Creating Vivado project.
+[11:31:07] Run vpl: Step create_project: Completed
+[11:31:07] Run vpl: Step create_bd: Started
+[11:31:25] Run vpl: Step create_bd: Completed
+[11:31:25] Run vpl: Step update_bd: Started
+[11:32:40] Run vpl: Step update_bd: RUNNING...
+WARNING: [VPL-1] Memory profiling was requested on DDR[0] which is unused. No monitoring will be added on this memory.
+WARNING: [VPL-1] Memory profiling was requested on DDR[1] which is unused. No monitoring will be added on this memory.
+WARNING: [VPL-1] Profiling of HBM is not supported.
+WARNING: [VPL-1] Memory profiling was requested on HOST[0] which is unused. No monitoring will be added on this memory.
+WARNING: [VPL-1] Memory profiling was requested on PLRAM[0] which is unused. No monitoring will be added on this memory.
+WARNING: [VPL-1] Memory profiling was requested on PLRAM[1] which is unused. No monitoring will be added on this memory.
+WARNING: [VPL-1] Memory profiling was requested on PLRAM[2] which is unused. No monitoring will be added on this memory.
+WARNING: [VPL-1] Memory profiling was requested on PLRAM[3] which is unused. No monitoring will be added on this memory.
+WARNING: [VPL-1] Memory profiling was requested on PLRAM[4] which is unused. No monitoring will be added on this memory.
+WARNING: [VPL-1] Memory profiling was requested on PLRAM[5] which is unused. No monitoring will be added on this memory.
+WARNING: [VPL-1] The use of profile options turned on trace, which uses a memory resource in one SLR; however kernels or compute units could potentially be located in multiple SLRs. This may impact timing due to SLR crossing. To improve timing, please consider implementing trace memory in every SLRs used via the linker option: --profile.trace_memory <memory>:<SLR>. SLRs present on the design : SLR0 SLR1 SLR2
+[11:32:42] Run vpl: Step update_bd: Completed
+[11:32:42] Run vpl: Step generate_target: Started
+[11:33:58] Run vpl: Step generate_target: RUNNING...
+[11:34:09] Run vpl: Step generate_target: Completed
+[11:34:09] Run vpl: Step config_hw_runs: Started
+[11:34:11] Run vpl: Step config_hw_runs: Completed
+[11:34:11] Run vpl: Step synth: Started
+[11:34:42] Block-level synthesis in progress, 0 of 9 jobs complete, 8 jobs running.
+[11:35:12] Block-level synthesis in progress, 2 of 9 jobs complete, 6 jobs running.
+[11:35:42] Block-level synthesis in progress, 7 of 9 jobs complete, 1 job running.
+[11:36:12] Block-level synthesis in progress, 7 of 9 jobs complete, 2 jobs running.
+[11:36:42] Block-level synthesis in progress, 8 of 9 jobs complete, 1 job running.
+[11:37:12] Block-level synthesis in progress, 8 of 9 jobs complete, 1 job running.
+[11:37:42] Block-level synthesis in progress, 8 of 9 jobs complete, 1 job running.
+[11:38:13] Top-level synthesis in progress.
+[11:38:43] Top-level synthesis in progress.
+[11:38:56] Run vpl: Step synth: Completed
+[11:38:56] Run vpl: Step impl: Started
+[11:45:58] Finished 2nd of 6 tasks (FPGA linking synthesized kernels to platform). Elapsed time: 00h 15m 01s 
+
+[11:45:58] Starting logic optimization..
+[11:45:58] Phase 1 Generate And Synthesize MIG Cores
+[11:48:59] Phase 2 Generate And Synthesize Debug Cores
+[11:49:59] Phase 3 Retarget
+[11:50:30] Phase 4 Constant propagation
+[11:50:30] Phase 5 Sweep
+[11:51:30] Phase 6 BUFG optimization
+[11:51:30] Phase 7 Shift Register Optimization
+[11:51:30] Phase 8 Post Processing Netlist
+[11:52:30] Finished 3rd of 6 tasks (FPGA logic optimization). Elapsed time: 00h 06m 32s 
+
+[11:52:30] Starting logic placement..
+[11:53:01] Phase 1 Placer Initialization
+[11:53:01] Phase 1.1 Placer Initialization Netlist Sorting
+[11:55:31] Phase 1.2 IO Placement/ Clock Placement/ Build Placer Device
+[11:56:32] Phase 1.3 Build Placer Netlist Model
+[11:58:33] Phase 1.4 Constrain Clocks/Macros
+[11:58:33] Phase 2 Global Placement
+[11:58:33] Phase 2.1 Floorplanning
+[11:59:33] Phase 2.1.1 Partition Driven Placement
+[11:59:33] Phase 2.1.1.1 PBP: Partition Driven Placement
+[12:01:04] Phase 2.1.1.2 PBP: Clock Region Placement
+[12:01:34] Phase 2.1.1.3 PBP: Discrete Incremental
+[12:02:04] Phase 2.1.1.4 PBP: Compute Congestion
+[12:02:35] Phase 2.1.1.5 PBP: Macro Placement
+[12:03:05] Phase 2.1.1.6 PBP: UpdateTiming
+[12:03:35] Phase 2.1.1.7 PBP: Add part constraints
+[12:03:35] Phase 2.2 Physical Synthesis After Floorplan
+[12:04:06] Phase 2.3 Update Timing before SLR Path Opt
+[12:04:36] Phase 2.4 Post-Processing in Floorplanning
+[12:04:36] Phase 2.5 Global Placement Core
+[12:12:40] Run vpl: Step impl: Failed
+[12:12:40] Run vpl: FINISHED. Run Status: impl ERROR
+
+===>The following messages were generated while processing /home/linker/hls_ccl/_x/link/vivado/vpl/prj/prj.runs/impl_1 :
+ERROR: [VPL 30-859] The number of BRAM cells that have to be placed in a constraint region exceeds the number of corresponding sites available.
+49 or more BRAM failed to place. 
+Some BRAM sites are excluded by the following pblocks. Check whether sufficient sites exist for BRAM instances not included in the exclude pblocks.
+Exclude pblock 'pblock_dynamic_region': with ranges:
+URAM288_X0Y0:URAM288_X4Y191
+RIU_OR_X0Y16:RIU_OR_X0Y43
+RIU_OR_X0Y0:RIU_OR_X0Y11
+RAMB36_X12Y132:RAMB36_X13Y143
+RAMB36_X12Y0:RAMB36_X13Y11
+RAMB36_X0Y0:RAMB36_X11Y143
+RAMB18_X12Y264:RAMB18_X13Y287
+RAMB18_X12Y0:RAMB18_X13Y23
+RAMB18_X0Y0:RAMB18_X11Y287
+PLL_X0Y8:PLL_X0Y21
+PLL_X0Y0:PLL_X0Y5
+PCIE4CE4_X0Y0:PCIE4CE4_X0Y1
+MMCM_X0Y4:MMCM_X0Y10
+MMCM_X0Y0:MMCM_X0Y2
+LAGUNA_X28Y480:LAGUNA_X31Y599
+LAGUNA_X0Y0:LAGUNA_X27Y599
+IOB_X0Y208:IOB_X0Y571
+IOB_X0Y0:IOB_X0Y155
+ILKNE4_X1Y3:ILKNE4_X1Y3
+ILKNE4_X0Y2:ILKNE4_X0Y2
+ILKNE4_X0Y0:ILKNE4_X0Y0
+HPIO_VREF_SITE_X0Y8:HPIO_VREF_SITE_X0Y21
+HPIO_VREF_SITE_X0Y0:HPIO_VREF_SITE_X0Y5
+HPIO_RCLK_PRBS_X0Y4:HPIO_RCLK_PRBS_X0Y10
+HPIO_RCLK_PRBS_X0Y0:HPIO_RCLK_PRBS_X0Y2
+HPIOB_DCI_SNGL_X0Y16:HPIOB_DCI_SNGL_X0Y43
+HPIOB_DCI_SNGL_X0Y0:HPIOB_DCI_SNGL_X0Y11
+HPIOBDIFFOUTBUF_X0Y96:HPIOBDIFFOUTBUF_X0Y263
+HPIOBDIFFOUTBUF_X0Y0:HPIOBDIFFOUTBUF_X0Y71
+HPIOBDIFFINBUF_X0Y96:HPIOBDIFFINBUF_X0Y263
+HPIOBDIFFINBUF_X0Y0:HPIOBDIFFINBUF_X0Y71
+HBM_REF_CLK_X0Y0:HBM_REF_CLK_X0Y1
+HARD_SYNC_X24Y22:HARD_SYNC_X27Y23
+HARD_SYNC_X24Y0:HARD_SYNC_X27Y1
+HARD_SYNC_X0Y0:HARD_SYNC_X23Y23
+GTYE4_COMMON_X1Y11:GTYE4_COMMON_X1Y11
+GTYE4_COMMON_X0Y0:GTYE4_COMMON_X0Y11
+GTYE4_CHANNEL_X1Y44:GTYE4_CHANNEL_X1Y47
+GTYE4_CHANNEL_X0Y0:GTYE4_CHANNEL_X0Y47
+DSP48E2_X29Y258:DSP48E2_X31Y281
+DSP48E2_X29Y0:DSP48E2_X31Y17
+DSP48E2_X0Y0:DSP48E2_X28Y281
+CONFIG_SITE_X0Y2:CONFIG_SITE_X0Y2
+CMACE4_X0Y0:CMACE4_X0Y7
+BUFG_GT_SYNC_X1Y165:BUFG_GT_SYNC_X1Y179
+BUFG_GT_SYNC_X0Y0:BUFG_GT_SYNC_X0Y179
+BUFG_GT_X1Y264:BUFG_GT_X1Y287
+BUFG_GT_X0Y0:BUFG_GT_X0Y287
+BUFGCTRL_X0Y32:BUFGCTRL_X0Y87
+BUFGCTRL_X0Y0:BUFGCTRL_X0Y23
+BUFGCE_DIV_X0Y16:BUFGCE_DIV_X0Y43
+BUFGCE_DIV_X0Y0:BUFGCE_DIV_X0Y11
+BUFGCE_X0Y96:BUFGCE_X0Y263
+BUFGCE_X0Y0:BUFGCE_X0Y71
+BLI_HBM_AXI_INTF_X0Y0:BLI_HBM_AXI_INTF_X31Y0
+BLI_HBM_APB_INTF_X0Y0:BLI_HBM_APB_INTF_X31Y0
+BITSLICE_TX_X0Y32:BITSLICE_TX_X0Y87
+BITSLICE_TX_X0Y0:BITSLICE_TX_X0Y23
+BITSLICE_RX_TX_X0Y208:BITSLICE_RX_TX_X0Y571
+BITSLICE_RX_TX_X0Y0:BITSLICE_RX_TX_X0Y155
+BITSLICE_CONTROL_X0Y32:BITSLICE_CONTROL_X0Y87
+BITSLICE_CONTROL_X0Y0:BITSLICE_CONTROL_X0Y23
+BIAS_X0Y8:BIAS_X0Y21
+BIAS_X0Y0:BIAS_X0Y5
+SLICE_X226Y660:SLICE_X232Y719
+SLICE_X222Y0:SLICE_X231Y59
+SLICE_X215Y660:SLICE_X224Y719
+SLICE_X220Y540:SLICE_X221Y599
+SLICE_X197Y0:SLICE_X219Y59
+SLICE_X197Y660:SLICE_X213Y719
+SLICE_X195Y0:SLICE_X196Y719
+SLICE_X194Y540:SLICE_X194Y659
+SLICE_X194Y300:SLICE_X194Y419
+SLICE_X194Y0:SLICE_X194Y179
+SLICE_X183Y0:SLICE_X193Y719
+SLICE_X182Y540:SLICE_X182Y659
+SLICE_X182Y300:SLICE_X182Y419
+SLICE_X182Y0:SLICE_X182Y179
+SLICE_X165Y0:SLICE_X181Y719
+SLICE_X164Y540:SLICE_X164Y659
+SLICE_X164Y300:SLICE_X164Y419
+SLICE_X164Y0:SLICE_X164Y179
+SLICE_X153Y0:SLICE_X163Y719
+SLICE_X152Y540:SLICE_X152Y659
+SLICE_X152Y300:SLICE_X152Y419
+SLICE_X152Y0:SLICE_X152Y179
+SLICE_X140Y0:SLICE_X151Y719
+SLICE_X139Y540:SLICE_X139Y659
+SLICE_X139Y300:SLICE_X139Y419
+SLICE_X139Y0:SLICE_X139Y179
+SLICE_X125Y0:SLICE_X138Y719
+SLICE_X124Y540:SLICE_X124Y659
+SLICE_X124Y300:SLICE_X124Y419
+SLICE_X124Y0:SLICE_X124Y179
+SLICE_X118Y0:SLICE_X123Y719
+SLICE_X117Y240:SLICE_X117Y659
+SLICE_X117Y0:SLICE_X117Y179
+SLICE_X112Y0:SLICE_X116Y719
+SLICE_X111Y540:SLICE_X111Y659
+SLICE_X111Y300:SLICE_X111Y419
+SLICE_X111Y0:SLICE_X111Y179
+SLICE_X98Y0:SLICE_X110Y719
+SLICE_X97Y540:SLICE_X97Y659
+SLICE_X97Y300:SLICE_X97Y419
+SLICE_X97Y0:SLICE_X97Y179
+SLICE_X86Y0:SLICE_X96Y719
+SLICE_X85Y540:SLICE_X85Y659
+SLICE_X85Y300:SLICE_X85Y419
+SLICE_X85Y0:SLICE_X85Y179
+SLICE_X64Y0:SLICE_X84Y719
+SLICE_X63Y540:SLICE_X63Y659
+SLICE_X63Y300:SLICE_X63Y419
+SLICE_X63Y0:SLICE_X63Y179
+SLICE_X51Y0:SLICE_X62Y719
+SLICE_X50Y540:SLICE_X50Y659
+SLICE_X50Y300:SLICE_X50Y419
+SLICE_X50Y0:SLICE_X50Y179
+SLICE_X38Y0:SLICE_X49Y719
+SLICE_X37Y540:SLICE_X37Y659
+SLICE_X37Y300:SLICE_X37Y419
+SLICE_X37Y0:SLICE_X37Y179
+SLICE_X20Y0:SLICE_X36Y719
+SLICE_X19Y540:SLICE_X19Y659
+SLICE_X19Y300:SLICE_X19Y419
+SLICE_X19Y0:SLICE_X19Y179
+SLICE_X9Y0:SLICE_X18Y719
+SLICE_X8Y540:SLICE_X8Y659
+SLICE_X8Y300:SLICE_X8Y419
+SLICE_X8Y0:SLICE_X8Y179
+SLICE_X0Y0:SLICE_X7Y719
+The unplaced BRAM are constrained as below: (listing maximum of 20 BRAMs per constraint)
+Pblock 'pblock_dynamic_SLR0':
+Pblock ranges:
+URAM288_X0Y0:URAM288_X4Y63
+RIU_OR_X0Y0:RIU_OR_X0Y11
+RAMB36_X12Y0:RAMB36_X13Y11
+RAMB36_X0Y0:RAMB36_X11Y47
+RAMB18_X12Y0:RAMB18_X13Y23
+RAMB18_X0Y0:RAMB18_X11Y95
+PLL_X0Y0:PLL_X0Y5
+PCIE4CE4_X0Y0:PCIE4CE4_X0Y1
+MMCM_X0Y0:MMCM_X0Y2
+IOB_X0Y0:IOB_X0Y155
+HPIO_VREF_SITE_X0Y0:HPIO_VREF_SITE_X0Y5
+HPIO_RCLK_PRBS_X0Y0:HPIO_RCLK_PRBS_X0Y2
+HPIOB_DCI_SNGL_X0Y0:HPIOB_DCI_SNGL_X0Y11
+HPIOBDIFFOUTBUF_X0Y0:HPIOBDIFFOUTBUF_X0Y71
+HPIOBDIFFINBUF_X0Y0:HPIOBDIFFINBUF_X0Y71
+HBM_REF_CLK_X0Y0:HBM_REF_CLK_X0Y1
+HARD_SYNC_X24Y0:HARD_SYNC_X27Y1
+HARD_SYNC_X0Y0:HARD_SYNC_X23Y7
+GTYE4_COMMON_X0Y0:GTYE4_COMMON_X0Y3
+GTYE4_CHANNEL_X0Y0:GTYE4_CHANNEL_X0Y15
+DSP48E2_X29Y0:DSP48E2_X31Y17
+DSP48E2_X0Y0:DSP48E2_X28Y89
+CMACE4_X0Y0:CMACE4_X0Y1
+BUFG_GT_SYNC_X0Y0:BUFG_GT_SYNC_X0Y59
+BUFG_GT_X0Y0:BUFG_GT_X0Y95
+BUFGCTRL_X0Y0:BUFGCTRL_X0Y23
+BUFGCE_DIV_X0Y0:BUFGCE_DIV_X0Y11
+BUFGCE_X0Y0:BUFGCE_X0Y71
+BLI_HBM_AXI_INTF_X0Y0:BLI_HBM_AXI_INTF_X29Y0
+BLI_HBM_APB_INTF_X0Y0:BLI_HBM_APB_INTF_X29Y0
+BITSLICE_TX_X0Y0:BITSLICE_TX_X0Y23
+BITSLICE_RX_TX_X0Y0:BITSLICE_RX_TX_X0Y155
+BITSLICE_CONTROL_X0Y0:BITSLICE_CONTROL_X0Y23
+BIAS_X0Y0:BIAS_X0Y5
+SLICE_X230Y0:SLICE_X231Y59
+SLICE_X229Y15:SLICE_X229Y59
+SLICE_X222Y0:SLICE_X228Y59
+SLICE_X217Y0:SLICE_X219Y59
+SLICE_X216Y15:SLICE_X216Y59
+SLICE_X197Y0:SLICE_X215Y59
+SLICE_X196Y0:SLICE_X196Y239
+SLICE_X194Y0:SLICE_X195Y179
+SLICE_X184Y0:SLICE_X193Y239
+SLICE_X182Y0:SLICE_X183Y179
+SLICE_X166Y0:SLICE_X181Y239
+SLICE_X164Y0:SLICE_X165Y179
+SLICE_X154Y0:SLICE_X163Y239
+SLICE_X152Y0:SLICE_X153Y179
+SLICE_X141Y0:SLICE_X151Y239
+SLICE_X139Y0:SLICE_X140Y179
+SLICE_X126Y0:SLICE_X138Y239
+SLICE_X124Y0:SLICE_X125Y179
+SLICE_X118Y0:SLICE_X123Y239
+SLICE_X117Y0:SLICE_X117Y179
+SLICE_X113Y0:SLICE_X116Y239
+SLICE_X111Y0:SLICE_X112Y179
+SLICE_X99Y0:SLICE_X110Y239
+SLICE_X97Y0:SLICE_X98Y179
+SLICE_X87Y0:SLICE_X96Y239
+SLICE_X85Y0:SLICE_X86Y179
+SLICE_X65Y0:SLICE_X84Y239
+SLICE_X63Y0:SLICE_X64Y179
+SLICE_X52Y0:SLICE_X62Y239
+SLICE_X50Y0:SLICE_X51Y179
+SLICE_X39Y0:SLICE_X49Y239
+SLICE_X37Y0:SLICE_X38Y179
+SLICE_X21Y0:SLICE_X36Y239
+SLICE_X19Y0:SLICE_X20Y179
+SLICE_X10Y0:SLICE_X18Y239
+SLICE_X8Y0:SLICE_X9Y179
+SLICE_X0Y0:SLICE_X7Y239
+Area constraint: PBlock
+  level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[2].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_2
+  level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s00_nodes/s00_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_0
+  level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s00_nodes/s00_w_node/inst/inst_mi_handler/gen_normal_area.gen_fifo_req.inst_fifo_req/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_bram_0
+  level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_w_node/inst/inst_mi_handler/gen_normal_area.gen_fifo_req.inst_fifo_req/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_bram_0
+  level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[1].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_2
+  level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_0
+  level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_w_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[2].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_1
+  level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_w_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_0
+  level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[2].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_1
+  level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_1
+  level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[1].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_0
+  level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[2].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_0
+  level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_2
+  level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s00_nodes/s00_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_2
+  level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[1].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_1
+  level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_w_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_1
+  level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_w_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[1].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_2
+  level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s00_nodes/s00_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[1].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_2
+  level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s00_nodes/s00_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[2].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_1
+  level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s00_nodes/s00_w_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[1].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_1
+Tile rectangles examined:
+Pblock 'pblock_dynamic_SLR0
+
+  Number of BRAM required by this constraint: 595
+  Number of BRAM available in this constraint region: 578
+  Number of BRAM blocked in this constraint region: 146
+  Utilization = 102%
+
+  Some of the BRAMs are cascaded BRAMs in SYSTOLIC or PIPELINED mode that cannot cross clock region boundaries for timing reasons. This adds additional placement constraints.
+
+Pblock 'pblock_dynamic_region':
+Pblock ranges:
+URAM288_X0Y0:URAM288_X4Y191
+RIU_OR_X0Y16:RIU_OR_X0Y43
+RIU_OR_X0Y0:RIU_OR_X0Y11
+RAMB36_X12Y132:RAMB36_X13Y143
+RAMB36_X12Y0:RAMB36_X13Y11
+RAMB36_X0Y0:RAMB36_X11Y143
+RAMB18_X12Y264:RAMB18_X13Y287
+RAMB18_X12Y0:RAMB18_X13Y23
+RAMB18_X0Y0:RAMB18_X11Y287
+PLL_X0Y8:PLL_X0Y21
+PLL_X0Y0:PLL_X0Y5
+PCIE4CE4_X0Y0:PCIE4CE4_X0Y1
+MMCM_X0Y4:MMCM_X0Y10
+MMCM_X0Y0:MMCM_X0Y2
+LAGUNA_X28Y480:LAGUNA_X31Y599
+LAGUNA_X0Y0:LAGUNA_X27Y599
+IOB_X0Y208:IOB_X0Y571
+IOB_X0Y0:IOB_X0Y155
+ILKNE4_X1Y3:ILKNE4_X1Y3
+ILKNE4_X0Y2:ILKNE4_X0Y2
+ILKNE4_X0Y0:ILKNE4_X0Y0
+HPIO_VREF_SITE_X0Y8:HPIO_VREF_SITE_X0Y21
+HPIO_VREF_SITE_X0Y0:HPIO_VREF_SITE_X0Y5
+HPIO_RCLK_PRBS_X0Y4:HPIO_RCLK_PRBS_X0Y10
+HPIO_RCLK_PRBS_X0Y0:HPIO_RCLK_PRBS_X0Y2
+HPIOB_DCI_SNGL_X0Y16:HPIOB_DCI_SNGL_X0Y43
+HPIOB_DCI_SNGL_X0Y0:HPIOB_DCI_SNGL_X0Y11
+HPIOBDIFFOUTBUF_X0Y96:HPIOBDIFFOUTBUF_X0Y263
+HPIOBDIFFOUTBUF_X0Y0:HPIOBDIFFOUTBUF_X0Y71
+HPIOBDIFFINBUF_X0Y96:HPIOBDIFFINBUF_X0Y263
+HPIOBDIFFINBUF_X0Y0:HPIOBDIFFINBUF_X0Y71
+HBM_REF_CLK_X0Y0:HBM_REF_CLK_X0Y1
+HARD_SYNC_X24Y22:HARD_SYNC_X27Y23
+HARD_SYNC_X24Y0:HARD_SYNC_X27Y1
+HARD_SYNC_X0Y0:HARD_SYNC_X23Y23
+GTYE4_COMMON_X1Y11:GTYE4_COMMON_X1Y11
+GTYE4_COMMON_X0Y0:GTYE4_COMMON_X0Y11
+GTYE4_CHANNEL_X1Y44:GTYE4_CHANNEL_X1Y47
+GTYE4_CHANNEL_X0Y0:GTYE4_CHANNEL_X0Y47
+DSP48E2_X29Y258:DSP48E2_X31Y281
+DSP48E2_X29Y0:DSP48E2_X31Y17
+DSP48E2_X0Y0:DSP48E2_X28Y281
+CONFIG_SITE_X0Y2:CONFIG_SITE_X0Y2
+CMACE4_X0Y0:CMACE4_X0Y7
+BUFG_GT_SYNC_X1Y165:BUFG_GT_SYNC_X1Y179
+BUFG_GT_SYNC_X0Y0:BUFG_GT_SYNC_X0Y179
+BUFG_GT_X1Y264:BUFG_GT_X1Y287
+BUFG_GT_X0Y0:BUFG_GT_X0Y287
+BUFGCTRL_X0Y32:BUFGCTRL_X0Y87
+BUFGCTRL_X0Y0:BUFGCTRL_X0Y23
+BUFGCE_DIV_X0Y16:BUFGCE_DIV_X0Y43
+BUFGCE_DIV_X0Y0:BUFGCE_DIV_X0Y11
+BUFGCE_X0Y96:BUFGCE_X0Y263
+BUFGCE_X0Y0:BUFGCE_X0Y71
+BLI_HBM_AXI_INTF_X0Y0:BLI_HBM_AXI_INTF_X31Y0
+BLI_HBM_APB_INTF_X0Y0:BLI_HBM_APB_INTF_X31Y0
+BITSLICE_TX_X0Y32:BITSLICE_TX_X0Y87
+BITSLICE_TX_X0Y0:BITSLICE_TX_X0Y23
+BITSLICE_RX_TX_X0Y208:BITSLICE_RX_TX_X0Y571
+BITSLICE_RX_TX_X0Y0:BITSLICE_RX_TX_X0Y155
+BITSLICE_CONTROL_X0Y32:BITSLICE_CONTROL_X0Y87
+BITSLICE_CONTROL_X0Y0:BITSLICE_CONTROL_X0Y23
+BIAS_X0Y8:BIAS_X0Y21
+BIAS_X0Y0:BIAS_X0Y5
+SLICE_X226Y660:SLICE_X232Y719
+SLICE_X222Y0:SLICE_X231Y59
+SLICE_X215Y660:SLICE_X224Y719
+SLICE_X220Y540:SLICE_X221Y599
+SLICE_X197Y0:SLICE_X219Y59
+SLICE_X197Y660:SLICE_X213Y719
+SLICE_X195Y0:SLICE_X196Y719
+SLICE_X194Y540:SLICE_X194Y659
+SLICE_X194Y300:SLICE_X194Y419
+SLICE_X194Y0:SLICE_X194Y179
+SLICE_X183Y0:SLICE_X193Y719
+SLICE_X182Y540:SLICE_X182Y659
+SLICE_X182Y300:SLICE_X182Y419
+SLICE_X182Y0:SLICE_X182Y179
+SLICE_X165Y0:SLICE_X181Y719
+SLICE_X164Y540:SLICE_X164Y659
+SLICE_X164Y300:SLICE_X164Y419
+SLICE_X164Y0:SLICE_X164Y179
+SLICE_X153Y0:SLICE_X163Y719
+SLICE_X152Y540:SLICE_X152Y659
+SLICE_X152Y300:SLICE_X152Y419
+SLICE_X152Y0:SLICE_X152Y179
+SLICE_X140Y0:SLICE_X151Y719
+SLICE_X139Y540:SLICE_X139Y659
+SLICE_X139Y300:SLICE_X139Y419
+SLICE_X139Y0:SLICE_X139Y179
+SLICE_X125Y0:SLICE_X138Y719
+SLICE_X124Y540:SLICE_X124Y659
+SLICE_X124Y300:SLICE_X124Y419
+SLICE_X124Y0:SLICE_X124Y179
+SLICE_X118Y0:SLICE_X123Y719
+SLICE_X117Y240:SLICE_X117Y659
+SLICE_X117Y0:SLICE_X117Y179
+SLICE_X112Y0:SLICE_X116Y719
+SLICE_X111Y540:SLICE_X111Y659
+SLICE_X111Y300:SLICE_X111Y419
+SLICE_X111Y0:SLICE_X111Y179
+SLICE_X98Y0:SLICE_X110Y719
+SLICE_X97Y540:SLICE_X97Y659
+SLICE_X97Y300:SLICE_X97Y419
+SLICE_X97Y0:SLICE_X97Y179
+SLICE_X86Y0:SLICE_X96Y719
+SLICE_X85Y540:SLICE_X85Y659
+SLICE_X85Y300:SLICE_X85Y419
+SLICE_X85Y0:SLICE_X85Y179
+SLICE_X64Y0:SLICE_X84Y719
+SLICE_X63Y540:SLICE_X63Y659
+SLICE_X63Y300:SLICE_X63Y419
+SLICE_X63Y0:SLICE_X63Y179
+SLICE_X51Y0:SLICE_X62Y719
+SLICE_X50Y540:SLICE_X50Y659
+SLICE_X50Y300:SLICE_X50Y419
+SLICE_X50Y0:SLICE_X50Y179
+SLICE_X38Y0:SLICE_X49Y719
+SLICE_X37Y540:SLICE_X37Y659
+SLICE_X37Y300:SLICE_X37Y419
+SLICE_X37Y0:SLICE_X37Y179
+SLICE_X20Y0:SLICE_X36Y719
+SLICE_X19Y540:SLICE_X19Y659
+SLICE_X19Y300:SLICE_X19Y419
+SLICE_X19Y0:SLICE_X19Y179
+SLICE_X9Y0:SLICE_X18Y719
+SLICE_X8Y540:SLICE_X8Y659
+SLICE_X8Y300:SLICE_X8Y419
+SLICE_X8Y0:SLICE_X8Y179
+SLICE_X0Y0:SLICE_X7Y719
+Area constraint: Tool:Combined
+  level0_i/ulp/CCL/inst/lookup_U/CCL_lookup_RAM_AUTO_1R1W_memcore_U/ram_reg_28_3
+  level0_i/ulp/CCL/inst/lookup_U/CCL_lookup_RAM_AUTO_1R1W_memcore_U/ram_reg_13_3
+  level0_i/ulp/CCL/inst/lookup_U/CCL_lookup_RAM_AUTO_1R1W_memcore_U/ram_reg_25_8
+  level0_i/ulp/CCL/inst/lookup_U/CCL_lookup_RAM_AUTO_1R1W_memcore_U/ram_reg_2_8
+  level0_i/ulp/CCL/inst/lookup_U/CCL_lookup_RAM_AUTO_1R1W_memcore_U/ram_reg_7_11
+  level0_i/ulp/memory_subsystem/inst/memory/ddr4_mem00/inst/u_ddr4_mem_intfc/u_ddr_cal_top/u_ddr_cal/u_ddr_cal_addr_decode/u_ddr_cal_cplx/u_ddr_cal_cplx_data/rd_addr_101_reg_rep
+Tile rectangles examined:
+Pblock 'pblock_dynamic_region
+
+  Number of BRAM required by this constraint: 581
+  Number of BRAM available in this constraint region: 576
+  Number of BRAM blocked in this constraint region: 165
+  Utilization = 100%
+
+  Some of the BRAMs are cascaded BRAMs in SYSTOLIC or PIPELINED mode that cannot cross clock region boundaries for timing reasons. This adds additional placement constraints.
+
+Pblock 'pblock_dynamic_region':
+Pblock ranges:
+URAM288_X0Y0:URAM288_X4Y191
+RIU_OR_X0Y16:RIU_OR_X0Y43
+RIU_OR_X0Y0:RIU_OR_X0Y11
+RAMB36_X12Y132:RAMB36_X13Y143
+RAMB36_X12Y0:RAMB36_X13Y11
+RAMB36_X0Y0:RAMB36_X11Y143
+RAMB18_X12Y264:RAMB18_X13Y287
+RAMB18_X12Y0:RAMB18_X13Y23
+RAMB18_X0Y0:RAMB18_X11Y287
+PLL_X0Y8:PLL_X0Y21
+PLL_X0Y0:PLL_X0Y5
+PCIE4CE4_X0Y0:PCIE4CE4_X0Y1
+MMCM_X0Y4:MMCM_X0Y10
+MMCM_X0Y0:MMCM_X0Y2
+LAGUNA_X28Y480:LAGUNA_X31Y599
+LAGUNA_X0Y0:LAGUNA_X27Y599
+IOB_X0Y208:IOB_X0Y571
+IOB_X0Y0:IOB_X0Y155
+ILKNE4_X1Y3:ILKNE4_X1Y3
+ILKNE4_X0Y2:ILKNE4_X0Y2
+ILKNE4_X0Y0:ILKNE4_X0Y0
+HPIO_VREF_SITE_X0Y8:HPIO_VREF_SITE_X0Y21
+HPIO_VREF_SITE_X0Y0:HPIO_VREF_SITE_X0Y5
+HPIO_RCLK_PRBS_X0Y4:HPIO_RCLK_PRBS_X0Y10
+HPIO_RCLK_PRBS_X0Y0:HPIO_RCLK_PRBS_X0Y2
+HPIOB_DCI_SNGL_X0Y16:HPIOB_DCI_SNGL_X0Y43
+HPIOB_DCI_SNGL_X0Y0:HPIOB_DCI_SNGL_X0Y11
+HPIOBDIFFOUTBUF_X0Y96:HPIOBDIFFOUTBUF_X0Y263
+HPIOBDIFFOUTBUF_X0Y0:HPIOBDIFFOUTBUF_X0Y71
+HPIOBDIFFINBUF_X0Y96:HPIOBDIFFINBUF_X0Y263
+HPIOBDIFFINBUF_X0Y0:HPIOBDIFFINBUF_X0Y71
+HBM_REF_CLK_X0Y0:HBM_REF_CLK_X0Y1
+HARD_SYNC_X24Y22:HARD_SYNC_X27Y23
+HARD_SYNC_X24Y0:HARD_SYNC_X27Y1
+HARD_SYNC_X0Y0:HARD_SYNC_X23Y23
+GTYE4_COMMON_X1Y11:GTYE4_COMMON_X1Y11
+GTYE4_COMMON_X0Y0:GTYE4_COMMON_X0Y11
+GTYE4_CHANNEL_X1Y44:GTYE4_CHANNEL_X1Y47
+GTYE4_CHANNEL_X0Y0:GTYE4_CHANNEL_X0Y47
+DSP48E2_X29Y258:DSP48E2_X31Y281
+DSP48E2_X29Y0:DSP48E2_X31Y17
+DSP48E2_X0Y0:DSP48E2_X28Y281
+CONFIG_SITE_X0Y2:CONFIG_SITE_X0Y2
+CMACE4_X0Y0:CMACE4_X0Y7
+BUFG_GT_SYNC_X1Y165:BUFG_GT_SYNC_X1Y179
+BUFG_GT_SYNC_X0Y0:BUFG_GT_SYNC_X0Y179
+BUFG_GT_X1Y264:BUFG_GT_X1Y287
+BUFG_GT_X0Y0:BUFG_GT_X0Y287
+BUFGCTRL_X0Y32:BUFGCTRL_X0Y87
+BUFGCTRL_X0Y0:BUFGCTRL_X0Y23
+BUFGCE_DIV_X0Y16:BUFGCE_DIV_X0Y43
+BUFGCE_DIV_X0Y0:BUFGCE_DIV_X0Y11
+BUFGCE_X0Y96:BUFGCE_X0Y263
+BUFGCE_X0Y0:BUFGCE_X0Y71
+BLI_HBM_AXI_INTF_X0Y0:BLI_HBM_AXI_INTF_X31Y0
+BLI_HBM_APB_INTF_X0Y0:BLI_HBM_APB_INTF_X31Y0
+BITSLICE_TX_X0Y32:BITSLICE_TX_X0Y87
+BITSLICE_TX_X0Y0:BITSLICE_TX_X0Y23
+BITSLICE_RX_TX_X0Y208:BITSLICE_RX_TX_X0Y571
+BITSLICE_RX_TX_X0Y0:BITSLICE_RX_TX_X0Y155
+BITSLICE_CONTROL_X0Y32:BITSLICE_CONTROL_X0Y87
+BITSLICE_CONTROL_X0Y0:BITSLICE_CONTROL_X0Y23
+BIAS_X0Y8:BIAS_X0Y21
+BIAS_X0Y0:BIAS_X0Y5
+SLICE_X226Y660:SLICE_X232Y719
+SLICE_X222Y0:SLICE_X231Y59
+SLICE_X215Y660:SLICE_X224Y719
+SLICE_X220Y540:SLICE_X221Y599
+SLICE_X197Y0:SLICE_X219Y59
+SLICE_X197Y660:SLICE_X213Y719
+SLICE_X195Y0:SLICE_X196Y719
+SLICE_X194Y540:SLICE_X194Y659
+SLICE_X194Y300:SLICE_X194Y419
+SLICE_X194Y0:SLICE_X194Y179
+SLICE_X183Y0:SLICE_X193Y719
+SLICE_X182Y540:SLICE_X182Y659
+SLICE_X182Y300:SLICE_X182Y419
+SLICE_X182Y0:SLICE_X182Y179
+SLICE_X165Y0:SLICE_X181Y719
+SLICE_X164Y540:SLICE_X164Y659
+SLICE_X164Y300:SLICE_X164Y419
+SLICE_X164Y0:SLICE_X164Y179
+SLICE_X153Y0:SLICE_X163Y719
+SLICE_X152Y540:SLICE_X152Y659
+SLICE_X152Y300:SLICE_X152Y419
+SLICE_X152Y0:SLICE_X152Y179
+SLICE_X140Y0:SLICE_X151Y719
+SLICE_X139Y540:SLICE_X139Y659
+SLICE_X139Y300:SLICE_X139Y419
+SLICE_X139Y0:SLICE_X139Y179
+SLICE_X125Y0:SLICE_X138Y719
+SLICE_X124Y540:SLICE_X124Y659
+SLICE_X124Y300:SLICE_X124Y419
+SLICE_X124Y0:SLICE_X124Y179
+SLICE_X118Y0:SLICE_X123Y719
+SLICE_X117Y240:SLICE_X117Y659
+SLICE_X117Y0:SLICE_X117Y179
+SLICE_X112Y0:SLICE_X116Y719
+SLICE_X111Y540:SLICE_X111Y659
+SLICE_X111Y300:SLICE_X111Y419
+SLICE_X111Y0:SLICE_X111Y179
+SLICE_X98Y0:SLICE_X110Y719
+SLICE_X97Y540:SLICE_X97Y659
+SLICE_X97Y300:SLICE_X97Y419
+SLICE_X97Y0:SLICE_X97Y179
+SLICE_X86Y0:SLICE_X96Y719
+SLICE_X85Y540:SLICE_X85Y659
+SLICE_X85Y300:SLICE_X85Y419
+SLICE_X85Y0:SLICE_X85Y179
+SLICE_X64Y0:SLICE_X84Y719
+SLICE_X63Y540:SLICE_X63Y659
+SLICE_X63Y300:SLICE_X63Y419
+SLICE_X63Y0:SLICE_X63Y179
+SLICE_X51Y0:SLICE_X62Y719
+SLICE_X50Y540:SLICE_X50Y659
+SLICE_X50Y300:SLICE_X50Y419
+SLICE_X50Y0:SLICE_X50Y179
+SLICE_X38Y0:SLICE_X49Y719
+SLICE_X37Y540:SLICE_X37Y659
+SLICE_X37Y300:SLICE_X37Y419
+SLICE_X37Y0:SLICE_X37Y179
+SLICE_X20Y0:SLICE_X36Y719
+SLICE_X19Y540:SLICE_X19Y659
+SLICE_X19Y300:SLICE_X19Y419
+SLICE_X19Y0:SLICE_X19Y179
+SLICE_X9Y0:SLICE_X18Y719
+SLICE_X8Y540:SLICE_X8Y659
+SLICE_X8Y300:SLICE_X8Y419
+SLICE_X8Y0:SLICE_X8Y179
+SLICE_X0Y0:SLICE_X7Y719
+Area constraint: Tool:Combined
+  level0_i/ulp/CCL/inst/lookup_U/CCL_lookup_RAM_AUTO_1R1W_memcore_U/ram_reg_1_1
+  level0_i/ulp/CCL/inst/lookup_U/CCL_lookup_RAM_AUTO_1R1W_memcore_U/ram_reg_16_7
+  level0_i/ulp/CCL/inst/lookup_U/CCL_lookup_RAM_AUTO_1R1W_memcore_U/ram_reg_15_31
+  level0_i/ulp/CCL/inst/lookup_U/CCL_lookup_RAM_AUTO_1R1W_memcore_U/ram_reg_18_24
+  level0_i/ulp/CCL/inst/lookup_U/CCL_lookup_RAM_AUTO_1R1W_memcore_U/ram_reg_26_28
+Tile rectangles examined:
+Pblock 'pblock_dynamic_region
+
+  Number of BRAM required by this constraint: 605
+  Number of BRAM available in this constraint region: 600
+  Number of BRAM blocked in this constraint region: 35
+  Utilization = 100%
+
+  Some of the BRAMs are cascaded BRAMs in SYSTOLIC or PIPELINED mode that cannot cross clock region boundaries for timing reasons. This adds additional placement constraints.
+
+
+Resolution: Check any pblock constraints that could prevent placement of cells in the constraint area. Also consider reducing number of cascaded macros to reduce the overall required sites.
+ERROR: [VPL 30-365] The following macros could not be placed:
+level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[2].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_2 (RAMB36E2)
+        The instance has been constrained to an area with the following utilization (BRAM/DSP/URAM): 99.17/0.9009/0
+level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s00_nodes/s00_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_0 (RAMB36E2)
+        The instance has been constrained to an area with the following utilization (BRAM/DSP/URAM): 99.17/0.9009/0
+level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s00_nodes/s00_w_node/inst/inst_mi_handler/gen_normal_area.gen_fifo_req.inst_fifo_req/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_bram_0 (RAMB18E2)
+        The instance has been constrained to an area with the following utilization (BRAM/DSP/URAM): 99.17/0.9009/0
+level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_w_node/inst/inst_mi_handler/gen_normal_area.gen_fifo_req.inst_fifo_req/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_bram_0 (RAMB18E2)
+        The instance has been constrained to an area with the following utilization (BRAM/DSP/URAM): 99.17/0.9009/0
+level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[1].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_2 (RAMB36E2)
+        The instance has been constrained to an area with the following utilization (BRAM/DSP/URAM): 99.17/0.9009/0
+level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_0 (RAMB36E2)
+        The instance has been constrained to an area with the following utilization (BRAM/DSP/URAM): 99.17/0.9009/0
+level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_w_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[2].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_1 (RAMB36E2)
+        The instance has been constrained to an area with the following utilization (BRAM/DSP/URAM): 99.17/0.9009/0
+level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_w_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_0 (RAMB36E2)
+        The instance has been constrained to an area with the following utilization (BRAM/DSP/URAM): 99.17/0.9009/0
+level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[2].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_1 (RAMB36E2)
+        The instance has been constrained to an area with the following utilization (BRAM/DSP/URAM): 99.17/0.9009/0
+level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_1 (RAMB36E2)
+        The instance has been constrained to an area with the following utilization (BRAM/DSP/URAM): 99.17/0.9009/0
+level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[1].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_0 (RAMB36E2)
+        The instance has been constrained to an area with the following utilization (BRAM/DSP/URAM): 99.17/0.9009/0
+level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[2].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_0 (RAMB36E2)
+        The instance has been constrained to an area with the following utilization (BRAM/DSP/URAM): 99.17/0.9009/0
+level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_2 (RAMB36E2)
+        The instance has been constrained to an area with the following utilization (BRAM/DSP/URAM): 99.17/0.9009/0
+level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s00_nodes/s00_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_2 (RAMB36E2)
+        The instance has been constrained to an area with the following utilization (BRAM/DSP/URAM): 99.17/0.9009/0
+level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[1].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_1 (RAMB36E2)
+        The instance has been constrained to an area with the following utilization (BRAM/DSP/URAM): 99.17/0.9009/0
+level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_w_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_1 (RAMB36E2)
+        The instance has been constrained to an area with the following utilization (BRAM/DSP/URAM): 99.17/0.9009/0
+level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s01_nodes/s01_w_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[1].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_2 (RAMB36E2)
+        The instance has been constrained to an area with the following utilization (BRAM/DSP/URAM): 99.17/0.9009/0
+level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s00_nodes/s00_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[1].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_2 (RAMB36E2)
+        The instance has been constrained to an area with the following utilization (BRAM/DSP/URAM): 99.17/0.9009/0
+level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s00_nodes/s00_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[2].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_1 (RAMB36E2)
+        The instance has been constrained to an area with the following utilization (BRAM/DSP/URAM): 99.17/0.9009/0
+level0_i/ulp/memory_subsystem/inst/interconnect/interconnect_ddr4_mem00/inst/s00_nodes/s00_w_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[1].inst_xpm_memory/xpm_memory_base_inst/gen_wr_a.gen_word_narrow.mem_reg_1 (RAMB36E2)
+        The instance has been constrained to an area with the following utilization (BRAM/DSP/URAM): 99.17/0.9009/0
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The first 20 instances out of 49 have been printed. Please set the tcl param "set_param place.printAllUnplacedMacros true" to print the whole list of unplaceable macros.
+The total BRAM utilization is 98.04%, the total DSP utilization is 0.6206% and the total URAM utilization is 0%
+A possible reason is high utilization of BRAMs, DSPs, URAMs, or RPMs. Please check user constraints to make sure design is not over-utilized in the constraint areas (if any) keeping in mind some macros require a number of consecutively available sites
+BRAM cascades:
+Constraints with IDs: 29, 30, 31, 32, 
+location: ((0, 0), (12, 48))
+((12, 0), (14, 12))
+cascades: 
+Number of 1 cascades: 597
+Constraints with IDs: 29, 31, 
+location: ((0, 48), (12, 96))
+cascades: 
+Number of 1 cascades: 1180
+Constraints with IDs: 31, 
+location: ((0, 96), (12, 144))
+((12, 132), (14, 144))
+cascades: 
+Number of 1 cascades: 1785
+Number of 1 cascades: 1979
+Number of 2 cascades: 2
+DSP cascades:
+Constraints with IDs: 107, 
+location: ((0, 0), (29, 45))
+((29, 0), (32, 8))
+cascades: 
+Number of 3 cascades: 1
+Number of 3 cascades: 1
+Number of 4 cascades: 1
+Too many BRAM cascades,Potentialy can be the reason of placement infeasibility, 
+Try balancing URAM , BRAM or LUTRAM utilization
+
+Resolution: For technical support on this issue, please visit http://www.xilinx.com/support.
+ERROR: [VPL 30-99] Placer failed with error: 'Exit after global placer'
+Please review all ERROR, CRITICAL WARNING, and WARNING messages during placement to understand the cause for failure.
+ERROR: [VPL 17-69] Command failed: Placer could not place all instances
+
+===>The following messages were generated while  creating FPGA bitstream. Log file: /home/linker/hls_ccl/_x/link/vivado/vpl/runme.log :
+ERROR: [VPL 12-13638] Failed runs(s) : 'impl_1'
+ERROR: [VPL 60-773] In '/home/linker/hls_ccl/_x/link/vivado/vpl/vivado.log', caught Tcl error:  ERROR: [Common 17-39] 'wait_on_runs' failed due to earlier errors.
+WARNING: [VPL 60-732] Link warning: The available BRAMs may not be sufficient to accommodate the kernels
+ERROR: [VPL 60-704] Integration error, Failed to complete hardware generation. The run name is 'impl_1'. An error stack with function names and arguments may be available in the 'vivado.log'.
+ERROR: [VPL 60-1328] Vpl run 'vpl' failed
+ERROR: [VPL 60-806] Failed to finish platform linker
+INFO: [v++ 60-1442] [12:12:41] Run run_link: Step vpl: Failed
+Time (s): cpu = 00:00:19 ; elapsed = 00:41:45 . Memory (MB): peak = 449.898 ; gain = 0.000 ; free physical = 23142 ; free virtual = 179050
+ERROR: [v++ 60-661] v++ link run 'run_link' failed
+ERROR: [v++ 60-626] Kernel link failed to complete
+ERROR: [v++ 60-703] Failed to finish linking
+INFO: [v++ 60-1653] Closing dispatch client.
+make: *** [Makefile:84: /home/linker/hls_ccl/out/hw.p_xilinx_u280_gen3x16.mode_debug/bin/kernels.xclbin] Error 1

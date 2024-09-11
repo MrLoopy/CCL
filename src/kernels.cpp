@@ -18,7 +18,7 @@ static void read_input_float(float* in, hls::stream<float>& inStream, unsigned i
     }
 }
 
-static void queue_components(unsigned int m_labels[MAX_TOTAL_NODES], hls::stream<unsigned int>& outStream, unsigned int size, unsigned int m_lookup[MAX_TOTAL_NODES]) {
+static void queue_components(unsigned int m_labels[MAX_TOTAL_NODES], hls::stream<unsigned int>& outStream, unsigned int size, unsigned int* m_lookup) {
   for (unsigned int i = 0; i < size; i++) {
     if(m_lookup[i] == 0)
       outStream << 0;
@@ -34,8 +34,8 @@ static void write_labels(unsigned int* out, hls::stream<unsigned int>& outStream
 }
 
 static void filter_memory(hls::stream<unsigned int>& edge_from_stream, hls::stream<unsigned int>& edge_to_stream, hls::stream<float>& scores_stream,
-                          unsigned int m_num_edges, unsigned int m_graph[MAX_TRUE_NODES][MAX_EDGES], unsigned int m_connections[MAX_TRUE_NODES],
-                          unsigned int m_lookup[MAX_TOTAL_NODES], unsigned int& m_graph_size) {
+                          unsigned int m_num_edges, unsigned int* m_graph, unsigned int m_connections[MAX_TRUE_NODES],
+                          unsigned int* m_lookup, unsigned int& m_graph_size) {
 
   unsigned int temp_lookup[MAX_TOTAL_NODES];
   for (unsigned int i = 0; i < MAX_TOTAL_NODES; i++)
@@ -74,10 +74,10 @@ static void filter_memory(hls::stream<unsigned int>& edge_from_stream, hls::stre
       }
 
       // add to-node to from-list and increase from-counter
-      m_graph[from_small][temp_connections[from_small]] = to_small;
+      m_graph[from_small * MAX_EDGES + temp_connections[from_small]] = to_small;
       temp_connections[from_small]++;
       // add from-node to to-list and increase to-counter
-      m_graph[to_small][temp_connections[to_small]] = from_small;
+      m_graph[to_small * MAX_EDGES + temp_connections[to_small]] = from_small;
       temp_connections[to_small]++;
     }
   }
@@ -87,7 +87,7 @@ static void filter_memory(hls::stream<unsigned int>& edge_from_stream, hls::stre
     m_connections[i] = temp_connections[i];
 }
 
-static void compute_core(unsigned int m_graph[MAX_TRUE_NODES][MAX_EDGES], unsigned int m_connections[MAX_TRUE_NODES], unsigned int m_num_nodes,
+static void compute_core(unsigned int* m_graph, unsigned int m_connections[MAX_TRUE_NODES], unsigned int m_num_nodes,
                           unsigned int m_labels[MAX_TRUE_NODES]){
 
   unsigned int current_label = 1;
@@ -100,6 +100,7 @@ static void compute_core(unsigned int m_graph[MAX_TRUE_NODES][MAX_EDGES], unsign
   unsigned int current_component_size = 0;
   unsigned int processed_nodes = 0;
   unsigned int next_node = 0;
+  unsigned int next_conns[MAX_EDGES];
 
   for (unsigned int node = 0; node < m_num_nodes; node++){
     // node without any connections -> label 0 and processed // should not happen anymore since lookup is used
@@ -128,9 +129,13 @@ static void compute_core(unsigned int m_graph[MAX_TRUE_NODES][MAX_EDGES], unsign
         // if(m_info[next_node].processed)
           // Conflict handler -> transfer current component from one core to the other
         // add all connections of current node to component if not already processed <- to many fills for highly connected components?
+        
+        for(int i = 0 ; i < MAX_EDGES ; i++)
+            next_conns[i] = m_graph[next_node * MAX_EDGES + i];
+
         for (unsigned int i = 0; i < m_connections[next_node]; i++){
-          if(!processed[m_graph[next_node][i]] && current_component_size < MAX_COMPONENT_SIZE){
-            component[current_component_size] = m_graph[next_node][i];
+          if(!processed[next_conns[i]] && current_component_size < MAX_COMPONENT_SIZE){
+            component[current_component_size] = next_conns[i];
             current_component_size++;
           }
         }
@@ -150,29 +155,26 @@ static void compute_core(unsigned int m_graph[MAX_TRUE_NODES][MAX_EDGES], unsign
 }
 
 extern "C" {
-  void CCL(unsigned int* in_edge_from, unsigned int* in_edge_to, float* in_scores, unsigned int* out_labels, unsigned int num_edges, unsigned int num_nodes) {
+  void CCL(unsigned int* in_edge_from, unsigned int* in_edge_to, float* in_scores, unsigned int* io_graph, unsigned int* io_lookup, unsigned int* out_labels, unsigned int num_edges, unsigned int num_nodes) {
     static hls::stream<unsigned int> inStream_edge_from("input_stream_from");
     static hls::stream<unsigned int> inStream_edge_to("input_stream_to");
     static hls::stream<float> inStream_score("input_stream_score");
     static hls::stream<unsigned int> outStream_labels("output_stream_labels");
     
     #pragma HLS INTERFACE m_axi port = in_edge_from   bundle=gmem0
-    #pragma HLS INTERFACE m_axi port = in_edge_from   bundle=gmem1
+    #pragma HLS INTERFACE m_axi port = in_edge_to     bundle=gmem1
     #pragma HLS INTERFACE m_axi port = in_scores      bundle=gmem2
-    #pragma HLS INTERFACE m_axi port = out_labels     bundle=gmem0
+    #pragma HLS INTERFACE m_axi port = io_graph       bundle=gmem3
+    #pragma HLS INTERFACE m_axi port = io_lookup      bundle=gmem4
+    #pragma HLS INTERFACE m_axi port = out_labels     bundle=gmem5
 
-    static unsigned int graph[MAX_TRUE_NODES][MAX_EDGES];
+    // static unsigned int graph[MAX_TRUE_NODES][MAX_EDGES];
     static unsigned int graph_connections[MAX_TRUE_NODES];
     static unsigned int labels[MAX_TRUE_NODES];
-    static unsigned int lookup[MAX_TOTAL_NODES];
-    #pragma HLS STREAM variable=graph type=pipo
+    // static unsigned int lookup[MAX_TOTAL_NODES];
     #pragma HLS STREAM variable=graph_connections type=pipo
     #pragma HLS STREAM variable=labels type=pipo
-    #pragma HLS STREAM variable=lookup type=pipo
-    // #pragma HLS bind_storage variable=graph type=RAM_T2P impl=bram
-    // #pragma HLS bind_storage variable=graph_connections type=RAM_T2P impl=bram
-    // #pragma HLS bind_storage variable=labels type=RAM_T2P impl=bram
-    // #pragma HLS bind_storage variable=lookup type=RAM_T2P impl=bram
+    // #pragma HLS STREAM variable=lookup type=pipo
 
     static unsigned int graph_size;
     #pragma HLS STREAM variable=graph_size type=pipo
@@ -182,11 +184,11 @@ extern "C" {
     read_input_int(in_edge_to, inStream_edge_to, num_edges);
     read_input_float(in_scores, inStream_score, num_edges);
 
-    filter_memory(inStream_edge_from, inStream_edge_to, inStream_score, num_edges, graph, graph_connections, lookup, graph_size);
+    filter_memory(inStream_edge_from, inStream_edge_to, inStream_score, num_edges, io_graph, graph_connections, io_lookup, graph_size);
 
-    compute_core(graph, graph_connections, graph_size, labels);
+    compute_core(io_graph, graph_connections, graph_size, labels);
 
-    queue_components(labels, outStream_labels, num_nodes, lookup);
+    queue_components(labels, outStream_labels, num_nodes, io_lookup);
 
     write_labels(out_labels, outStream_labels, num_nodes);
   }

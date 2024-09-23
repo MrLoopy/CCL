@@ -175,16 +175,16 @@ int main (int argc, char ** argv){
   auto buffer_in_edge_from  = xrt::bo(targetDevice, size_edges_byte, krnl.group_id(0));
   auto buffer_in_edge_to    = xrt::bo(targetDevice, size_edges_byte, krnl.group_id(1));
   auto buffer_in_scores     = xrt::bo(targetDevice, size_scores_byte, krnl.group_id(2));
-  auto buffer_out_labels    = xrt::bo(targetDevice, size_labels_byte, krnl.group_id(3));
+  auto buffer_out_labels    = xrt::bo(targetDevice, size_labels_byte, krnl.group_id(5));      // 5 because of order of idices and fitting to HBM-bank in u280.cfg
 
   auto map_in_edge_from   = buffer_in_edge_from.map<unsigned int*>();
   auto map_in_edge_to     = buffer_in_edge_to.map<unsigned int*>();
   auto map_in_scores      = buffer_in_scores.map<float*>();
   auto map_out_labels     = buffer_out_labels.map<unsigned int*>();
   // ##########################
-  auto buffer_inout_graph = xrt::bo(targetDevice, size_graph_byte, krnl.group_id(4));
+  auto buffer_inout_graph = xrt::bo(targetDevice, size_graph_byte, krnl.group_id(3));         // 3 because of order of idices and fitting to HBM-bank in u280.cfg
   auto map_inout_graph    = buffer_inout_graph.map<unsigned int*>();
-  auto buffer_inout_lookup = xrt::bo(targetDevice, size_lookup_byte, krnl.group_id(4));
+  auto buffer_inout_lookup = xrt::bo(targetDevice, size_lookup_byte, krnl.group_id(4));       // 4 because of order of idices and fitting to HBM-bank in u280.cfg
   auto map_inout_lookup    = buffer_inout_lookup.map<unsigned int*>();
   // ##########################
 
@@ -236,7 +236,7 @@ int main (int argc, char ** argv){
   std::cout << "[INFO] Validate results" << std::endl;
   bool correct = true;
   int num_errors = 0;
-  const int max_num_labels = 50;
+  const int max_num_labels = MAX_TRUE_NODES; //50;
   unsigned int lookupU[max_num_labels];
   bool lookupB[max_num_labels];
   for(unsigned int i = 0; i < max_num_labels ; i++)

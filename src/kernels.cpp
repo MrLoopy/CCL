@@ -161,12 +161,12 @@ extern "C" {
     static hls::stream<float> inStream_score("input_stream_score");
     static hls::stream<unsigned int> outStream_labels("output_stream_labels");
     
-    #pragma HLS INTERFACE m_axi port = in_edge_from   bundle=gmem0
-    #pragma HLS INTERFACE m_axi port = in_edge_to     bundle=gmem1
-    #pragma HLS INTERFACE m_axi port = in_scores      bundle=gmem2
-    #pragma HLS INTERFACE m_axi port = io_graph       bundle=gmem3
-    #pragma HLS INTERFACE m_axi port = io_lookup      bundle=gmem4
-    #pragma HLS INTERFACE m_axi port = out_labels     bundle=gmem5
+    #pragma HLS INTERFACE m_axi port = in_edge_from   bundle=gmem0 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_edge_to     bundle=gmem1 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_scores      bundle=gmem2 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_graph       bundle=gmem3 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_lookup      bundle=gmem4 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = out_labels     bundle=gmem5 max_widen_bitwidth=512
 
     // static unsigned int graph[MAX_TRUE_NODES][MAX_EDGES];
     static unsigned int graph_connections[MAX_TRUE_NODES];

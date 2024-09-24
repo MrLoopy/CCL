@@ -1,0 +1,42 @@
+HEADER
+VTF File Version,1.1
+VTF File Type,0
+PID,1800253
+Generated on,2024-09-24 09:32:35
+Resolution,ms
+Min Resolution,ns
+Trace Version,1.1
+TraceID,1800255
+
+STRUCTURE
+Group_Start,User and Internal Events
+Dynamic_Row,1,General,User Events from APIs and Internally Generated Events
+Group_End,User and Internal Events
+
+MAPPING
+21,Device Trace Buffer Full
+15,HBM[0]
+16,HBM[1]
+17,HBM[2]
+18,HBM[3]
+19,HBM[4]
+20,HBM[5]
+14,READ
+5,WRITE
+6,xrt::bo::address
+3,xrt::bo::bo
+9,xrt::bo::map
+10,xrt::bo::size
+4,xrt::bo::sync
+1,xrt::device::device
+2,xrt::device::load_xclbin
+8,xrt::kernel::group_id
+7,xrt::kernel::kernel
+11,xrt::run::run
+12,xrt::run::start
+13,xrt::run::wait
+
+EVENTS
+152024,0,6382.126525,1,USER_MARKER,21
+
+DEPENDENCIES

@@ -5,6 +5,7 @@
 #include <utility>
 #include <map>
 #include <stdexcept>
+#include <chrono>
 
 // XRT includes
 #include "xrt/xrt_bo.h"
@@ -221,8 +222,13 @@ int main (int argc, char ** argv){
   // Execute Kernel
   //
   std::cout << "[INFO] Execute Kernel" << std::endl;
+  auto start = std::chrono::system_clock::now();
   auto run = krnl(buffer_in_edge_from, buffer_in_edge_to, buffer_in_scores, buffer_inout_graph, buffer_inout_lookup, buffer_out_labels, num_edges, num_nodes);
   run.wait();
+  auto end = std::chrono::system_clock::now();
+
+  std::chrono::duration<double> elapsed = end - start;
+  std::cout << "[    ] Elapsed time:   " << elapsed.count() << " s" << std::endl;
 
   //
   // Read back data from Kernel

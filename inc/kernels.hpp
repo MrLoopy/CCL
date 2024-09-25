@@ -20,7 +20,7 @@ struct node_information{
 };
 
 extern "C" {
-  void CCL(unsigned int* in_edge_from, unsigned int* in_edge_to, float* in_scores, unsigned int* io_graph, unsigned int* io_lookup, unsigned int* out_labels, unsigned int num_edges, unsigned int num_nodes);
+  void CCL(unsigned int* in_edge_from, unsigned int* in_edge_to, float* in_scores, unsigned int* io_graph, unsigned int* io_lookup, unsigned int* io_lookup_filter, unsigned int* out_labels, unsigned int num_edges, unsigned int num_nodes);
   // void CCL(unsigned int* in_edge_from, unsigned int* in_edge_to, float* in_scores, unsigned int* out_labels, unsigned int num_edges, unsigned int num_nodes);
   // void CCL(unsigned int* in_edge_from, unsigned int* in_edge_to, float* in_scores, node_information* out_node_info, int* out_graph, int num_edges, int num_nodes);
 }

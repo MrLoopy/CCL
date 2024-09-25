@@ -176,7 +176,7 @@ int main (int argc, char ** argv){
   auto buffer_in_edge_from  = xrt::bo(targetDevice, size_edges_byte, krnl.group_id(0));
   auto buffer_in_edge_to    = xrt::bo(targetDevice, size_edges_byte, krnl.group_id(1));
   auto buffer_in_scores     = xrt::bo(targetDevice, size_scores_byte, krnl.group_id(2));
-  auto buffer_out_labels    = xrt::bo(targetDevice, size_labels_byte, krnl.group_id(5));      // 5 because of order of idices and fitting to HBM-bank in u280.cfg
+  auto buffer_out_labels    = xrt::bo(targetDevice, size_labels_byte, krnl.group_id(6));      // 6 because of order of idices and fitting to HBM-bank in u280.cfg
 
   auto map_in_edge_from   = buffer_in_edge_from.map<unsigned int*>();
   auto map_in_edge_to     = buffer_in_edge_to.map<unsigned int*>();
@@ -187,6 +187,8 @@ int main (int argc, char ** argv){
   auto map_inout_graph    = buffer_inout_graph.map<unsigned int*>();
   auto buffer_inout_lookup = xrt::bo(targetDevice, size_lookup_byte, krnl.group_id(4));       // 4 because of order of idices and fitting to HBM-bank in u280.cfg
   auto map_inout_lookup    = buffer_inout_lookup.map<unsigned int*>();
+  auto buffer_inout_lookup_filter = xrt::bo(targetDevice, size_lookup_byte, krnl.group_id(5));       // 5 because of order of idices and fitting to HBM-bank in u280.cfg
+  auto map_inout_lookup_filter    = buffer_inout_lookup.map<unsigned int*>();
   // ##########################
 
   //set to const 0 for output only -> necessary?
@@ -194,6 +196,7 @@ int main (int argc, char ** argv){
   // ##########################
   std::fill(map_inout_graph, map_inout_graph + MAX_TRUE_NODES * MAX_EDGES, 0);
   std::fill(map_inout_lookup, map_inout_lookup + MAX_TOTAL_NODES, 0);
+  std::fill(map_inout_lookup_filter, map_inout_lookup + MAX_TOTAL_NODES, 0);
   // ##########################
 
   //
@@ -216,6 +219,7 @@ int main (int argc, char ** argv){
   // ##########################
   buffer_inout_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
   buffer_inout_lookup.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+  buffer_inout_lookup_filter.sync(XCL_BO_SYNC_BO_TO_DEVICE);
   // ##########################
 
   //
@@ -223,7 +227,7 @@ int main (int argc, char ** argv){
   //
   std::cout << "[INFO] Execute Kernel" << std::endl;
   auto start = std::chrono::system_clock::now();
-  auto run = krnl(buffer_in_edge_from, buffer_in_edge_to, buffer_in_scores, buffer_inout_graph, buffer_inout_lookup, buffer_out_labels, num_edges, num_nodes);
+  auto run = krnl(buffer_in_edge_from, buffer_in_edge_to, buffer_in_scores, buffer_inout_graph, buffer_inout_lookup, buffer_inout_lookup_filter, buffer_out_labels, num_edges, num_nodes);
   run.wait();
   auto end = std::chrono::system_clock::now();
 

@@ -35,11 +35,8 @@ static void write_labels(unsigned int* out, hls::stream<unsigned int>& outStream
 
 static void filter_memory(hls::stream<unsigned int>& edge_from_stream, hls::stream<unsigned int>& edge_to_stream, hls::stream<float>& scores_stream,
                           unsigned int m_num_edges, unsigned int* m_graph, unsigned int m_connections[MAX_TRUE_NODES],
-                          unsigned int* m_lookup, unsigned int& m_graph_size) {
+                          unsigned int* m_lookup, unsigned int* m_lookup_filter, unsigned int& m_graph_size) {
 
-  unsigned int temp_lookup[MAX_TOTAL_NODES];
-  for (unsigned int i = 0; i < MAX_TOTAL_NODES; i++)
-    temp_lookup[i] = 0;
   unsigned int temp_connections[MAX_TRUE_NODES];
   for (unsigned int i = 0; i < MAX_TRUE_NODES; i++)
     temp_connections[i] = false;
@@ -56,21 +53,23 @@ static void filter_memory(hls::stream<unsigned int>& edge_from_stream, hls::stre
     // check if score > cutoff -> true edge
     if(score > cutoff){
       // fill lookup and determain from_small and to_small
-      if(temp_lookup[from_large] == 0){
+      if(m_lookup_filter[from_large] == 0){
         from_small = m_graph_size;
-        temp_lookup[from_large] = m_graph_size;
+        m_lookup_filter[from_large] = m_graph_size;
+        m_lookup[from_large] = m_graph_size;
         m_graph_size++;
       }
       else{
-        from_small = temp_lookup[from_large];
+        from_small = m_lookup_filter[from_large];
       }
-      if(temp_lookup[to_large] == 0){
+      if(m_lookup_filter[to_large] == 0){
         to_small = m_graph_size;
-        temp_lookup[to_large] = m_graph_size;
+        m_lookup_filter[to_large] = m_graph_size;
+        m_lookup[to_large] = m_graph_size;
         m_graph_size++;
       }
       else{
-        to_small = temp_lookup[to_large];
+        to_small = m_lookup_filter[to_large];
       }
 
       // add to-node to from-list and increase from-counter
@@ -81,8 +80,6 @@ static void filter_memory(hls::stream<unsigned int>& edge_from_stream, hls::stre
       temp_connections[to_small]++;
     }
   }
-  for (unsigned int i = 0; i < MAX_TOTAL_NODES; i++)
-    m_lookup[i] = temp_lookup[i];
   for (unsigned int i = 0; i < MAX_TRUE_NODES; i++)
     m_connections[i] = temp_connections[i];
 }
@@ -155,18 +152,19 @@ static void compute_core(unsigned int* m_graph, unsigned int m_connections[MAX_T
 }
 
 extern "C" {
-  void CCL(unsigned int* in_edge_from, unsigned int* in_edge_to, float* in_scores, unsigned int* io_graph, unsigned int* io_lookup, unsigned int* out_labels, unsigned int num_edges, unsigned int num_nodes) {
+  void CCL(unsigned int* in_edge_from, unsigned int* in_edge_to, float* in_scores, unsigned int* io_graph, unsigned int* io_lookup, unsigned int* io_lookup_filter, unsigned int* out_labels, unsigned int num_edges, unsigned int num_nodes) {
     static hls::stream<unsigned int> inStream_edge_from("input_stream_from");
     static hls::stream<unsigned int> inStream_edge_to("input_stream_to");
     static hls::stream<float> inStream_score("input_stream_score");
     static hls::stream<unsigned int> outStream_labels("output_stream_labels");
     
-    #pragma HLS INTERFACE m_axi port = in_edge_from   bundle=gmem0 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = in_edge_to     bundle=gmem1 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = in_scores      bundle=gmem2 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_graph       bundle=gmem3 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_lookup      bundle=gmem4 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = out_labels     bundle=gmem5 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_edge_from     bundle=gmem0 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_edge_to       bundle=gmem1 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_scores        bundle=gmem2 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_graph         bundle=gmem3 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_lookup        bundle=gmem4 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_lookup_filter bundle=gmem5 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = out_labels       bundle=gmem6 max_widen_bitwidth=512
 
     // static unsigned int graph[MAX_TRUE_NODES][MAX_EDGES];
     static unsigned int graph_connections[MAX_TRUE_NODES];
@@ -184,7 +182,7 @@ extern "C" {
     read_input_int(in_edge_to, inStream_edge_to, num_edges);
     read_input_float(in_scores, inStream_score, num_edges);
 
-    filter_memory(inStream_edge_from, inStream_edge_to, inStream_score, num_edges, io_graph, graph_connections, io_lookup, graph_size);
+    filter_memory(inStream_edge_from, inStream_edge_to, inStream_score, num_edges, io_graph, graph_connections, io_lookup, io_lookup_filter, graph_size);
 
     compute_core(io_graph, graph_connections, graph_size, labels);
 

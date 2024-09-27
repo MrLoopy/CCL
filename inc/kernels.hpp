@@ -2,14 +2,15 @@
 #define KERNELS_H
 
 
-#define MAX_TOTAL_NODES 524288
-#define MAX_EDGES 16
-#define MAX_FULL_GRAPH_EDGES 256
-#define MAX_COMPONENT_SIZE 128
-#define MAX_TRUE_NODES 32768
-#define CSV_FILE "dat/dummy.csv"
+#define MAX_TOTAL_NODES 524288          // maximum number of total nodes in the full graph [325381]
+#define MAX_EDGES 16                    // maximum number of high-score connections a node can have [14]
+#define MAX_FULL_GRAPH_EDGES 256        // maximum number of all connections a node can have [136]
+#define MAX_COMPONENT_SIZE 128          // maximum number of nodes, that can be part of the same component [81]
+#define MAX_TRUE_NODES 32768            // maximum number of nodes, that have high-score connections and are therefor part of components [31991]
+#define MAX_COMPONENTS 8192             // maximum number of different components [4200]
+// #define CSV_FILE "dat/dummy.csv"
 // #define CSV_FILE "dat/dummy_long.csv"
-// #define CSV_FILE "dat/event005001514.csv"
+#define CSV_FILE "dat/event005001514.csv"
 // #define MAX_NODES 12
 // #define MAX_CONNECTIONS 4
 // #define MAX_COMPONENT_SIZE 8
@@ -21,7 +22,8 @@ struct node_information{
 };
 
 extern "C" {
-  void CCL(unsigned int* in_full_graph, float* in_scores, unsigned int* io_graph, unsigned int* io_lookup, unsigned int* io_lookup_filter, unsigned int* out_labels, unsigned int num_edges, unsigned int num_nodes);
+  void CCL(unsigned int* in_full_graph, float* in_scores, unsigned int* io_graph, unsigned int* io_lookup, unsigned int* io_lookup_filter, unsigned int* out_components, unsigned int num_edges, unsigned int num_nodes);
+  // void CCL(unsigned int* in_full_graph, float* in_scores, unsigned int* io_graph, unsigned int* io_lookup, unsigned int* io_lookup_filter, unsigned int* out_labels, unsigned int num_edges, unsigned int num_nodes);
   // void CCL(unsigned int* in_edge_from, unsigned int* in_edge_to, float* in_scores, unsigned int* out_labels, unsigned int num_edges, unsigned int num_nodes);
   // void CCL(unsigned int* in_edge_from, unsigned int* in_edge_to, float* in_scores, node_information* out_node_info, int* out_graph, int num_edges, int num_nodes);
 }

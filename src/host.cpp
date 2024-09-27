@@ -44,7 +44,8 @@ int main (int argc, char ** argv){
   //
   //============================================
 
-  std::string csv_file_name = CSV_FILE;
+  std::string csv_file_name = "dat/dummy.csv"; // "dat/event005001514.csv"; // "dat/dummy.csv";
+  // std::string csv_file_name = CSV_FILE;
   std::vector<unsigned int> edge_from;
   std::vector<unsigned int> edge_to;
   std::vector<unsigned int> ref_labels;
@@ -153,16 +154,21 @@ int main (int argc, char ** argv){
   //
   // Calculate size of vector in bytes
   //
-  size_t size_full_graph_byte = sizeof(unsigned int) * num_nodes * MAX_FULL_GRAPH_EDGES;
-  size_t size_scores_byte = sizeof(float) * num_edges * 2;
+  unsigned int temp = 140;
+  size_t size_full_graph_byte = sizeof(unsigned int) * MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;    // 256, 136
+  size_t size_scores_byte = sizeof(float) * MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;
   size_t size_graph_byte = sizeof(unsigned int) * MAX_TRUE_NODES * MAX_EDGES;
-  size_t size_lookup_byte = sizeof(unsigned int) * MAX_TOTAL_NODES;
-  size_t size_labels_byte = sizeof(unsigned int) * num_nodes;
-  std::cout << "[INFO] Size of full graph:  " << size_full_graph_byte << " Bytes" << std::endl;
-  std::cout << "[    ] Size of scores: " << size_scores_byte << " Bytes" << std::endl;
-  std::cout << "[    ] Size of graph: " << size_graph_byte << " Bytes" << std::endl;
-  std::cout << "[    ] Size of lookup: " << size_lookup_byte << " Bytes" << std::endl;
-  std::cout << "[    ] Size of labels: " << size_labels_byte << " Bytes" << std::endl;
+  size_t size_lookup_byte = sizeof(unsigned int) * MAX_TRUE_NODES;
+  size_t size_lookup_filter_byte = sizeof(unsigned int) * MAX_TOTAL_NODES;
+  size_t size_components_byte = sizeof(unsigned int) * (MAX_TRUE_NODES + MAX_COMPONENTS);
+  // size_t size_labels_byte = sizeof(unsigned int) * num_nodes;
+  std::cout << "[INFO] Size of full_graph:    " << size_full_graph_byte << " Bytes" << std::endl;
+  std::cout << "[    ] Size of scores:        " << size_scores_byte << " Bytes" << std::endl;
+  std::cout << "[    ] Size of graph:         " << size_graph_byte << " Bytes" << std::endl;
+  std::cout << "[    ] Size of lookup:        " << size_lookup_byte << " Bytes" << std::endl;
+  std::cout << "[    ] Size of lookup_filter: " << size_lookup_filter_byte << " Bytes" << std::endl;
+  std::cout << "[    ] Size of components:    " << size_components_byte << " Bytes" << std::endl;
+  // std::cout << "[    ] Size of labels:        " << size_labels_byte << " Bytes" << std::endl;
   
   //
   // Define Kernel Function to be executed on Device
@@ -173,52 +179,61 @@ int main (int argc, char ** argv){
   // Allocate Buffer in Global Memory
   //
   std::cout << "[INFO] Allocate Buffer in Global Memory" << std::endl;
-  auto buffer_in_full_graph    = xrt::bo(targetDevice, size_full_graph_byte, krnl.group_id(0));    // gourp_id must fit to HBM-bank in u280.cfg
-  auto buffer_in_scores     = xrt::bo(targetDevice, size_scores_byte, krnl.group_id(1));
+  auto buffer_in_full_graph = xrt::bo(targetDevice, size_full_graph_byte, krnl.group_id(0));    // gourp_id must fit to HBM-bank in u280.cfg
+  auto buffer_in_scores = xrt::bo(targetDevice, size_scores_byte, krnl.group_id(1));
   auto buffer_inout_graph = xrt::bo(targetDevice, size_graph_byte, krnl.group_id(2));
   auto buffer_inout_lookup = xrt::bo(targetDevice, size_lookup_byte, krnl.group_id(3));
-  auto buffer_inout_lookup_filter = xrt::bo(targetDevice, size_lookup_byte, krnl.group_id(4));
-  auto buffer_out_labels    = xrt::bo(targetDevice, size_labels_byte, krnl.group_id(5));
+  auto buffer_inout_lookup_filter = xrt::bo(targetDevice, size_lookup_filter_byte, krnl.group_id(4));
+  auto buffer_out_components = xrt::bo(targetDevice, size_components_byte, krnl.group_id(5));
+  // auto buffer_out_labels = xrt::bo(targetDevice, size_labels_byte, krnl.group_id(5));
 
-  auto map_in_full_graph     = buffer_in_full_graph.map<unsigned int*>();
-  auto map_in_scores      = buffer_in_scores.map<float*>();
-  auto map_inout_graph    = buffer_inout_graph.map<unsigned int*>();
-  auto map_inout_lookup    = buffer_inout_lookup.map<unsigned int*>();
-  auto map_inout_lookup_filter    = buffer_inout_lookup.map<unsigned int*>();
-  auto map_out_labels     = buffer_out_labels.map<unsigned int*>();
+  auto map_in_full_graph = buffer_in_full_graph.map<unsigned int*>();
+  auto map_in_scores = buffer_in_scores.map<float*>();
+  auto map_inout_graph = buffer_inout_graph.map<unsigned int*>();
+  auto map_inout_lookup = buffer_inout_lookup.map<unsigned int*>();
+  auto map_inout_lookup_filter = buffer_inout_lookup_filter.map<unsigned int*>();
+  auto map_out_components = buffer_out_components.map<unsigned int*>();
+  // auto map_out_labels     = buffer_out_labels.map<unsigned int*>();
 
   //set to const 0 for output only -> necessary?
-  std::fill(map_in_full_graph, map_in_full_graph + num_nodes * MAX_FULL_GRAPH_EDGES, 0);
+  std::fill(map_in_full_graph, map_in_full_graph + MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES, 0);
+  std::fill(map_in_scores, map_in_scores + MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES, 0.0);
   std::fill(map_inout_graph, map_inout_graph + MAX_TRUE_NODES * MAX_EDGES, 0);
-  std::fill(map_inout_lookup, map_inout_lookup + MAX_TOTAL_NODES, 0);
-  std::fill(map_inout_lookup_filter, map_inout_lookup + MAX_TOTAL_NODES, 0);
-  std::fill(map_out_labels, map_out_labels + num_nodes, -1);
+  std::fill(map_inout_lookup, map_inout_lookup + MAX_TRUE_NODES, 0);
+  std::fill(map_inout_lookup_filter, map_inout_lookup_filter + MAX_TOTAL_NODES, 0);
+  std::fill(map_out_components, map_out_components + MAX_TRUE_NODES + MAX_COMPONENTS, 0);
+  // std::fill(map_out_labels, map_out_labels + num_nodes, 0);
 
   //
   // Fill input buffers with test data from CSV
   //
   std::cout << "[INFO] Fill full graph data structure with data from CSV-file" << std::endl;
-  float score_table[num_nodes * MAX_FULL_GRAPH_EDGES];
+  // unsigned int temp2 = 7;
+  // unsigned int score_table[num_nodes * MAX_FULL_GRAPH_EDGES];
+  // float score_table[num_nodes * temp];
+  std::cout << "[    ] 0" << std::endl;
   // set all indicators that give the number of connections of that node to 0
-  for(unsigned int i = 0; i < num_nodes ; i++)
-    map_in_full_graph[i * MAX_FULL_GRAPH_EDGES] = 0;
+  // for(unsigned int i = 0; i < num_nodes ; i++)
+  //   map_in_full_graph[i * MAX_FULL_GRAPH_EDGES] = 0;
+  std::cout << "[    ] 1" << std::endl;
   // fill tables with connections and scores of the edges and keep the number of connections for each node up to date
   for(unsigned int i = 0; i < num_edges ; i++){
     map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES + map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_to[i];
-    score_table[edge_from[i] * MAX_FULL_GRAPH_EDGES + map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES]] = scores[i];
+    map_in_scores[edge_from[i] * MAX_FULL_GRAPH_EDGES + map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES]] = scores[i];
     map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES]++;
     map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES + map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_from[i];
-    score_table[edge_to[i] * MAX_FULL_GRAPH_EDGES + map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES]] = scores[i];
+    map_in_scores[edge_to[i] * MAX_FULL_GRAPH_EDGES + map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES]] = scores[i];
     map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES]++;
   }
+  std::cout << "[    ] 2" << std::endl;
   // create a stream of scores out of the score-table
-  unsigned int edge = 0;
-  for(unsigned int row = 0; row < num_nodes ; row++){
-    for(unsigned int i = 0; i < map_in_full_graph[row * MAX_FULL_GRAPH_EDGES] ; i++){
-      map_in_scores[edge] = score_table[row * MAX_FULL_GRAPH_EDGES + i];
-      edge++;
-    }
-  }
+  // unsigned int edge = 0;
+  // for(unsigned int row = 0; row < num_nodes ; row++){
+  //   for(unsigned int i = 0; i < map_in_full_graph[row * MAX_FULL_GRAPH_EDGES] ; i++){
+  //     map_in_scores[edge] = scores[score_table[row * MAX_FULL_GRAPH_EDGES + i]];
+  //     edge++;
+  //   }
+  // }
 
   //
   // Synchronize input buffer data to device global memory
@@ -235,7 +250,7 @@ int main (int argc, char ** argv){
   //
   std::cout << "[INFO] Execute Kernel" << std::endl;
   auto start = std::chrono::system_clock::now();
-  auto run = krnl(buffer_in_full_graph, buffer_in_scores, buffer_inout_graph, buffer_inout_lookup, buffer_inout_lookup_filter, buffer_out_labels, num_edges, num_nodes);
+  auto run = krnl(buffer_in_full_graph, buffer_in_scores, buffer_inout_graph, buffer_inout_lookup, buffer_inout_lookup_filter, buffer_out_components, num_edges, num_nodes);
   run.wait();
   auto end = std::chrono::system_clock::now();
 
@@ -246,30 +261,99 @@ int main (int argc, char ** argv){
   // Read back data from Kernel
   //
   std::cout << "[INFO] Read back data from Kernel" << std::endl;
-  buffer_out_labels.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+  buffer_out_components.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
 
   //
   // Validate results
   //
   std::cout << "[INFO] Validate results" << std::endl;
+  // ##########################################################################################
+  for(unsigned int i = 0; i < map_out_components[0] ; i++)
+    std::cout << "[    ] " << i << " - " << map_out_components[i] << std::endl;
+  // ##########################################################################################
+
   bool correct = true;
-  int num_errors = 0;
-  const int max_num_labels = MAX_TRUE_NODES; //50;
-  unsigned int lookupU[max_num_labels];
-  bool lookupB[max_num_labels];
-  for(unsigned int i = 0; i < max_num_labels ; i++)
-    lookupB[i] = false;
-  for(unsigned int i = 0; i < num_nodes ; i++){
-    if(!lookupB[map_out_labels[i]]){
-      lookupU[map_out_labels[i]] = ref_labels[i];
-      lookupB[map_out_labels[i]] = true;
+  bool end_reached = false;
+  bool first_free_node = true;
+  bool processed[num_nodes];
+  for(unsigned int i = 0; i < num_nodes ; i++)
+    processed[i] = false;
+  unsigned int num_errors = 0;
+  unsigned int component_size = 0;
+  unsigned int node = 0;
+  unsigned int first_node = 0;
+  unsigned int label = 0;
+  unsigned int idx = 1;
+  unsigned int output_size = map_out_components[0];
+
+  // count #components, #comp_nodes, comp_sizes
+  unsigned int num_components = 0;
+  unsigned int num_component_nodes = 0;
+  unsigned int size_of_components[MAX_COMPONENT_SIZE];
+  for(unsigned int i = 0; i < MAX_COMPONENT_SIZE ; i++)
+    size_of_components[i] = 0;
+
+
+  while(!end_reached){
+    // if the index reaches the size of the output, all found components have been processed
+    if(idx == output_size){
+      end_reached = true;
+      break;
     }
-    else if(lookupU[map_out_labels[i]] != ref_labels[i]){
-      correct = false;
-      std::cout << "[WARNING] Wrong result, node: " << i << " expected: " << ref_labels[i] << " got: " << map_out_labels[i] << std::endl;
-      num_errors++;
+    else{
+      // read the size of the next component and get the label of its first snode
+      component_size = map_out_components[idx];
+      idx++;
+      size_of_components[component_size]++;
+      num_components++;
+      first_node = map_out_components[idx];
+      idx++;
+      num_component_nodes++;
+      label = ref_labels[first_node];
+      processed[first_node] = true;
+      // iterate through the rest of the component and compare each label to the one of the first node
+      // this makes sure, that each found component is also a component in the reference
+      for(unsigned int i = 1; i < component_size ; i++){
+        node = map_out_components[idx];
+        idx++;
+        num_component_nodes++;
+        // if a missmatch has been found, there is an error in the solution
+        if(label != ref_labels[node]){
+          num_errors++;
+          correct = false;
+          std::cout << "[WARNING] Wrong result. The two following nodes should not be part of the same component" << std::endl;
+          std::cout << "[       ] node " << first_node << " has label " << label << " ; node " << node << " has label " << ref_labels[node] << std::endl;
+        }
+        processed[node] = true;
+      }
+      // iterate through all reference-labels and make sure that no other nodes were supposed to be part of that component
+      for(unsigned int i = 0; i < num_nodes ; i++){
+        if(!processed[i] && ref_labels[i] == label){
+          num_errors++;
+          correct = false;
+          processed[i] = true;
+          std::cout << "[WARNING] Wrong result. The following node should also be part of the last component" << std::endl;
+          std::cout << "[       ] component with label " << label << " did not include node " << i << " with the label" << ref_labels[i] << std::endl;
+        }
+      }
     }
   }
+  // make sure no component has been forgotten
+  for(unsigned int i = 0; i < num_nodes ; i++){
+    if(!processed[i]){
+      if(first_free_node){
+        first_free_node = false;
+        label = ref_labels[i];
+      }
+      else if(label != ref_labels[i]){
+        num_errors++;
+        correct = false;
+        std::cout << "[WARNING] Wrong result. The following node should be part of a component, but was not" << std::endl;
+        std::cout << "[       ] node " << i << " has label " << ref_labels[i] << " while the label for free nodes should be " << label << std::endl;
+      }
+    }
+  }
+
   if(correct){
     std::cout << "[    ]\n[INFO] TEST PASSED\n[    ]" << std::endl;
     std::cout << "[INFO] All results of the kernel match the expected results" << std::endl;
@@ -277,6 +361,14 @@ int main (int argc, char ** argv){
     std::cout << "[       ]\n[WARNING] TEST FAILED\n[       ]" << std::endl;
     std::cout << "[WARNING] " << num_errors << "  mismatches in the results have been found\n[       ]" << std::endl;
   }
+
+  std::cout << "[    ]\n[INFO] Number of different components: " << num_components << std::endl;
+  std::cout << "[    ] Number of nodes that are part of components: " << num_component_nodes << std::endl;
+  std::cout << "[    ] Number of components with each size (number nodes per component)\n[    ]";
+  for(unsigned int i = 0; i < MAX_COMPONENT_SIZE ; i++)
+    std::cout << " " << i << "-" << size_of_components[i] << " ;";
+
+  std::cout << "\n[    ]" << std::endl;
 
   return 0;
 }

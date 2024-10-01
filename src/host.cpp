@@ -44,7 +44,7 @@ int main (int argc, char ** argv){
   //
   //============================================
 
-  std::string csv_file_name = "dat/dummy.csv"; // "dat/event005001514.csv"; // "dat/dummy.csv";
+  std::string csv_file_name = "dat/event005001514.csv"; // "dat/dummy.csv"; //
   // std::string csv_file_name = CSV_FILE;
   std::vector<unsigned int> edge_from;
   std::vector<unsigned int> edge_to;
@@ -154,8 +154,13 @@ int main (int argc, char ** argv){
   //
   // Calculate size of vector in bytes
   //
-  unsigned int temp = 140;
-  size_t size_full_graph_byte = sizeof(unsigned int) * MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;    // 256, 136
+  // unsigned int temp = 128; // 256, 136
+  // 256 MB per bank
+  // -> 4 B * 524288 = 2.097.152
+  // 256 MB / 2.097.152 = 128
+  // -> MAX_FULL_GRAPH_EDGES = 128, to fill one complete bank
+
+  size_t size_full_graph_byte = sizeof(unsigned int) * MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;
   size_t size_scores_byte = sizeof(float) * MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;
   size_t size_graph_byte = sizeof(unsigned int) * MAX_TRUE_NODES * MAX_EDGES;
   size_t size_lookup_byte = sizeof(unsigned int) * MAX_TRUE_NODES;
@@ -208,32 +213,51 @@ int main (int argc, char ** argv){
   // Fill input buffers with test data from CSV
   //
   std::cout << "[INFO] Fill full graph data structure with data from CSV-file" << std::endl;
-  // unsigned int temp2 = 7;
-  // unsigned int score_table[num_nodes * MAX_FULL_GRAPH_EDGES];
-  // float score_table[num_nodes * temp];
-  std::cout << "[    ] 0" << std::endl;
-  // set all indicators that give the number of connections of that node to 0
-  // for(unsigned int i = 0; i < num_nodes ; i++)
-  //   map_in_full_graph[i * MAX_FULL_GRAPH_EDGES] = 0;
-  std::cout << "[    ] 1" << std::endl;
-  // fill tables with connections and scores of the edges and keep the number of connections for each node up to date
+  unsigned int full_nodes = 0;
   for(unsigned int i = 0; i < num_edges ; i++){
-    map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES + map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_to[i];
-    map_in_scores[edge_from[i] * MAX_FULL_GRAPH_EDGES + map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES]] = scores[i];
-    map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES]++;
-    map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES + map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_from[i];
-    map_in_scores[edge_to[i] * MAX_FULL_GRAPH_EDGES + map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES]] = scores[i];
-    map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES]++;
+    // if size of table is exceeded write a warning
+    if(map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES] < MAX_FULL_GRAPH_EDGES - 1){
+      // check if node is already present in row, to filter out duplicate edges
+      bool new_node = true;
+      // for(unsigned int j = 0 ; j < map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES] ; j++)
+      //   if(map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES + 1 + j] == edge_to[i])
+      //     new_node = false;
+      if(new_node){
+        // fill tables with connections and scores of the edges and keep the number of connections for each node up to date
+        map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES + map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_to[i];
+        map_in_scores[edge_from[i] * MAX_FULL_GRAPH_EDGES + map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES]] = scores[i];
+        map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES]++;
+        full_nodes++;
+      }
+    }
+    else
+        std::cout << "[WARNING] Full graph data structure is exceeded!\n[       ] Row " << edge_from[i] << " is already full and can not take in node " << edge_to[i] << " anymore" << std::endl;
+
+    // if size of table is exceeded write a warning
+    if(map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES] < MAX_FULL_GRAPH_EDGES - 1){
+      // check if node is already present in row, to filter out duplicate edges
+      bool new_node = true;
+      // for(unsigned int j = 0 ; j < map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES] ; j++)
+      //   if(map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES + 1 + j] == edge_from[i])
+      //     new_node = false;
+      if(new_node){
+        // fill tables with connections and scores of the edges and keep the number of connections for each node up to date
+        map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES + map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_from[i];
+        map_in_scores[edge_to[i] * MAX_FULL_GRAPH_EDGES + map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES]] = scores[i];
+        map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES]++;
+        full_nodes++;
+      }
+    }
+    else
+        std::cout << "[WARNING] Full graph data structure is exceeded!\n[       ] Row " << edge_to[i] << " is already full and can not take in node " << edge_from[i] << " anymore" << std::endl;
   }
-  std::cout << "[    ] 2" << std::endl;
-  // create a stream of scores out of the score-table
-  // unsigned int edge = 0;
-  // for(unsigned int row = 0; row < num_nodes ; row++){
-  //   for(unsigned int i = 0; i < map_in_full_graph[row * MAX_FULL_GRAPH_EDGES] ; i++){
-  //     map_in_scores[edge] = scores[score_table[row * MAX_FULL_GRAPH_EDGES + i]];
-  //     edge++;
-  //   }
-  // }
+  std::cout << "[INFO] Nodes in the full-graph-table " << full_nodes << std::endl;
+  for(unsigned int i = 0; i < 10 ; i++){
+    std::cout << "[    ] " << i << " - ";
+    for(unsigned int j = 0 ; j < map_in_full_graph[i * MAX_FULL_GRAPH_EDGES] ; j++)
+      std::cout << map_in_full_graph[i * MAX_FULL_GRAPH_EDGES + 1 + j] << ",";
+    std::cout << std::endl;
+  }
 
   //
   // Synchronize input buffer data to device global memory
@@ -268,8 +292,8 @@ int main (int argc, char ** argv){
   //
   std::cout << "[INFO] Validate results" << std::endl;
   // ##########################################################################################
-  for(unsigned int i = 0; i < map_out_components[0] ; i++)
-    std::cout << "[    ] " << i << " - " << map_out_components[i] << std::endl;
+  // for(unsigned int i = 0; i < map_out_components[0] ; i++)
+  //   std::cout << "[    ] " << i << " - " << map_out_components[i] << std::endl;
   // ##########################################################################################
 
   bool correct = true;
@@ -285,6 +309,8 @@ int main (int argc, char ** argv){
   unsigned int label = 0;
   unsigned int idx = 1;
   unsigned int output_size = map_out_components[0];
+  std::cout << "[INFO] output_size = " << output_size << std::endl;
+  std::cout << "[    ] max size of output = " << MAX_TRUE_NODES + MAX_COMPONENTS << std::endl;
 
   // count #components, #comp_nodes, comp_sizes
   unsigned int num_components = 0;
@@ -296,7 +322,7 @@ int main (int argc, char ** argv){
 
   while(!end_reached){
     // if the index reaches the size of the output, all found components have been processed
-    if(idx == output_size){
+    if(idx >= output_size){
       end_reached = true;
       break;
     }
@@ -332,8 +358,8 @@ int main (int argc, char ** argv){
           num_errors++;
           correct = false;
           processed[i] = true;
-          std::cout << "[WARNING] Wrong result. The following node should also be part of the last component" << std::endl;
-          std::cout << "[       ] component with label " << label << " did not include node " << i << " with the label" << ref_labels[i] << std::endl;
+          // std::cout << "[WARNING] Wrong result. The following node should also be part of the last component" << std::endl;
+          // std::cout << "[       ] component with label " << label << " did not include node " << i << " with the label" << ref_labels[i] << std::endl;
         }
       }
     }
@@ -348,8 +374,8 @@ int main (int argc, char ** argv){
       else if(label != ref_labels[i]){
         num_errors++;
         correct = false;
-        std::cout << "[WARNING] Wrong result. The following node should be part of a component, but was not" << std::endl;
-        std::cout << "[       ] node " << i << " has label " << ref_labels[i] << " while the label for free nodes should be " << label << std::endl;
+        // std::cout << "[WARNING] Wrong result. The following node should be part of a component, but was not" << std::endl;
+        // std::cout << "[       ] node " << i << " has label " << ref_labels[i] << " while the label for free nodes should be " << label << std::endl;
       }
     }
   }
@@ -364,11 +390,10 @@ int main (int argc, char ** argv){
 
   std::cout << "[    ]\n[INFO] Number of different components: " << num_components << std::endl;
   std::cout << "[    ] Number of nodes that are part of components: " << num_component_nodes << std::endl;
-  std::cout << "[    ] Number of components with each size (number nodes per component)\n[    ]";
-  for(unsigned int i = 0; i < MAX_COMPONENT_SIZE ; i++)
-    std::cout << " " << i << "-" << size_of_components[i] << " ;";
-
-  std::cout << "\n[    ]" << std::endl;
+  std::cout << "[    ] Number of components with each size (number nodes per component, starting at size 0)\n[" << size_of_components[0];
+  for(unsigned int i = 1; i < MAX_COMPONENT_SIZE ; i++)
+    std::cout << "," << size_of_components[i];
+  std::cout << "]\n[    ]" << std::endl;
 
   return 0;
 }

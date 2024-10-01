@@ -4,7 +4,7 @@
 
 #define MAX_TOTAL_NODES 524288          // maximum number of total nodes in the full graph [325381]
 #define MAX_EDGES 16                    // maximum number of high-score connections a node can have [14]
-#define MAX_FULL_GRAPH_EDGES 256        // maximum number of all connections a node can have [136]
+#define MAX_FULL_GRAPH_EDGES 128        // maximum number of all connections a node can have [136]
 #define MAX_COMPONENT_SIZE 128          // maximum number of nodes, that can be part of the same component [81]
 #define MAX_TRUE_NODES 32768            // maximum number of nodes, that have high-score connections and are therefor part of components [31991]
 #define MAX_COMPONENTS 8192             // maximum number of different components [4200]

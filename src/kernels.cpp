@@ -33,8 +33,6 @@ static void write_components(unsigned int* out, hls::stream<unsigned int>& outSt
       component_size = outStream.read();
       // if the size == 0, the end of the stream is reached, the total size can be written and the writing ended
       if(component_size == 0){
-        // out[stream_size] = 0;
-        // stream_size++;
         out[0] = stream_size;
         stream_running = false;
         break;
@@ -61,13 +59,11 @@ static void filter_memory(unsigned int* full_graph, float* m_scores, unsigned in
 
   const float cutoff = 0.5;
   unsigned int new_from, new_to;
-  float score;
   m_graph_size = 1;
   // for each node in the full graph / for each row in the graph-table
   for (unsigned int row = 0; row < m_num_nodes; row++){
     // for each connection of that node
     for (unsigned int i = 0; i < full_graph[row * MAX_FULL_GRAPH_EDGES]; i++){
-      // score = scores_stream.read();
       if(m_scores[row * MAX_FULL_GRAPH_EDGES + i] > cutoff){
         // put row in lookup and get out new index
         if(m_lookup_filter[row] == 0){
@@ -91,13 +87,18 @@ static void filter_memory(unsigned int* full_graph, float* m_scores, unsigned in
         // Add new indices to the filtered graph
         m_graph[new_from * MAX_EDGES + 1 + temp_connections[new_from]] = new_to;
         temp_connections[new_from]++;
-        // m_graph[new_to * MAX_EDGES + 1 + temp_connections[new_to]] = new_from;
-        // temp_connections[new_to]++;
       }
     }
   }
   for (unsigned int i = 0; i < m_graph_size; i++)
     m_graph[i * MAX_EDGES] = temp_connections[i];
+
+  for(unsigned int i = 0; i < 52 ; i++){
+    std::cout << "[    ] " << i << " - ";
+    for(unsigned int j = 0 ; j < m_graph[i * MAX_EDGES] ; j++)
+      std::cout << m_graph[i * MAX_EDGES + 1 + j] << ",";
+    std::cout << std::endl;
+  }
 
 }
 
@@ -114,7 +115,6 @@ static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::s
   for (unsigned int row = 0; row < m_num_nodes; row++){
 
     if(m_graph[row * MAX_EDGES] == 0){
-      // m_labels[row] = 0;
       processed[row] = true;
     }
     // node with connections that has not been processed yet -> new component
@@ -139,9 +139,16 @@ static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::s
 
         // add all connections of current node to component if not already processed <- to many fills for highly connected components?
         for(unsigned int i = 0 ; i < m_graph[next_node * MAX_EDGES] ; i++){
+
           if(!processed[m_graph[next_node * MAX_EDGES + 1 + i]] && current_component_size < MAX_COMPONENT_SIZE){
-            component[current_component_size] = m_graph[next_node * MAX_EDGES + 1 + i];
-            current_component_size++;
+            bool new_node = true;
+            for(unsigned int j = 0 ; j < current_component_size ; j++)
+              if(component[j] == m_graph[next_node * MAX_EDGES + 1 + i])
+                new_node = false;
+            if(new_node){
+              component[current_component_size] = m_graph[next_node * MAX_EDGES + 1 + i];
+              current_component_size++;
+            }
           }
         }
         // after all connections of node have been added, the node is done and can be marked as processed

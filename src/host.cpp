@@ -128,13 +128,7 @@ int main (int argc, char ** argv){
         ref_labels.push_back(std::stoi(word));
       }
     }
-  }
-  // std::cout << "[INFO] print dummy values" << std::endl;
-  // std::cout << "[    ] edge_from: \t" << edge_from << std::endl;
-  // std::cout << "[    ] edge_to: \t" << edge_to << std::endl;
-  // std::cout << "[    ] scores: \t\t" << scores << std::endl;
-  // std::cout << "[    ] ref_labels: \t" << ref_labels << std::endl;
-  
+  }  
   csv_file.close();
   
   //============================================
@@ -162,26 +156,18 @@ int main (int argc, char ** argv){
   //
   // Calculate size of vector in bytes
   //
-  // unsigned int temp = 128; // 256, 136
-  // 256 MB per bank
-  // -> 4 B * 524288 = 2.097.152
-  // 256 MB / 2.097.152 = 128
-  // -> MAX_FULL_GRAPH_EDGES = 128, to fill one complete bank
-
   size_t size_full_graph_byte = sizeof(unsigned int) * MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;
   size_t size_scores_byte = sizeof(float) * MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;
   size_t size_graph_byte = sizeof(unsigned int) * MAX_TRUE_NODES * MAX_EDGES;
   size_t size_lookup_byte = sizeof(unsigned int) * MAX_TRUE_NODES;
   size_t size_lookup_filter_byte = sizeof(unsigned int) * MAX_TOTAL_NODES;
   size_t size_components_byte = sizeof(unsigned int) * (MAX_TRUE_NODES + MAX_COMPONENTS);
-  // size_t size_labels_byte = sizeof(unsigned int) * num_nodes;
   std::cout << "[INFO] Size of full_graph:    " << size_full_graph_byte << " Bytes" << std::endl;
   std::cout << "[    ] Size of scores:        " << size_scores_byte << " Bytes" << std::endl;
   std::cout << "[    ] Size of graph:         " << size_graph_byte << " Bytes" << std::endl;
   std::cout << "[    ] Size of lookup:        " << size_lookup_byte << " Bytes" << std::endl;
   std::cout << "[    ] Size of lookup_filter: " << size_lookup_filter_byte << " Bytes" << std::endl;
   std::cout << "[    ] Size of components:    " << size_components_byte << " Bytes" << std::endl;
-  // std::cout << "[    ] Size of labels:        " << size_labels_byte << " Bytes" << std::endl;
   
   //
   // Define Kernel Function to be executed on Device
@@ -198,7 +184,6 @@ int main (int argc, char ** argv){
   auto buffer_inout_lookup = xrt::bo(targetDevice, size_lookup_byte, krnl.group_id(3));
   auto buffer_inout_lookup_filter = xrt::bo(targetDevice, size_lookup_filter_byte, krnl.group_id(4));
   auto buffer_out_components = xrt::bo(targetDevice, size_components_byte, krnl.group_id(5));
-  // auto buffer_out_labels = xrt::bo(targetDevice, size_labels_byte, krnl.group_id(5));
 
   auto map_in_full_graph = buffer_in_full_graph.map<unsigned int*>();
   auto map_in_scores = buffer_in_scores.map<float*>();
@@ -206,7 +191,6 @@ int main (int argc, char ** argv){
   auto map_inout_lookup = buffer_inout_lookup.map<unsigned int*>();
   auto map_inout_lookup_filter = buffer_inout_lookup_filter.map<unsigned int*>();
   auto map_out_components = buffer_out_components.map<unsigned int*>();
-  // auto map_out_labels     = buffer_out_labels.map<unsigned int*>();
 
   //set to const 0 for output only -> necessary?
   std::fill(map_in_full_graph, map_in_full_graph + MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES, 0);
@@ -215,125 +199,12 @@ int main (int argc, char ** argv){
   std::fill(map_inout_lookup, map_inout_lookup + MAX_TRUE_NODES, 0);
   std::fill(map_inout_lookup_filter, map_inout_lookup_filter + MAX_TOTAL_NODES, 0);
   std::fill(map_out_components, map_out_components + MAX_TRUE_NODES + MAX_COMPONENTS, 0);
-  // std::fill(map_out_labels, map_out_labels + num_nodes, 0);
 
   //
   // Fill input buffers with test data from CSV
   //
   std::cout << "[INFO] Fill full graph data structure with data from CSV-file" << std::endl;
 
-  {
-    std::cout << "[    ]\n[INFO] Compare full-graph tables" << std::endl;
-    std::cout << "[    ] Allocate heap-memory" << std::endl;
-    unsigned int* large_graph = new unsigned int[MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES];
-    unsigned int* small_graph = new unsigned int[MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES];
-
-    std::cout << "[    ] Fill large graph" << std::endl;
-    for(unsigned int i = 0; i < num_edges ; i++){
-      if(large_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES] < MAX_FULL_GRAPH_EDGES - 1){
-        large_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES + large_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_to[i];
-        large_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES]++;
-      }
-      else
-          std::cout << "[    ] Large graph exceeded: row " << edge_from[i] << " ; node " << edge_to[i] << std::endl;
-      if(large_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES] < MAX_FULL_GRAPH_EDGES - 1){
-        large_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES + large_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_from[i];
-        large_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES]++;
-      }
-      else
-          std::cout << "[    ] Large graph exceeded: row " << edge_to[i] << " ; node " << edge_from[i] << std::endl;
-    }
-
-    std::cout << "[    ] Fill small graph" << std::endl;
-    for(unsigned int i = 0; i < num_edges ; i++){
-      if(small_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES] < MAX_FULL_GRAPH_EDGES - 1){
-        bool new_node = true;
-        for(unsigned int j = 0 ; j < small_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES] ; j++)
-          if(small_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES + 1 + j] == edge_to[i])
-            new_node = false;
-        if(new_node){
-          small_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES + small_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_to[i];
-          small_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES]++;
-        }
-      }
-      else
-          std::cout << "[    ] Small graph exceeded: row " << edge_from[i] << " ; node " << edge_to[i] << std::endl;
-      if(small_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES] < MAX_FULL_GRAPH_EDGES - 1){
-        bool new_node = true;
-        for(unsigned int j = 0 ; j < small_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES] ; j++)
-          if(small_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES + 1 + j] == edge_from[i])
-            new_node = false;
-        if(new_node){
-          small_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES + small_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_from[i];
-          small_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES]++;
-        }
-      }
-      else
-          std::cout << "[    ] Small graph exceeded: row " << edge_to[i] << " ; node " << edge_from[i] << std::endl;
-    }
-
-    std::cout << "[    ] Comparison" << std::endl;
-    unsigned int empty_rows = 0;
-    unsigned int one_zero = 0;
-    unsigned int wrong_ratio = 0;
-    unsigned int missing_small = 0;
-    unsigned int missing_large = 0;
-
-    for(unsigned int row = 0; row < num_nodes ; row++){
-      // test row-length == 0 for both or only one
-      if(large_graph[row * MAX_FULL_GRAPH_EDGES] == 0 && small_graph[row * MAX_FULL_GRAPH_EDGES] == 0)
-        empty_rows++;
-      else if(large_graph[row * MAX_FULL_GRAPH_EDGES] == 0 || small_graph[row * MAX_FULL_GRAPH_EDGES] == 0){
-        one_zero++;
-        // std::cout << "[    ] Missmatch of row-lengths: row " << row << " ; large " << large_graph[row * MAX_FULL_GRAPH_EDGES] << " ; small " << small_graph[row * MAX_FULL_GRAPH_EDGES] << std::endl;
-      }
-      else{
-        // compare row-lengths -> len(large) == 2 * len(small)
-        if(large_graph[row * MAX_FULL_GRAPH_EDGES] != 2 * small_graph[row * MAX_FULL_GRAPH_EDGES]){
-          wrong_ratio++;
-          // std::cout << "[    ] Unexpected row-lengths: row " << row << " ; large " << large_graph[row * MAX_FULL_GRAPH_EDGES] << " ; small " << small_graph[row * MAX_FULL_GRAPH_EDGES] << std::endl;
-          // std::cout << "[    ] " << large_graph[row * MAX_FULL_GRAPH_EDGES + 1];
-          // for(unsigned int i = 1; i < large_graph[row * MAX_FULL_GRAPH_EDGES]; i++)
-          //   std::cout << "," << large_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i];
-          // std::cout << std::endl;
-          // std::cout << "[    ] " << small_graph[row * MAX_FULL_GRAPH_EDGES + 1];
-          // for(unsigned int i = 1; i < small_graph[row * MAX_FULL_GRAPH_EDGES]; i++)
-          //   std::cout << "," << small_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i];
-          // std::cout << std::endl;          
-        }
-
-        // make sure in each row of short, all nodes of large are present
-        for(unsigned int i = 0; i < small_graph[row * MAX_FULL_GRAPH_EDGES]; i++){
-          bool node_found = false;
-          for(unsigned int j = 0; j < large_graph[row * MAX_FULL_GRAPH_EDGES]; j++)
-            if(small_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i] == large_graph[row * MAX_FULL_GRAPH_EDGES + 1 + j])
-              node_found = true;
-          if(!node_found)
-            missing_small++;
-        }
-        for(unsigned int i = 0; i < large_graph[row * MAX_FULL_GRAPH_EDGES]; i++){
-          bool node_found = false;
-          for(unsigned int j = 0; j < small_graph[row * MAX_FULL_GRAPH_EDGES]; j++)
-            if(large_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i] == small_graph[row * MAX_FULL_GRAPH_EDGES + 1 + j])
-              node_found = true;
-          if(!node_found)
-            missing_large++;
-        }
-      }
-    }
-    std::cout << "[    ] Empty rows (expect 29873)    " << empty_rows << std::endl;
-    std::cout << "[    ] missmatched zero-rows        " << one_zero << std::endl;
-    std::cout << "[    ] len(large) != 2 * len(small) " << wrong_ratio << std::endl;
-    std::cout << "[    ] Missing small                " << missing_small << std::endl;
-    std::cout << "[    ] Missing large                " << missing_large << std::endl;
-
-    std::cout << "[    ] Free heap-memory" << std::endl;
-    delete[] large_graph;
-    delete[] small_graph;
-    std::cout << "[    ] Comparison done\n[    ]" << std::endl;
-  }
-
-  unsigned int full_nodes = 0;
   unsigned int score_missmatch = 0;
   for(unsigned int i = 0; i < num_edges ; i++){
     // if size of table is exceeded write a warning
@@ -353,7 +224,6 @@ int main (int argc, char ** argv){
         map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES + map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_to[i];
         map_in_scores[edge_from[i] * MAX_FULL_GRAPH_EDGES + map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES]] = scores[i];
         map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES]++;
-        full_nodes++;
       }
     }
     else
@@ -376,15 +246,14 @@ int main (int argc, char ** argv){
         map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES + map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_from[i];
         map_in_scores[edge_to[i] * MAX_FULL_GRAPH_EDGES + map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES]] = scores[i];
         map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES]++;
-        full_nodes++;
       }
     }
     else
         std::cout << "[WARNING] Full graph data structure is exceeded!\n[       ] Row " << edge_to[i] << " is already full and can not take in node " << edge_from[i] << " anymore" << std::endl;
   }
-  std::cout << "[WARNING] Missmatched scores: " << score_missmatch << std::endl;
+  std::cout << "[INFO] Missmatched scores of doubled edges detected and have their scores set to 1.0: " << score_missmatch << std::endl;
   if(score_missmatch % 2 == 0)
-    std::cout << "[       ] Affected edges:     " << score_missmatch / 2 << std::endl;
+    std::cout << "[    ] Affected edges: " << score_missmatch / 2  << std::endl;
 
   //
   // Synchronize input buffer data to device global memory

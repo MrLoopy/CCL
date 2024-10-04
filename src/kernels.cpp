@@ -4,23 +4,8 @@
 #include <hls_stream.h>
 
 // Custom includes
-#include <iostream>
+// #include <iostream>
 #include "kernels.hpp"
-
-// static void read_input_float(float* in, hls::stream<float>& inStream, unsigned int size) {
-//     for (unsigned int i = 0; i < size * 2; i++) {
-//       inStream << in[i];
-//     }
-// }
-
-// static void queue_components(unsigned int m_labels[MAX_TOTAL_NODES], hls::stream<unsigned int>& outStream, unsigned int size, unsigned int* m_lookup) {
-//   for (unsigned int i = 0; i < size; i++) {
-//     if(m_lookup[i] == 0)
-//       outStream << 0;
-//     else
-//       outStream << m_labels[m_lookup[i]];
-//   }
-// }
 
 static void write_components(unsigned int* out, hls::stream<unsigned int>& outStream, unsigned int size) {
 
@@ -101,33 +86,6 @@ static void filter_memory(unsigned int* full_graph, float* m_scores, unsigned in
     }
   for (unsigned int i = 0; i < m_graph_size; i++)
     m_graph[i * MAX_EDGES] = temp_connections[i];
-  
-  // write part of graph/lookup
-  std::cout << "[    ]\n[INFO] Writing part of filtered output with corresponding part of the full graph\n[    ]\n" << std::endl;
-  for(unsigned int i = 45; i < 52; i++){
-    unsigned int full_i = m_lookup[i];
-    std::cout << i << "(" << m_graph[i * MAX_EDGES] << ") - " << m_graph[i * MAX_EDGES + 1];
-    if(m_graph[i * MAX_EDGES] > 1)
-      for(unsigned int j = 1; j < m_graph[i * MAX_EDGES]; j++)
-        std::cout << "," << m_graph[i * MAX_EDGES + 1 + j];
-    std::cout << std::endl;
-    std::cout << full_i << "(" << full_graph[full_i * MAX_FULL_GRAPH_EDGES] << ") - " << full_graph[full_i * MAX_FULL_GRAPH_EDGES + 1];
-    if(m_scores[full_i * MAX_FULL_GRAPH_EDGES] > 0.5)
-      std::cout << "t";
-    else
-      std::cout << "f";
-    if(full_graph[full_i * MAX_FULL_GRAPH_EDGES] > 1)
-      for(unsigned int j = 1; j < full_graph[full_i * MAX_FULL_GRAPH_EDGES]; j++){
-        std::cout << "," << full_graph[full_i * MAX_FULL_GRAPH_EDGES + 1 + j];
-      if(m_scores[full_i * MAX_FULL_GRAPH_EDGES + j] > 0.5)
-        std::cout << "t";
-      else
-        std::cout << "f";
-      }
-    std::cout << std::endl;
-    std::cout << std::endl;
-  }
-
 }
 
 static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::stream<unsigned int>& outStream, unsigned int* m_lookup){

@@ -49,7 +49,9 @@ LDFLAGS := -Itemp \
 	   -L${XILINX_HLS}/lib \
 	   -L${XILINX_XRT}/lib \
 	   $(ROOTLFLAGS)
-CFLAGS  := -g -Wno-unknown-pragmas \
+CFLAGS  := -g \
+	   -Wno-unused-label \
+	   -Wno-unknown-pragmas \
 	   -pthread \
 	   -std=c++17 \
 	   -Wall \

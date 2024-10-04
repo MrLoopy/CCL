@@ -204,7 +204,6 @@ int main (int argc, char ** argv){
   // Fill input buffers with test data from CSV
   //
   std::cout << "[INFO] Fill full graph data structure with data from CSV-file" << std::endl;
-
   unsigned int score_missmatch = 0;
   for(unsigned int i = 0; i < num_edges ; i++){
     // if size of table is exceeded write a warning

@@ -12,7 +12,7 @@ static void write_components(unsigned int* out, hls::stream<unsigned int>& outSt
   bool stream_running = true;
   unsigned int stream_size = 1; // position 0 in the Output will be the size of the total output. Therefore size needs to start at 1
   unsigned int component_size = 0;
-  while(stream_running){
+  out_while: while(stream_running)
     if(outStream.size() > 0){
       // every first number of each component is the size of the component;
       component_size = outStream.read();
@@ -26,20 +26,20 @@ static void write_components(unsigned int* out, hls::stream<unsigned int>& outSt
         // if the stream is still running, the size of the component is written, followed by all its node-indices
         out[stream_size] = component_size;
         stream_size++;
-        for (unsigned int i = 0; i < component_size; i++){
+        out_write_nodes: for (unsigned int i = 0; i < MAX_COMPONENT_SIZE; i++)
+        if(i < component_size){
           out[stream_size] = outStream.read();
           stream_size++;
         }
       }
     }
-  }
 }
 
 static void filter_memory(unsigned int* full_graph, float* m_scores, unsigned int m_num_nodes,
                           unsigned int* m_graph, unsigned int* m_lookup, unsigned int* m_lookup_filter, unsigned int& m_graph_size) {
 
   unsigned int temp_connections[MAX_TRUE_NODES];
-  for (unsigned int i = 0; i < MAX_TRUE_NODES; i++)
+  filter_reset_cons: for (unsigned int i = 0; i < MAX_TRUE_NODES; i++)
     temp_connections[i] = 0;
 
   const float cutoff = 0.5;
@@ -47,10 +47,12 @@ static void filter_memory(unsigned int* full_graph, float* m_scores, unsigned in
   m_graph_size = 1; // has to start at 1, cause 0 indicates that no index has been given yet
   
   // for each node in the full graph / for each row in the graph-table
-  for (unsigned int row = 0; row < m_num_nodes; row++){
+  filter_rows: for (unsigned int row = 0; row < MAX_TOTAL_NODES; row++)
+  if(row < m_num_nodes)
     // for each connection of that node
     if(full_graph[row * MAX_FULL_GRAPH_EDGES] > 0) // avoid for-loop 0 times
-      for (unsigned int i = 0; i < full_graph[row * MAX_FULL_GRAPH_EDGES]; i++){
+      filter_nodes: for (unsigned int i = 0; i < MAX_FULL_GRAPH_EDGES - 1; i++)
+      if(i < full_graph[row * MAX_FULL_GRAPH_EDGES])
         if(m_scores[row * MAX_FULL_GRAPH_EDGES + i] > cutoff){
           // put row in lookup and get out new index
           if(m_lookup_filter[row] == 0){
@@ -72,19 +74,11 @@ static void filter_memory(unsigned int* full_graph, float* m_scores, unsigned in
             new_to = m_lookup_filter[full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i]];
 
           // Add new indices to the filtered graph
-          bool new_node = true;
-          if(temp_connections[new_from] > 0)
-            for(unsigned int j = 0 ; j < temp_connections[new_from] ; j++)
-              if(m_graph[new_from * MAX_EDGES + 1 + j] == new_to)
-                new_node = false;
-          if(new_node){
-            m_graph[new_from * MAX_EDGES + 1 + temp_connections[new_from]] = new_to;
-            temp_connections[new_from]++;
-          }
+          m_graph[new_from * MAX_EDGES + 1 + temp_connections[new_from]] = new_to;
+          temp_connections[new_from]++;
         }
-      }
-    }
-  for (unsigned int i = 0; i < m_graph_size; i++)
+  filter_connections: for (unsigned int i = 0; i < MAX_TRUE_NODES; i++)
+  if(i < m_graph_size)
     m_graph[i * MAX_EDGES] = temp_connections[i];
 }
 
@@ -92,21 +86,20 @@ static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::s
 
   unsigned int component[MAX_COMPONENT_SIZE];
   unsigned int processed[MAX_TRUE_NODES];
-  for (unsigned int i = 0; i < MAX_TRUE_NODES; i++)
+  compute_reset_processed: for (unsigned int i = 0; i < MAX_TRUE_NODES; i++)
     processed[i] = false;
   unsigned int current_component_size = 0;
   unsigned int processed_nodes = 0;
   unsigned int next_node = 0;
 
-  for (unsigned int row = 0; row < m_num_nodes; row++){
-
-    if(m_graph[row * MAX_EDGES] == 0){
+  compute_rows: for (unsigned int row = 0; row < MAX_TRUE_NODES; row++)
+  if(row < m_num_nodes){
+    if(m_graph[row * MAX_EDGES] == 0)
       processed[row] = true;
-    }
     // node with connections that has not been processed yet -> new component
     else if (!processed[row]){
       // new component needs to reset parameters
-      for (unsigned int i = 0; i < MAX_COMPONENT_SIZE; i++)
+      compute_reset_component: for (unsigned int i = 0; i < MAX_COMPONENT_SIZE; i++)
         component[i] = 0;
       current_component_size = 0;
       processed_nodes = 0;
@@ -125,11 +118,12 @@ static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::s
 
         // add all connections of current node to component if not already processed <- to many fills for highly connected components?
         if(m_graph[next_node * MAX_EDGES] > 0) // avoid for-loop 0 times
-          for(unsigned int i = 0 ; i < m_graph[next_node * MAX_EDGES] ; i++){
-
+          compute_connections: for(unsigned int i = 0 ; i < MAX_EDGES - 1; i++)
+          if(i < m_graph[next_node * MAX_EDGES]){
             if(!processed[m_graph[next_node * MAX_EDGES + 1 + i]] && current_component_size < MAX_COMPONENT_SIZE){
               bool new_node = true;
-              for(unsigned int j = 0 ; j < current_component_size ; j++)
+              compute_check_component: for(unsigned int j = 0 ; j < MAX_COMPONENT_SIZE; j++)
+              if(j < current_component_size)
                 if(component[j] == m_graph[next_node * MAX_EDGES + 1 + i])
                   new_node = false;
               if(new_node){
@@ -145,9 +139,9 @@ static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::s
 
       // after component is fully set up, we can export its size and indices
       outStream << current_component_size;
-      for (unsigned int i = 0; i < current_component_size; i++){
+      compute_write_output: for (unsigned int i = 0; i < MAX_COMPONENT_SIZE; i++)
+      if(i < current_component_size)
         outStream << m_lookup[component[i]];
-      }
     }
   }
   outStream << 0;

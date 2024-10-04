@@ -28,6 +28,14 @@ std::ostream& operator<<(std::ostream& os, const std::vector<S>& vector){
     return os;
 }
 
+bool missmatch_found(float a, float b, float cutoff = 0.5){
+  if(a < cutoff && b > cutoff)
+    return true;
+  if(a > cutoff && b < cutoff)
+    return true;
+  return false;
+}
+
 int main (int argc, char ** argv){
   //============================================
   //
@@ -213,15 +221,133 @@ int main (int argc, char ** argv){
   // Fill input buffers with test data from CSV
   //
   std::cout << "[INFO] Fill full graph data structure with data from CSV-file" << std::endl;
+
+  {
+    std::cout << "[    ]\n[INFO] Compare full-graph tables" << std::endl;
+    std::cout << "[    ] Allocate heap-memory" << std::endl;
+    unsigned int* large_graph = new unsigned int[MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES];
+    unsigned int* small_graph = new unsigned int[MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES];
+
+    std::cout << "[    ] Fill large graph" << std::endl;
+    for(unsigned int i = 0; i < num_edges ; i++){
+      if(large_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES] < MAX_FULL_GRAPH_EDGES - 1){
+        large_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES + large_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_to[i];
+        large_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES]++;
+      }
+      else
+          std::cout << "[    ] Large graph exceeded: row " << edge_from[i] << " ; node " << edge_to[i] << std::endl;
+      if(large_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES] < MAX_FULL_GRAPH_EDGES - 1){
+        large_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES + large_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_from[i];
+        large_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES]++;
+      }
+      else
+          std::cout << "[    ] Large graph exceeded: row " << edge_to[i] << " ; node " << edge_from[i] << std::endl;
+    }
+
+    std::cout << "[    ] Fill small graph" << std::endl;
+    for(unsigned int i = 0; i < num_edges ; i++){
+      if(small_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES] < MAX_FULL_GRAPH_EDGES - 1){
+        bool new_node = true;
+        for(unsigned int j = 0 ; j < small_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES] ; j++)
+          if(small_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES + 1 + j] == edge_to[i])
+            new_node = false;
+        if(new_node){
+          small_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES + small_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_to[i];
+          small_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES]++;
+        }
+      }
+      else
+          std::cout << "[    ] Small graph exceeded: row " << edge_from[i] << " ; node " << edge_to[i] << std::endl;
+      if(small_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES] < MAX_FULL_GRAPH_EDGES - 1){
+        bool new_node = true;
+        for(unsigned int j = 0 ; j < small_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES] ; j++)
+          if(small_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES + 1 + j] == edge_from[i])
+            new_node = false;
+        if(new_node){
+          small_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES + small_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_from[i];
+          small_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES]++;
+        }
+      }
+      else
+          std::cout << "[    ] Small graph exceeded: row " << edge_to[i] << " ; node " << edge_from[i] << std::endl;
+    }
+
+    std::cout << "[    ] Comparison" << std::endl;
+    unsigned int empty_rows = 0;
+    unsigned int one_zero = 0;
+    unsigned int wrong_ratio = 0;
+    unsigned int missing_small = 0;
+    unsigned int missing_large = 0;
+
+    for(unsigned int row = 0; row < num_nodes ; row++){
+      // test row-length == 0 for both or only one
+      if(large_graph[row * MAX_FULL_GRAPH_EDGES] == 0 && small_graph[row * MAX_FULL_GRAPH_EDGES] == 0)
+        empty_rows++;
+      else if(large_graph[row * MAX_FULL_GRAPH_EDGES] == 0 || small_graph[row * MAX_FULL_GRAPH_EDGES] == 0){
+        one_zero++;
+        // std::cout << "[    ] Missmatch of row-lengths: row " << row << " ; large " << large_graph[row * MAX_FULL_GRAPH_EDGES] << " ; small " << small_graph[row * MAX_FULL_GRAPH_EDGES] << std::endl;
+      }
+      else{
+        // compare row-lengths -> len(large) == 2 * len(small)
+        if(large_graph[row * MAX_FULL_GRAPH_EDGES] != 2 * small_graph[row * MAX_FULL_GRAPH_EDGES]){
+          wrong_ratio++;
+          // std::cout << "[    ] Unexpected row-lengths: row " << row << " ; large " << large_graph[row * MAX_FULL_GRAPH_EDGES] << " ; small " << small_graph[row * MAX_FULL_GRAPH_EDGES] << std::endl;
+          // std::cout << "[    ] " << large_graph[row * MAX_FULL_GRAPH_EDGES + 1];
+          // for(unsigned int i = 1; i < large_graph[row * MAX_FULL_GRAPH_EDGES]; i++)
+          //   std::cout << "," << large_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i];
+          // std::cout << std::endl;
+          // std::cout << "[    ] " << small_graph[row * MAX_FULL_GRAPH_EDGES + 1];
+          // for(unsigned int i = 1; i < small_graph[row * MAX_FULL_GRAPH_EDGES]; i++)
+          //   std::cout << "," << small_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i];
+          // std::cout << std::endl;          
+        }
+
+        // make sure in each row of short, all nodes of large are present
+        for(unsigned int i = 0; i < small_graph[row * MAX_FULL_GRAPH_EDGES]; i++){
+          bool node_found = false;
+          for(unsigned int j = 0; j < large_graph[row * MAX_FULL_GRAPH_EDGES]; j++)
+            if(small_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i] == large_graph[row * MAX_FULL_GRAPH_EDGES + 1 + j])
+              node_found = true;
+          if(!node_found)
+            missing_small++;
+        }
+        for(unsigned int i = 0; i < large_graph[row * MAX_FULL_GRAPH_EDGES]; i++){
+          bool node_found = false;
+          for(unsigned int j = 0; j < small_graph[row * MAX_FULL_GRAPH_EDGES]; j++)
+            if(large_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i] == small_graph[row * MAX_FULL_GRAPH_EDGES + 1 + j])
+              node_found = true;
+          if(!node_found)
+            missing_large++;
+        }
+      }
+    }
+    std::cout << "[    ] Empty rows (expect 29873)    " << empty_rows << std::endl;
+    std::cout << "[    ] missmatched zero-rows        " << one_zero << std::endl;
+    std::cout << "[    ] len(large) != 2 * len(small) " << wrong_ratio << std::endl;
+    std::cout << "[    ] Missing small                " << missing_small << std::endl;
+    std::cout << "[    ] Missing large                " << missing_large << std::endl;
+
+    std::cout << "[    ] Free heap-memory" << std::endl;
+    delete[] large_graph;
+    delete[] small_graph;
+    std::cout << "[    ] Comparison done\n[    ]" << std::endl;
+  }
+
   unsigned int full_nodes = 0;
+  unsigned int score_missmatch = 0;
   for(unsigned int i = 0; i < num_edges ; i++){
     // if size of table is exceeded write a warning
     if(map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES] < MAX_FULL_GRAPH_EDGES - 1){
       // check if node is already present in row, to filter out duplicate edges
       bool new_node = true;
-      // for(unsigned int j = 0 ; j < map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES] ; j++)
-      //   if(map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES + 1 + j] == edge_to[i])
-      //     new_node = false;
+      for(unsigned int j = 0 ; j < map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES] ; j++)
+        if(map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES + 1 + j] == edge_to[i]){
+          new_node = false;
+          if(missmatch_found(map_in_scores[edge_from[i] * MAX_FULL_GRAPH_EDGES + j], scores[i], 0.5)){
+            score_missmatch++;
+            map_in_scores[edge_from[i] * MAX_FULL_GRAPH_EDGES + j] = 1.0;
+          }
+        }
       if(new_node){
         // fill tables with connections and scores of the edges and keep the number of connections for each node up to date
         map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES + map_in_full_graph[edge_from[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_to[i];
@@ -237,9 +363,14 @@ int main (int argc, char ** argv){
     if(map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES] < MAX_FULL_GRAPH_EDGES - 1){
       // check if node is already present in row, to filter out duplicate edges
       bool new_node = true;
-      // for(unsigned int j = 0 ; j < map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES] ; j++)
-      //   if(map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES + 1 + j] == edge_from[i])
-      //     new_node = false;
+      for(unsigned int j = 0 ; j < map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES] ; j++)
+        if(map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES + 1 + j] == edge_from[i]){
+          new_node = false;
+          if(missmatch_found(map_in_scores[edge_to[i] * MAX_FULL_GRAPH_EDGES + j], scores[i], 0.5)){
+            score_missmatch++;
+            map_in_scores[edge_to[i] * MAX_FULL_GRAPH_EDGES + j] = 1.0;
+          }
+        }
       if(new_node){
         // fill tables with connections and scores of the edges and keep the number of connections for each node up to date
         map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES + map_in_full_graph[edge_to[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_from[i];
@@ -251,13 +382,9 @@ int main (int argc, char ** argv){
     else
         std::cout << "[WARNING] Full graph data structure is exceeded!\n[       ] Row " << edge_to[i] << " is already full and can not take in node " << edge_from[i] << " anymore" << std::endl;
   }
-  std::cout << "[INFO] Nodes in the full-graph-table " << full_nodes << std::endl;
-  for(unsigned int i = 0; i < 10 ; i++){
-    std::cout << "[    ] " << i << " - ";
-    for(unsigned int j = 0 ; j < map_in_full_graph[i * MAX_FULL_GRAPH_EDGES] ; j++)
-      std::cout << map_in_full_graph[i * MAX_FULL_GRAPH_EDGES + 1 + j] << ",";
-    std::cout << std::endl;
-  }
+  std::cout << "[WARNING] Missmatched scores: " << score_missmatch << std::endl;
+  if(score_missmatch % 2 == 0)
+    std::cout << "[       ] Affected edges:     " << score_missmatch / 2 << std::endl;
 
   //
   // Synchronize input buffer data to device global memory
@@ -358,8 +485,8 @@ int main (int argc, char ** argv){
           num_errors++;
           correct = false;
           processed[i] = true;
-          // std::cout << "[WARNING] Wrong result. The following node should also be part of the last component" << std::endl;
-          // std::cout << "[       ] component with label " << label << " did not include node " << i << " with the label" << ref_labels[i] << std::endl;
+          std::cout << "[WARNING] Wrong result. The following node should also be part of the last component" << std::endl;
+          std::cout << "[       ] component with label " << label << " did not include node " << i << " with the label" << ref_labels[i] << std::endl;
         }
       }
     }
@@ -374,8 +501,8 @@ int main (int argc, char ** argv){
       else if(label != ref_labels[i]){
         num_errors++;
         correct = false;
-        // std::cout << "[WARNING] Wrong result. The following node should be part of a component, but was not" << std::endl;
-        // std::cout << "[       ] node " << i << " has label " << ref_labels[i] << " while the label for free nodes should be " << label << std::endl;
+        std::cout << "[WARNING] Wrong result. The following node should be part of a component, but was not" << std::endl;
+        std::cout << "[       ] node " << i << " has label " << ref_labels[i] << " while the label for free nodes should be " << label << std::endl;
       }
     }
   }
@@ -390,7 +517,7 @@ int main (int argc, char ** argv){
 
   std::cout << "[    ]\n[INFO] Number of different components: " << num_components << std::endl;
   std::cout << "[    ] Number of nodes that are part of components: " << num_component_nodes << std::endl;
-  std::cout << "[    ] Number of components with each size (number nodes per component, starting at size 0)\n[" << size_of_components[0];
+  std::cout << "[    ] Number of components with each size (number nodes per component, starting at size 0)\n[    ] [" << size_of_components[0];
   for(unsigned int i = 1; i < MAX_COMPONENT_SIZE ; i++)
     std::cout << "," << size_of_components[i];
   std::cout << "]\n[    ]" << std::endl;

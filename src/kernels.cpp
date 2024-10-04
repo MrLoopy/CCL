@@ -59,44 +59,72 @@ static void filter_memory(unsigned int* full_graph, float* m_scores, unsigned in
 
   const float cutoff = 0.5;
   unsigned int new_from, new_to;
-  m_graph_size = 1;
+  m_graph_size = 1; // has to start at 1, cause 0 indicates that no index has been given yet
+  
   // for each node in the full graph / for each row in the graph-table
   for (unsigned int row = 0; row < m_num_nodes; row++){
     // for each connection of that node
-    for (unsigned int i = 0; i < full_graph[row * MAX_FULL_GRAPH_EDGES]; i++){
-      if(m_scores[row * MAX_FULL_GRAPH_EDGES + i] > cutoff){
-        // put row in lookup and get out new index
-        if(m_lookup_filter[row] == 0){
-          m_lookup_filter[row] = m_graph_size;
-          m_lookup[m_graph_size] = row;
-          new_from = m_graph_size;
-          m_graph_size++;
-        }
-        else
-          new_from = m_lookup_filter[row];
-        // put i in lookup and get out new index
-        if(m_lookup_filter[full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i]] == 0){
-          m_lookup_filter[full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i]] = m_graph_size;
-          m_lookup[m_graph_size] = full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i];
-          new_to = m_graph_size;
-          m_graph_size++;
-        }
-        else
-          new_to = m_lookup_filter[full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i]];
+    if(full_graph[row * MAX_FULL_GRAPH_EDGES] > 0) // avoid for-loop 0 times
+      for (unsigned int i = 0; i < full_graph[row * MAX_FULL_GRAPH_EDGES]; i++){
+        if(m_scores[row * MAX_FULL_GRAPH_EDGES + i] > cutoff){
+          // put row in lookup and get out new index
+          if(m_lookup_filter[row] == 0){
+            m_lookup_filter[row] = m_graph_size;
+            m_lookup[m_graph_size] = row;
+            new_from = m_graph_size;
+            m_graph_size++;
+          }
+          else
+            new_from = m_lookup_filter[row];
+          // put i in lookup and get out new index
+          if(m_lookup_filter[full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i]] == 0){
+            m_lookup_filter[full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i]] = m_graph_size;
+            m_lookup[m_graph_size] = full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i];
+            new_to = m_graph_size;
+            m_graph_size++;
+          }
+          else
+            new_to = m_lookup_filter[full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i]];
 
-        // Add new indices to the filtered graph
-        m_graph[new_from * MAX_EDGES + 1 + temp_connections[new_from]] = new_to;
-        temp_connections[new_from]++;
+          // Add new indices to the filtered graph
+          bool new_node = true;
+          if(temp_connections[new_from] > 0)
+            for(unsigned int j = 0 ; j < temp_connections[new_from] ; j++)
+              if(m_graph[new_from * MAX_EDGES + 1 + j] == new_to)
+                new_node = false;
+          if(new_node){
+            m_graph[new_from * MAX_EDGES + 1 + temp_connections[new_from]] = new_to;
+            temp_connections[new_from]++;
+          }
+        }
       }
     }
-  }
   for (unsigned int i = 0; i < m_graph_size; i++)
     m_graph[i * MAX_EDGES] = temp_connections[i];
-
-  for(unsigned int i = 0; i < 52 ; i++){
-    std::cout << "[    ] " << i << " - ";
-    for(unsigned int j = 0 ; j < m_graph[i * MAX_EDGES] ; j++)
-      std::cout << m_graph[i * MAX_EDGES + 1 + j] << ",";
+  
+  // write part of graph/lookup
+  std::cout << "[    ]\n[INFO] Writing part of filtered output with corresponding part of the full graph\n[    ]\n" << std::endl;
+  for(unsigned int i = 45; i < 52; i++){
+    unsigned int full_i = m_lookup[i];
+    std::cout << i << "(" << m_graph[i * MAX_EDGES] << ") - " << m_graph[i * MAX_EDGES + 1];
+    if(m_graph[i * MAX_EDGES] > 1)
+      for(unsigned int j = 1; j < m_graph[i * MAX_EDGES]; j++)
+        std::cout << "," << m_graph[i * MAX_EDGES + 1 + j];
+    std::cout << std::endl;
+    std::cout << full_i << "(" << full_graph[full_i * MAX_FULL_GRAPH_EDGES] << ") - " << full_graph[full_i * MAX_FULL_GRAPH_EDGES + 1];
+    if(m_scores[full_i * MAX_FULL_GRAPH_EDGES] > 0.5)
+      std::cout << "t";
+    else
+      std::cout << "f";
+    if(full_graph[full_i * MAX_FULL_GRAPH_EDGES] > 1)
+      for(unsigned int j = 1; j < full_graph[full_i * MAX_FULL_GRAPH_EDGES]; j++){
+        std::cout << "," << full_graph[full_i * MAX_FULL_GRAPH_EDGES + 1 + j];
+      if(m_scores[full_i * MAX_FULL_GRAPH_EDGES + j] > 0.5)
+        std::cout << "t";
+      else
+        std::cout << "f";
+      }
+    std::cout << std::endl;
     std::cout << std::endl;
   }
 
@@ -138,19 +166,20 @@ static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::s
           // Conflict handler -> transfer current component from one core to the other
 
         // add all connections of current node to component if not already processed <- to many fills for highly connected components?
-        for(unsigned int i = 0 ; i < m_graph[next_node * MAX_EDGES] ; i++){
+        if(m_graph[next_node * MAX_EDGES] > 0) // avoid for-loop 0 times
+          for(unsigned int i = 0 ; i < m_graph[next_node * MAX_EDGES] ; i++){
 
-          if(!processed[m_graph[next_node * MAX_EDGES + 1 + i]] && current_component_size < MAX_COMPONENT_SIZE){
-            bool new_node = true;
-            for(unsigned int j = 0 ; j < current_component_size ; j++)
-              if(component[j] == m_graph[next_node * MAX_EDGES + 1 + i])
-                new_node = false;
-            if(new_node){
-              component[current_component_size] = m_graph[next_node * MAX_EDGES + 1 + i];
-              current_component_size++;
+            if(!processed[m_graph[next_node * MAX_EDGES + 1 + i]] && current_component_size < MAX_COMPONENT_SIZE){
+              bool new_node = true;
+              for(unsigned int j = 0 ; j < current_component_size ; j++)
+                if(component[j] == m_graph[next_node * MAX_EDGES + 1 + i])
+                  new_node = false;
+              if(new_node){
+                component[current_component_size] = m_graph[next_node * MAX_EDGES + 1 + i];
+                current_component_size++;
+              }
             }
           }
-        }
         // after all connections of node have been added, the node is done and can be marked as processed
         processed[next_node] = true;
         processed_nodes++;

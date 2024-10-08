@@ -39,8 +39,10 @@ static void filter_memory(unsigned int* full_graph, float* m_scores, unsigned in
                           unsigned int* m_graph, unsigned int* m_lookup, unsigned int* m_lookup_filter, unsigned int& m_graph_size) {
 
   unsigned int temp_connections[MAX_TRUE_NODES];
-  filter_reset_cons: for (unsigned int i = 0; i < MAX_TRUE_NODES; i++)
+  filter_reset_cons: for (unsigned int i = 0; i < MAX_TRUE_NODES; i++){
+    // #pragma HLS unroll
     temp_connections[i] = 0;
+  }
 
   const float cutoff = 0.5;
   unsigned int new_from, new_to;
@@ -77,17 +79,21 @@ static void filter_memory(unsigned int* full_graph, float* m_scores, unsigned in
           m_graph[new_from * MAX_EDGES + 1 + temp_connections[new_from]] = new_to;
           temp_connections[new_from]++;
         }
-  filter_connections: for (unsigned int i = 0; i < MAX_TRUE_NODES; i++)
-  if(i < m_graph_size)
-    m_graph[i * MAX_EDGES] = temp_connections[i];
+  filter_connections: for (unsigned int i = 0; i < MAX_TRUE_NODES; i++){
+    // #pragma HLS unroll
+    if(i < m_graph_size)
+      m_graph[i * MAX_EDGES] = temp_connections[i];
+  }
 }
 
 static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::stream<unsigned int>& outStream, unsigned int* m_lookup){
 
   unsigned int component[MAX_COMPONENT_SIZE];
   unsigned int processed[MAX_TRUE_NODES];
-  compute_reset_processed: for (unsigned int i = 0; i < MAX_TRUE_NODES; i++)
+  compute_reset_processed: for (unsigned int i = 0; i < MAX_TRUE_NODES; i++){
+    // #pragma HLS unroll
     processed[i] = false;
+  }
   unsigned int current_component_size = 0;
   unsigned int processed_nodes = 0;
   unsigned int next_node = 0;
@@ -99,8 +105,10 @@ static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::s
     // node with connections that has not been processed yet -> new component
     else if (!processed[row]){
       // new component needs to reset parameters
-      compute_reset_component: for (unsigned int i = 0; i < MAX_COMPONENT_SIZE; i++)
+      compute_reset_component: for (unsigned int i = 0; i < MAX_COMPONENT_SIZE; i++){
+        // #pragma HLS unroll
         component[i] = 0;
+      }
       current_component_size = 0;
       processed_nodes = 0;
 
@@ -122,10 +130,12 @@ static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::s
           if(i < m_graph[next_node * MAX_EDGES]){
             if(!processed[m_graph[next_node * MAX_EDGES + 1 + i]] && current_component_size < MAX_COMPONENT_SIZE){
               bool new_node = true;
-              compute_check_component: for(unsigned int j = 0 ; j < MAX_COMPONENT_SIZE; j++)
-              if(j < current_component_size)
-                if(component[j] == m_graph[next_node * MAX_EDGES + 1 + i])
-                  new_node = false;
+              compute_check_component: for(unsigned int j = 0 ; j < MAX_COMPONENT_SIZE; j++){
+                // #pragma HLS unroll
+                if(j < current_component_size)
+                  if(component[j] == m_graph[next_node * MAX_EDGES + 1 + i])
+                    new_node = false;
+              }
               if(new_node){
                 component[current_component_size] = m_graph[next_node * MAX_EDGES + 1 + i];
                 current_component_size++;

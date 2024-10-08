@@ -10,7 +10,7 @@
   // 256 MB / 2.097.152 = 128
   // -> MAX_FULL_GRAPH_EDGES = 128, to fill one complete bank
 #define MAX_COMPONENT_SIZE 128          // maximum number of nodes, that can be part of the same component [81]
-#define MAX_TRUE_NODES 32768            // maximum number of nodes, that have high-score connections and are therefor part of components [31991]
+#define MAX_TRUE_NODES 65536            // maximum number of nodes, that have high-score connections and are therefor part of components [31991] 32768
 #define MAX_COMPONENTS 8192             // maximum number of different components [4200]
 // #define CSV_FILE "dat/dummy.csv"
 // #define CSV_FILE "dat/dummy_long.csv"

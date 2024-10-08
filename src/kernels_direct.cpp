@@ -27,20 +27,24 @@ static void compute_direct(unsigned int* full_graph, float* scores, unsigned int
         new_row = true;
         current_component_size = 0;
         processed_nodes = 0;
-        direct_reset: for(unsigned int i = 0; i < MAX_COMPONENT_SIZE; i++)
+        direct_reset: for(unsigned int i = 0; i < MAX_COMPONENT_SIZE; i++){
+          #pragma HLS unroll
           component[i] = 4294967295;
+        }
       }
       direct_nodes: for (unsigned int i = 0; i < MAX_FULL_GRAPH_EDGES - 1; i++)
       if(i < full_graph[row * MAX_FULL_GRAPH_EDGES])
         if(scores[row * MAX_FULL_GRAPH_EDGES + i] > cutoff){
           found_component = true;
           bool new_node = true;
-          direct_check_row: for(unsigned int j = 0 ; j < MAX_COMPONENT_SIZE; j++)
-          if(j < current_component_size){
-            if(component[j] == row)
-              new_row = false;
-            if(component[j] == full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i])
-              new_node = false;
+          direct_check_row: for(unsigned int j = 0 ; j < MAX_COMPONENT_SIZE; j++){
+            #pragma HLS unroll
+            if(j < current_component_size){
+              if(component[j] == row)
+                new_row = false;
+              if(component[j] == full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i])
+                new_node = false;
+            }
           }
           if(new_row){
             component[current_component_size] = row;
@@ -64,10 +68,12 @@ static void compute_direct(unsigned int* full_graph, float* scores, unsigned int
             && processed[full_graph[next_node * MAX_FULL_GRAPH_EDGES + 1 + i]] == 0 
             && current_component_size < MAX_COMPONENT_SIZE){
               bool new_node = true;
-              direct_check_component: for(unsigned int j = 0 ; j < MAX_COMPONENT_SIZE; j++)
-              if(j < current_component_size)
-                if(component[j] == full_graph[next_node * MAX_FULL_GRAPH_EDGES + 1 + i])
-                  new_node = false;
+              direct_check_component: for(unsigned int j = 0 ; j < MAX_COMPONENT_SIZE; j++){
+                #pragma HLS unroll
+                if(j < current_component_size)
+                  if(component[j] == full_graph[next_node * MAX_FULL_GRAPH_EDGES + 1 + i])
+                    new_node = false;
+              }
               if(new_node){
                 component[current_component_size] = full_graph[next_node * MAX_FULL_GRAPH_EDGES + 1 + i];
                 current_component_size++;

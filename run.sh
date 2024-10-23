@@ -10,7 +10,7 @@ then
   unset XCL_EMULATION_MODE
   export EMCONFIG_PATH=${FPGA_PATH2CONF}
   ${FPGA_PATH2EMU_BIN}/app_${XCL_EMULATION_MODE_CHANGED} \
-    --xclbin ${FPGA_PATH2EMU_BIN}/test_kernels.xclbin
+    --xclbin ${FPGA_PATH2EMU_BIN}/kernels.xclbin
 elif [[ "${XCL_EMULATION_MODE_CHANGED}" = "hw_emu" || "${XCL_EMULATION_MODE_CHANGED}" = "sw_emu" ]]
 then
   if [ -z ${XCL_EMULATION_MODE} ]; then
@@ -18,7 +18,7 @@ then
   fi
   export EMCONFIG_PATH=${FPGA_PATH2CONF}
   ${FPGA_PATH2EMU_BIN}/app_${XCL_EMULATION_MODE_CHANGED} \
-    --xclbin ${FPGA_PATH2EMU_BIN}/test_kernels.xclbin \
+    --xclbin ${FPGA_PATH2EMU_BIN}/kernels.xclbin \
   --treename ${XCL_EMULATION_MODE_CHANGED}
 else
   echo "[ERROR] Wrong emulation mode: ${XCL_EMULATION_MODE_CHANGED}"

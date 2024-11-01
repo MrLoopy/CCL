@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <chrono>
 #include <iomanip>
+#include <thread>
 
 // XRT includes
 #include "xrt/xrt_bo.h"
@@ -25,8 +26,8 @@
 // Global parameters
 //
 //============================================
-const u_int32_t num_threads = 1;
-const std::vector<std::string> csv_names = {"dat/dummy.csv", "dat/dummy.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
+const u_int32_t num_threads = 2;
+const std::vector<std::string> csv_names = {"dat/dummy.csv", "dat/dummy.csv", "dat/dummy.csv", "dat/dummy.csv", "dat/dummy.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
 const u_int32_t num_events = (const u_int32_t)csv_names.size();
 
 const u_int32_t size_scores = MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;
@@ -49,8 +50,8 @@ std::ostream& operator<<(std::ostream& os, const std::vector<S>& vector){
 }
 
 struct kernel_timing{
+  u_int32_t iterations = 0;
   std::chrono::system_clock::time_point init_start;
-  std::chrono::system_clock::time_point alloc_done;
   std::chrono::system_clock::time_point final_end;
   std::vector<std::chrono::system_clock::time_point> in_written;
   std::vector<std::chrono::system_clock::time_point> in_synced;
@@ -58,6 +59,41 @@ struct kernel_timing{
   std::vector<std::chrono::system_clock::time_point> krnl_ended;
   std::vector<std::chrono::system_clock::time_point> out_synced;
   std::vector<std::chrono::system_clock::time_point> out_written;
+};
+struct thread_timing{
+  u_int32_t max_iterations = 0;
+  std::chrono::system_clock::time_point start_threads;
+  std::chrono::system_clock::time_point threads_running;
+  std::chrono::system_clock::time_point threads_done;
+  std::vector<kernel_timing> krnls;
+};
+struct kernel_buffers{
+  xrt::device device;
+  xrt::kernel kernel;
+  xrt::bo in_scores;
+  xrt::bo inout_graph;
+  xrt::bo inout_lookup;
+  xrt::bo out_components;
+  kernel_buffers(xrt::device &m_device, xrt::kernel &m_kernel){
+    device = m_device;
+    kernel = m_kernel;
+    in_scores = xrt::bo(device, size_scores_byte, m_kernel.group_id(0));
+    inout_graph = xrt::bo(device, size_graph_byte, m_kernel.group_id(1));
+    inout_lookup = xrt::bo(device, size_lookup_byte, m_kernel.group_id(2));
+    out_components = xrt::bo(device, size_components_byte, m_kernel.group_id(3));
+  }
+};
+struct kernel_maps{
+  float* in_scores;
+  float* inout_graph;
+  unsigned int* inout_lookup;
+  unsigned int* out_components;
+  kernel_maps(kernel_buffers &m_bo){
+    in_scores = m_bo.in_scores.map<float*>();
+    inout_graph = m_bo.inout_graph.map<float*>();
+    inout_lookup = m_bo.inout_lookup.map<unsigned int*>();
+    out_components = m_bo.out_components.map<unsigned int*>();
+  }
 };
 
 bool missmatch_found(float a, float b, float cutoff = 0.5){
@@ -96,14 +132,9 @@ void print_time_stemps(kernel_timing &timing){
   std::cout << std::fixed << std::setprecision(3);
   
   std::cout << "[    ]\n[INFO] Write time stemps" << std::endl;
-  std::cout << "[    ] Start:              0.000 ms" << std::endl;
-  duration = timing.alloc_done - timing.init_start;
-  std::cout << "[    ] Initiation:      " << std::setw(9) << duration.count() * 1000 << " ms" << std::endl;
-  duration = timing.final_end - timing.init_start;
-  std::cout << "[    ] Total execution: " << std::setw(9) << duration.count() * 1000 << " ms\n[    ]" << std::endl;
-
+  std::cout << "[    ] Start at:            0.000 ms" << std::endl;
   for(unsigned int i = 0; i < iterations ; i++){
-    std::cout << "[    ] All time stemps" << std::endl;
+    std::cout << "[    ] Kernel " << i << std::endl;
     duration = timing.in_written[i] - timing.init_start;
     std::cout << "[    ][" << i << "] Write inputs: " << std::setw(9) << duration.count() * 1000 << " ms" << std::endl;
     duration = timing.in_synced[i] - timing.init_start;
@@ -117,61 +148,122 @@ void print_time_stemps(kernel_timing &timing){
     duration = timing.out_written[i] - timing.init_start;
     std::cout << "[    ][" << i << "] Write output: " << std::setw(9) << duration.count() * 1000 << " ms" << std::endl;
     duration = timing.krnl_ended[i] - timing.krnl_started[i];
-    std::cout << "[    ][" << i << "] Kernel time:  " << std::setw(9) << duration.count() * 1000 << " ms\n[    ]" << std::endl;
+    std::cout << "[    ][" << i << "] Kernel delta: " << std::setw(9) << duration.count() * 1000 << " ms\n[    ]" << std::endl;
   }
-  if(iterations > 1){
-    std::cout << "[    ] Total and Average " << iterations << " iterations" << std::endl;
-    duration = timing.in_written[0] - timing.alloc_done;
-    for(unsigned int i = 1; i < iterations ; i++) duration += timing.in_written[i] - timing.out_written[i - 1];
-    std::cout << "[    ][x] Write inputs: " << std::setw(9) << duration.count() * 1000 << " ms\t" << std::setw(9) << duration.count() * 1000 / iterations << " ms" << std::endl;
-    duration = timing.init_start - timing.init_start;
-    for(unsigned int i = 0; i < iterations ; i++) duration += timing.in_synced[i] - timing.in_written[i];
-    std::cout << "[    ][x] Sync inputs:  " << std::setw(9) << duration.count() * 1000 << " ms\t" << std::setw(9) << duration.count() * 1000 / iterations << " ms" << std::endl;
-    duration = timing.init_start - timing.init_start;
-    for(unsigned int i = 0; i < iterations ; i++) duration += timing.krnl_started[i] - timing.in_synced[i];
-    std::cout << "[    ][x] Start kernel: " << std::setw(9) << duration.count() * 1000 << " ms\t" << std::setw(9) << duration.count() * 1000 / iterations << " ms" << std::endl;
-    duration = timing.init_start - timing.init_start;
-    for(unsigned int i = 0; i < iterations ; i++) duration += timing.krnl_ended[i] - timing.krnl_started[i];
-    std::cout << "[    ][x] Kernel time:  " << std::setw(9) << duration.count() * 1000 << " ms\t" << std::setw(9) << duration.count() * 1000 / iterations << " ms" << std::endl;
-    duration = timing.init_start - timing.init_start;
-    for(unsigned int i = 0; i < iterations ; i++) duration += timing.out_synced[i] - timing.krnl_ended[i];
-    std::cout << "[    ][x] Sync output:  " << std::setw(9) << duration.count() * 1000 << " ms\t" << std::setw(9) << duration.count() * 1000 / iterations << " ms" << std::endl;
-    duration = timing.init_start - timing.init_start;
-    for(unsigned int i = 0; i < iterations ; i++) duration += timing.out_written[i] - timing.out_synced[i];
-    std::cout << "[    ][x] Write output: " << std::setw(9) << duration.count() * 1000 << " ms\t" << std::setw(9) << duration.count() * 1000 / iterations << " ms\n[    ]" << std::endl;
+  std::cout << "[    ] Total and Average " << iterations << " iterations" << std::endl;
+  duration = timing.in_written[0] - timing.init_start;
+  for(unsigned int i = 1; i < iterations ; i++) duration += timing.in_written[i] - timing.out_written[i - 1];
+  std::cout << "[    ][x] Write inputs: " << std::setw(9) << duration.count() * 1000 << " ms\t" << std::setw(9) << duration.count() * 1000 / num_events << " ms" << std::endl;
+  duration = timing.init_start - timing.init_start;
+  for(unsigned int i = 0; i < iterations ; i++) duration += timing.in_synced[i] - timing.in_written[i];
+  std::cout << "[    ][x] Sync inputs:  " << std::setw(9) << duration.count() * 1000 << " ms\t" << std::setw(9) << duration.count() * 1000 / num_events << " ms" << std::endl;
+  duration = timing.init_start - timing.init_start;
+  for(unsigned int i = 0; i < iterations ; i++) duration += timing.krnl_started[i] - timing.in_synced[i];
+  std::cout << "[    ][x] Start kernel: " << std::setw(9) << duration.count() * 1000 << " ms\t" << std::setw(9) << duration.count() * 1000 / num_events << " ms" << std::endl;
+  duration = timing.init_start - timing.init_start;
+  for(unsigned int i = 0; i < iterations ; i++) duration += timing.krnl_ended[i] - timing.krnl_started[i];
+  std::cout << "[    ][x] Kernel time:  " << std::setw(9) << duration.count() * 1000 << " ms\t" << std::setw(9) << duration.count() * 1000 / num_events << " ms" << std::endl;
+  duration = timing.init_start - timing.init_start;
+  for(unsigned int i = 0; i < iterations ; i++) duration += timing.out_synced[i] - timing.krnl_ended[i];
+  std::cout << "[    ][x] Sync output:  " << std::setw(9) << duration.count() * 1000 << " ms\t" << std::setw(9) << duration.count() * 1000 / num_events << " ms" << std::endl;
+  duration = timing.init_start - timing.init_start;
+  for(unsigned int i = 0; i < iterations ; i++) duration += timing.out_written[i] - timing.out_synced[i];
+  std::cout << "[    ][x] Write output: " << std::setw(9) << duration.count() * 1000 << " ms\t" << std::setw(9) << duration.count() * 1000 / num_events << " ms\n[    ]" << std::endl;
+  duration = timing.final_end - timing.init_start;
+  std::cout << "[    ] Total execution: " << std::setw(9) << duration.count() * 1000 << " ms\t" << std::setw(9) << duration.count() * 1000 / num_events << " ms\n[    ]" << std::endl;
+
+}
+void print_thread_time(thread_timing &timing){
+  std::chrono::duration<double> duration;
+  std::vector<std::chrono::duration<double>> totals;
+  for(u_int32_t i = 0; i < 8 ; i++) totals.push_back(timing.start_threads - timing.start_threads);
+  int w = 9;
+  std::cout << std::fixed << std::setprecision(3);
+
+  std::cout << "[    ]\n[INFO] Write time stemps" << std::endl;
+  std::cout << "[    ] Start at:                0.000 ms" << std::endl;
+  duration = timing.threads_running - timing.start_threads;
+  std::cout << "[    ] All threads running: " << std::setw(w) << duration.count() * 1000 << " ms" << std::endl;
+  duration = timing.threads_done - timing.start_threads;
+  std::cout << "[    ] All threads done:    " << std::setw(w) << duration.count() * 1000 << " ms" << std::endl;
+
+  std::cout << "[    ]\n[    ] Event time stemps [ms]" << std::endl;
+  uint32_t ev = 0;
+  for(u_int32_t i = 0; i < timing.max_iterations ; i++){
+    for(u_int32_t line = 0; line < 8 ; line++){
+      std::cout << "[    ] ";
+      switch(line){
+        case 0: std::cout << "Event:          "; break;
+        case 1: std::cout << "Write inputs: "; break;
+        case 2: std::cout << "Sync inputs:  "; break;
+        case 3: std::cout << "Start kernel: "; break;
+        case 4: std::cout << "End kernel:   "; break;
+        case 5: std::cout << "Sync output:  "; break;
+        case 6: std::cout << "Write output: "; break;
+        case 7: std::cout << "Kernel delta: "; break;
+      }
+      for(u_int32_t t = 0; t < num_threads ; t++){
+        if(i == 0 && line == 0) totals[7] += timing.krnls[t].final_end - timing.krnls[t].init_start;
+        if(i < timing.krnls[t].iterations){
+          switch(line){
+            case 0: ev = i * num_threads + t;
+              std::cout << " " << ev << "         "; break;
+            case 1:
+              duration = timing.krnls[t].in_written[i] - timing.start_threads;
+              if(i == 0) totals[line] += timing.krnls[t].in_written[0] - timing.krnls[t].init_start;
+              else totals[line] += timing.krnls[t].in_written[i] - timing.krnls[t].out_written[i - 1];
+              std::cout << " " << std::setw(w) << duration.count() * 1000 << " "; break;
+            case 2: totals[line] += timing.krnls[t].in_synced[i] - timing.krnls[t].in_written[i];
+              duration = timing.krnls[t].in_synced[i] - timing.start_threads;
+              std::cout << " " << std::setw(w) << duration.count() * 1000 << " "; break;
+            case 3: totals[line] += timing.krnls[t].krnl_started[i] - timing.krnls[t].in_synced[i];
+              duration = timing.krnls[t].krnl_started[i] - timing.start_threads;
+              std::cout << " " << std::setw(w) << duration.count() * 1000 << " "; break;
+            case 4: totals[line] += timing.krnls[t].krnl_ended[i] - timing.krnls[t].krnl_started[i];
+              duration = timing.krnls[t].krnl_ended[i] - timing.start_threads;
+              std::cout << " " << std::setw(w) << duration.count() * 1000 << " "; break;
+            case 5: totals[line] += timing.krnls[t].out_synced[i] - timing.krnls[t].krnl_ended[i];
+              duration = timing.krnls[t].out_synced[i] - timing.start_threads;
+              std::cout << " " << std::setw(w) << duration.count() * 1000 << " "; break;
+            case 6: totals[line] += timing.krnls[t].out_written[i] - timing.krnls[t].out_synced[i];
+              duration = timing.krnls[t].out_written[i] - timing.start_threads;
+              std::cout << " " << std::setw(w) << duration.count() * 1000 << " "; break;
+            case 7:
+              duration = timing.krnls[t].krnl_ended[i] - timing.krnls[t].krnl_started[i];
+              std::cout << " " << std::setw(w) << duration.count() * 1000 << " "; break;
+          }
+        }
+      }
+      std::cout << std::endl;
+    }
+    std::cout << "[    ]" << std::endl;
   }
+
+  ev++;
+  std::cout << "[    ] Total and average duration [ms] for " << ev << " events" << std::endl;
+  std::cout << "[    ] Write inputs:    " << std::setw(9) << totals[1].count() * 1000 << "  " << std::setw(9) << totals[1].count() * 1000 / ev << std::endl;
+  std::cout << "[    ] Sync inputs:     " << std::setw(9) << totals[2].count() * 1000 << "  " << std::setw(9) << totals[2].count() * 1000 / ev << std::endl;
+  std::cout << "[    ] Start kernel:    " << std::setw(9) << totals[3].count() * 1000 << "  " << std::setw(9) << totals[3].count() * 1000 / ev << std::endl;
+  std::cout << "[    ] Kernel time:     " << std::setw(9) << totals[4].count() * 1000 << "  " << std::setw(9) << totals[4].count() * 1000 / ev << std::endl;
+  std::cout << "[    ] Sync output:     " << std::setw(9) << totals[5].count() * 1000 << "  " << std::setw(9) << totals[5].count() * 1000 / ev << std::endl;
+  std::cout << "[    ] Write output:    " << std::setw(9) << totals[6].count() * 1000 << "  " << std::setw(9) << totals[6].count() * 1000 / ev << std::endl;
+  std::cout << "[    ] Thread time:     " << std::setw(9) << totals[7].count() * 1000 << "  " << std::setw(9) << totals[7].count() * 1000 / ev << "\n[    ]" << std::endl;
+  duration = timing.threads_done - timing.start_threads;
+  std::cout << "[    ] Wall clock time: " << std::setw(9) << duration.count() * 1000 << "  " << std::setw(9) << duration.count() * 1000 / ev << "\n[    ]" << std::endl;
+
 }
 
 // execute kernel
-void exe_kernel(xrt::device m_device, 
-                xrt::kernel m_kernel, 
+void exe_kernel(kernel_buffers &m_bo, 
+                kernel_maps &m_map, 
                 kernel_timing &timing, 
                 u_int32_t m_num_events, 
                 std::vector<float*> m_ev_score, 
                 std::vector<unsigned int*> m_ev_components, 
                 std::vector<unsigned int> m_num_nodes){
-  //
-  // Allocate Buffer in Global Memory
-  //
+
+  timing.iterations = m_num_events;
   timing.init_start = std::chrono::system_clock::now();
-  std::cout << "[KRNL] Allocate Buffer in Global Memory" << std::endl;
-  auto buffer_in_scores = xrt::bo(m_device, size_scores_byte, m_kernel.group_id(0));
-  auto buffer_inout_graph = xrt::bo(m_device, size_graph_byte, m_kernel.group_id(1));
-  auto buffer_inout_lookup = xrt::bo(m_device, size_lookup_byte, m_kernel.group_id(2));
-  auto buffer_out_components = xrt::bo(m_device, size_components_byte, m_kernel.group_id(3));
-
-  auto map_in_scores = buffer_in_scores.map<float*>();
-  auto map_inout_graph = buffer_inout_graph.map<float*>();
-  auto map_inout_lookup = buffer_inout_lookup.map<unsigned int*>();
-  auto map_out_components = buffer_out_components.map<unsigned int*>();
-
-  //set to const 0 for output only -> necessary?
-  std::fill(map_in_scores, map_in_scores + size_scores, 0.0);
-  std::fill(map_inout_graph, map_inout_graph + size_graph, 0.0);
-  std::fill(map_inout_lookup, map_inout_lookup + size_lookup, 0);
-  std::fill(map_out_components, map_out_components + size_components, 0);
-
-  timing.alloc_done = std::chrono::system_clock::now();
 
   // Event loop
   for(unsigned int ev = 0; ev < m_num_events ; ev++){
@@ -180,26 +272,26 @@ void exe_kernel(xrt::device m_device,
     //
     std::cout << "[KRNL][" << ev << "] Write Event to Global Memory Buffer" << std::endl;
     for(unsigned int i = 0; i < size_scores ; i++)
-      map_in_scores[i] = m_ev_score[ev][i];
-    std::fill(map_inout_graph, map_inout_graph + size_graph, 0.0);
-    std::fill(map_inout_lookup, map_inout_lookup + size_lookup, 0);
-    std::fill(map_out_components, map_out_components + size_components, 0);
+      m_map.in_scores[i] = m_ev_score[ev][i];
+    std::fill(m_map.inout_graph, m_map.inout_graph + size_graph, 0.0);
+    std::fill(m_map.inout_lookup, m_map.inout_lookup + size_lookup, 0);
+    std::fill(m_map.out_components, m_map.out_components + size_components, 0);
     timing.in_written.push_back(std::chrono::system_clock::now());
 
     //
     // Synchronize input buffer data to device global memory
     //
     std::cout << "[    ][" << ev << "] Synchronize input buffer data to device global memory" << std::endl;
-    buffer_in_scores.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    buffer_inout_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    buffer_inout_lookup.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    m_bo.in_scores.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    m_bo.inout_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    m_bo.inout_lookup.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     timing.in_synced.push_back(std::chrono::system_clock::now());
 
     //
     // Execute Kernel
     //
     std::cout << "[    ][" << ev << "] Start Kernel" << std::endl;
-    auto run = m_kernel(buffer_in_scores, buffer_inout_graph, buffer_inout_lookup, buffer_out_components, m_num_nodes[ev]);
+    auto run = m_bo.kernel(m_bo.in_scores, m_bo.inout_graph, m_bo.inout_lookup, m_bo.out_components, m_num_nodes[ev]);
     timing.krnl_started.push_back(std::chrono::system_clock::now());
     std::cout << "[    ][" << ev << "] Wait for Kernel to finish" << std::endl;
     run.wait();
@@ -209,7 +301,7 @@ void exe_kernel(xrt::device m_device,
     // Synchronize device global memory to output buffer
     //
     std::cout << "[    ][" << ev << "] Read back data from Kernel" << std::endl;
-    buffer_out_components.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+    m_bo.out_components.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
     timing.out_synced.push_back(std::chrono::system_clock::now());
 
     //
@@ -217,7 +309,7 @@ void exe_kernel(xrt::device m_device,
     //
     std::cout << "[    ][" << ev << "] Write results from global memory back to event buffer" << std::endl;
     for(unsigned int i = 0; i < size_components ; i++)
-      m_ev_components[ev][i] = map_out_components[i];
+      m_ev_components[ev][i] = m_map.out_components[i];
     timing.out_written.push_back(std::chrono::system_clock::now());
     
   }
@@ -226,6 +318,62 @@ void exe_kernel(xrt::device m_device,
 }
 
 // execute threads
+void exe_threads(xrt::device &m_device, 
+                xrt::kernel &m_kernel, 
+                thread_timing &m_thread_time, 
+                u_int32_t m_num_events, 
+                u_int32_t m_num_threads, 
+                std::vector<float*> m_ev_score, 
+                std::vector<unsigned int*> m_ev_components, 
+                std::vector<unsigned int> m_ev_nodes){
+
+  std::cout << "[THRD] Allocate kernel buffers" << std::endl;
+  std::vector<u_int32_t> ev_numbers;
+  std::vector<kernel_buffers> bo;
+  std::vector<kernel_maps> maps;
+  for(u_int32_t i = 0; i < m_num_threads ; i++){
+    ev_numbers.push_back(0);
+    bo.push_back(kernel_buffers(m_device, m_kernel)); // + i, 5 + i, 10 + i, 15 + i));
+    maps.push_back(kernel_maps(bo[i]));
+    m_thread_time.krnls.push_back(kernel_timing());
+  }
+  
+  std::cout << "[THRD] Create event queues for each kernel" << std::endl;
+  std::vector<std::vector<float*>> thread_ev_scores(m_num_threads);
+  std::vector<std::vector<unsigned int*>> thread_ev_components(m_num_threads);
+  std::vector<std::vector<unsigned int>> thread_num_nodes(m_num_threads);
+  u_int32_t residue = m_num_events % m_num_threads;
+  u_int32_t ev = 0;
+  for(u_int32_t k = 0; k < m_num_events / m_num_threads ; k++)
+    for(u_int32_t i = 0; i < m_num_threads ; i++){
+      thread_ev_scores[i].push_back(m_ev_score[ev]);
+      thread_ev_components[i].push_back(m_ev_components[ev]);
+      thread_num_nodes[i].push_back(m_ev_nodes[ev]);
+      ev_numbers[i]++;
+      ev++;
+    }
+  for(u_int32_t i = 0; i < residue ; i++){
+    thread_ev_scores[i].push_back(m_ev_score[ev]);
+    thread_ev_components[i].push_back(m_ev_components[ev]);
+    thread_num_nodes[i].push_back(m_ev_nodes[ev]);
+    ev_numbers[i]++;
+    ev++;
+  }
+
+  std::cout << "[THRD] Start threads" << std::endl;
+  std::vector<std::thread> t(m_num_threads);
+  m_thread_time.max_iterations = ev_numbers[0];
+  m_thread_time.start_threads = std::chrono::system_clock::now();
+  for(u_int32_t i = 0; i < m_num_threads ; i++)
+    t[i] = std::thread(exe_kernel, std::ref(bo[i]), std::ref(maps[i]), std::ref(m_thread_time.krnls[i]), ev_numbers[i], thread_ev_scores[i], thread_ev_components[i], thread_num_nodes[i]);
+  m_thread_time.threads_running = std::chrono::system_clock::now();
+  std::cout << "[THRD] Wait for threads to end" << std::endl;
+  for(u_int32_t i = 0; i < m_num_threads ; i++)
+    t[i].join();
+  m_thread_time.threads_done = std::chrono::system_clock::now();
+
+  std::cout << "[THRD] Threads finished" << std::endl;
+}
 
 int main (int argc, char ** argv){
 
@@ -305,7 +453,7 @@ int main (int argc, char ** argv){
     // create an input file stream from the csv-file
     std::ifstream csv_file(csv_file_name);
     if(not csv_file.is_open()) throw std::runtime_error("Could not open CSV-file");
-    // read an control the headers
+    // read and control the headers
     if(csv_file.good()){
       std::string line, field_0, field_1, field_2, field_3, word;
       unsigned int num_0 = 0;
@@ -438,15 +586,24 @@ int main (int argc, char ** argv){
   // Run threads which run kernels
   //
   //============================================
-  kernel_timing k_timing;
-  exe_kernel(targetDevice, krnl, k_timing, num_events, ev_in_score, ev_out_components, ev_num_nodes);
+  thread_timing thread_time;
+  std::vector<kernel_timing> t_timing;
+  std::cout << "[INFO] Start exe_thread()" << std::endl;
+  exe_threads(targetDevice, krnl, thread_time, num_events, num_threads, ev_in_score, ev_out_components, ev_num_nodes);
+
+  // kernel_timing k_timing;
+  // kernel_buffers k_bo = kernel_buffers(targetDevice, krnl);
+  // kernel_maps k_map = kernel_maps(k_bo);
+  // exe_kernel(k_bo, k_map, k_timing, num_events, ev_in_score, ev_out_components, ev_num_nodes);
 
   //============================================
   //
   // Write time stemps / durations
   //
   //============================================
-  print_time_stemps(k_timing);
+  print_thread_time(thread_time);
+  // for(u_int32_t i = 0; i < num_threads ; i++)
+    // print_time_stemps(t_timing[i]);
 
   //============================================
   //

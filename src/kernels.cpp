@@ -7,36 +7,6 @@
 // #include <iostream>
 #include "kernels.hpp"
 
-static void write_components(unsigned int* out, hls::stream<unsigned int>& outStream, unsigned int size) {
-
-  bool stream_running = true;
-  unsigned int stream_size = 1; // position 0 in the Output will be the size of the total output. Therefore size needs to start at 1
-  unsigned int component_size = 0;
-  out_while:
-  while(stream_running)
-    if(outStream.size() > 0){
-      // every first number of each component is the size of the component;
-      component_size = outStream.read();
-      // if the size == 0, the end of the stream is reached, the total size can be written and the writing ended
-      if(component_size == 0){
-        out[0] = stream_size;
-        stream_running = false;
-        break;
-      }
-      else{
-        // if the stream is still running, the size of the component is written, followed by all its node-indices
-        out[stream_size] = component_size;
-        stream_size++;
-        out_write_nodes:
-        for (unsigned int i = 0; i < component_size; i++){
-          #pragma HLS loop_tripcount min=2 avg=8 max=MAX_COMPONENT_SIZE
-          out[stream_size] = outStream.read();
-          stream_size++;
-        }
-      }
-    }
-}
-
 static void filter_memory(unsigned int* full_graph, float* m_scores, unsigned int m_num_nodes,
                           unsigned int* m_graph, unsigned int* m_lookup, unsigned int* m_lookup_filter, unsigned int& m_graph_size) {
 
@@ -163,26 +133,93 @@ static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::s
   outStream << 0;
 }
 
-extern "C" {
-  void CCL(unsigned int* in_full_graph, float* in_scores, unsigned int* io_graph, unsigned int* io_lookup, unsigned int* io_lookup_filter, unsigned int* out_components, unsigned int num_edges, unsigned int num_nodes) {
-    static hls::stream<unsigned int> outStream_components("output_stream_components");
-    
-    #pragma HLS INTERFACE m_axi port = in_full_graph    bundle=gmem0 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = in_scores        bundle=gmem1 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_graph         bundle=gmem2 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_lookup        bundle=gmem3 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_lookup_filter bundle=gmem4 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = out_components   bundle=gmem5 max_widen_bitwidth=512
+static void write_components(unsigned int* out, hls::stream<unsigned int>& outStream, unsigned int size) {
 
-    static unsigned int graph_size;
-    #pragma HLS STREAM variable=graph_size type=pipo
+  bool stream_running = true;
+  unsigned int stream_size = 1; // position 0 in the Output will be the size of the total output. Therefore size needs to start at 1
+  unsigned int component_size = 0;
+  out_while:
+  while(stream_running)
+    if(outStream.size() > 0){
+      // every first number of each component is the size of the component;
+      component_size = outStream.read();
+      // if the size == 0, the end of the stream is reached, the total size can be written and the writing ended
+      if(component_size == 0){
+        out[0] = stream_size;
+        stream_running = false;
+        break;
+      }
+      else{
+        // if the stream is still running, the size of the component is written, followed by all its node-indices
+        out[stream_size] = component_size;
+        stream_size++;
+        out_write_nodes:
+        for (unsigned int i = 0; i < component_size; i++){
+          #pragma HLS loop_tripcount min=2 avg=8 max=MAX_COMPONENT_SIZE
+          out[stream_size] = outStream.read();
+          stream_size++;
+        }
+      }
+    }
+}
+
+static void wrap_filter(){;}
+static void wrap_compute(){;}
+static void wrap_write(){;}
+
+extern "C" {
+
+  void CCL( unsigned int* in_full_graph_0, unsigned int* in_full_graph_1, unsigned int* in_full_graph_2,
+            float* in_scores_0, float* in_scores_1, float* in_scores_2,
+            unsigned int* io_graph_0, unsigned int* io_graph_1, unsigned int* io_graph_2,
+            unsigned int* io_lookup_0, unsigned int* io_lookup_1, unsigned int* io_lookup_2,
+            unsigned int* io_lookup_filter_0, unsigned int* io_lookup_filter_1, unsigned int* io_lookup_filter_2,
+            unsigned int* out_components_0, unsigned int* out_components_1, unsigned int* out_components_2,
+            unsigned int num_nodes_0, unsigned int num_nodes_1, unsigned int num_nodes_2,
+            unsigned int tid) {
+  // void CCL(unsigned int* in_full_graph, float* in_scores, unsigned int* io_graph, unsigned int* io_lookup, unsigned int* io_lookup_filter, unsigned int* out_components, unsigned int num_edges, unsigned int num_nodes) {
+    
+    #pragma HLS INTERFACE m_axi port = in_full_graph_0    // bundle=gmem0 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_full_graph_1    // bundle=gmem0 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_full_graph_2    // bundle=gmem0 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_scores_0        // bundle=gmem1 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_scores_1        // bundle=gmem1 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_scores_2        // bundle=gmem1 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_graph_0         // bundle=gmem2 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_graph_1         // bundle=gmem2 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_graph_2         // bundle=gmem2 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_lookup_0        // bundle=gmem3 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_lookup_1        // bundle=gmem3 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_lookup_2        // bundle=gmem3 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_lookup_filter_0 // bundle=gmem4 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_lookup_filter_1 // bundle=gmem4 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_lookup_filter_2 // bundle=gmem4 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = out_components_0   // bundle=gmem5 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = out_components_1   // bundle=gmem5 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = out_components_2   // bundle=gmem5 max_widen_bitwidth=512
+
+    static hls::stream<unsigned int> outStream_components_0("output_stream_components_0");
+    static hls::stream<unsigned int> outStream_components_1("output_stream_components_1");
+    static hls::stream<unsigned int> outStream_components_2("output_stream_components_2");
+    static unsigned int graph_size_0;
+    #pragma HLS STREAM variable=graph_size_0 type=pipo
+    static unsigned int graph_size_1;
+    #pragma HLS STREAM variable=graph_size_1 type=pipo
+    static unsigned int graph_size_2;
+    #pragma HLS STREAM variable=graph_size_2 type=pipo
 
     #pragma HLS dataflow
-    filter_memory(in_full_graph, in_scores, num_nodes, io_graph, io_lookup, io_lookup_filter, graph_size);
+    filter_memory(in_full_graph_0, in_scores_0, num_nodes_0, io_graph_0, io_lookup_0, io_lookup_filter_0, graph_size_0);
+    compute_core(io_graph_0, graph_size_0, outStream_components_0, io_lookup_0);
+    write_components(out_components_0, outStream_components_0, num_nodes_0);
 
-    compute_core(io_graph, graph_size, outStream_components, io_lookup);
+    filter_memory(in_full_graph_1, in_scores_1, num_nodes_1, io_graph_1, io_lookup_1, io_lookup_filter_1, graph_size_1);
+    compute_core(io_graph_1, graph_size_1, outStream_components_1, io_lookup_1);
+    write_components(out_components_1, outStream_components_1, num_nodes_1);
 
-    write_components(out_components, outStream_components, num_nodes);
+    filter_memory(in_full_graph_2, in_scores_2, num_nodes_2, io_graph_2, io_lookup_2, io_lookup_filter_2, graph_size_2);
+    compute_core(io_graph_2, graph_size_2, outStream_components_2, io_lookup_2);
+    write_components(out_components_2, outStream_components_2, num_nodes_2);
   }
 }
 

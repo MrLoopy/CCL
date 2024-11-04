@@ -22,6 +22,13 @@ struct node_information{
 };
 
 extern "C" {
-  void CCL(unsigned int* in_full_graph, float* in_scores, unsigned int* io_graph, unsigned int* io_lookup, unsigned int* io_lookup_filter, unsigned int* out_components, unsigned int num_edges, unsigned int num_nodes);
+  void CCL( unsigned int* in_full_graph_0, unsigned int* in_full_graph_1, unsigned int* in_full_graph_2,
+            float* in_scores_0, float* in_scores_1, float* in_scores_2,
+            unsigned int* io_graph_0, unsigned int* io_graph_1, unsigned int* io_graph_2,
+            unsigned int* io_lookup_0, unsigned int* io_lookup_1, unsigned int* io_lookup_2,
+            unsigned int* io_lookup_filter_0, unsigned int* io_lookup_filter_1, unsigned int* io_lookup_filter_2,
+            unsigned int* out_components_0, unsigned int* out_components_1, unsigned int* out_components_2,
+            unsigned int num_nodes_0, unsigned int num_nodes_1, unsigned int num_nodes_2,
+            unsigned int tid);
 }
 #endif // KERNELS_H

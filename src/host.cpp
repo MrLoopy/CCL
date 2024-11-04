@@ -26,8 +26,8 @@
 //
 //============================================
 const bool ooo = false;
-const u_int32_t num_threads = 1;
-const std::vector<std::string> csv_names = {"dat/dummy.csv", "dat/dummy.csv", "dat/dummy.csv"}; // {"dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
+const u_int32_t num_threads = 2;
+const std::vector<std::string> csv_names = {"dat/dummy.csv", "dat/dummy.csv"}; // {"dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
 const u_int32_t num_events = (const u_int32_t)csv_names.size();
 
 u_int32_t size_full_graph = MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;
@@ -71,15 +71,16 @@ struct kernel_buffers{
   xrt::bo inout_lookup;
   xrt::bo inout_lookup_filter;
   xrt::bo out_components;
-  kernel_buffers(xrt::device &m_device, xrt::kernel &m_kernel){
+  kernel_buffers(xrt::device &m_device, xrt::kernel &m_kernel, u_int32_t offset, u_int32_t st = 3){
     device = m_device;
     kernel = m_kernel;
-    in_full_graph = xrt::bo(device, size_full_graph_byte, kernel.group_id(0));
-    in_scores = xrt::bo(device, size_scores_byte, kernel.group_id(1));
-    inout_graph = xrt::bo(device, size_graph_byte, kernel.group_id(2));
-    inout_lookup = xrt::bo(device, size_lookup_byte, kernel.group_id(3));
-    inout_lookup_filter = xrt::bo(device, size_lookup_filter_byte, kernel.group_id(4));
-    out_components = xrt::bo(device, size_components_byte, kernel.group_id(5));
+    std::cout << "[    ]    " << offset << " 0" << std::endl; in_full_graph = xrt::bo(device, size_full_graph_byte, kernel.group_id(0 * st + offset));
+    std::cout << "[    ]    " << offset << " 1" << std::endl; in_scores = xrt::bo(device, size_scores_byte, kernel.group_id(1 * st + offset));
+    std::cout << "[    ]    " << offset << " 2" << std::endl; inout_graph = xrt::bo(device, size_graph_byte, kernel.group_id(2 * st + offset));
+    std::cout << "[    ]    " << offset << " 3" << std::endl; inout_lookup = xrt::bo(device, size_lookup_byte, kernel.group_id(3 * st + offset));
+    std::cout << "[    ]    " << offset << " 4" << std::endl; inout_lookup_filter = xrt::bo(device, size_lookup_filter_byte, kernel.group_id(4 * st + offset));
+    std::cout << "[    ]    " << offset << " 5" << std::endl; out_components = xrt::bo(device, size_components_byte, kernel.group_id(5 * st + offset));
+    std::cout << "[    ]    " << offset << " 6" << std::endl;
   }
 };
 struct kernel_maps{
@@ -224,7 +225,7 @@ void print_thread_time(thread_timing &timing){
 
 // execute kernel
 void exe_kernel(u_int32_t tid,
-                kernel_buffers &m_bo, 
+                std::vector<kernel_buffers> &m_bo, 
                 kernel_maps &m_map, 
                 kernel_timing &timing, 
                 u_int32_t m_num_events, 
@@ -256,18 +257,59 @@ void exe_kernel(u_int32_t tid,
     // Synchronize input buffer data to device global memory
     //
     std::cout << "[    ] [" << tid << "] [" << ev << "] Synchronize input buffer data to device global memory" << std::endl;
-    m_bo.in_full_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    m_bo.in_scores.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    m_bo.inout_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    m_bo.inout_lookup.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    m_bo.inout_lookup_filter.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    m_bo[tid].in_full_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    m_bo[tid].in_scores.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    m_bo[tid].inout_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    m_bo[tid].inout_lookup.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    m_bo[tid].inout_lookup_filter.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     timing.in_synced.push_back(std::chrono::system_clock::now());
 
     //
     // Execute Kernel
     //
     std::cout << "[    ] [" << tid << "] [" << ev << "] Start Kernel" << std::endl;
-    auto run = m_bo.kernel(m_bo.in_full_graph, m_bo.in_scores, m_bo.inout_graph, m_bo.inout_lookup, m_bo.inout_lookup_filter, m_bo.out_components, 0, m_num_nodes[ev]);
+    // auto run = m_bo.kernel(m_bo.in_full_graph, m_bo.in_scores, m_bo.inout_graph, m_bo.inout_lookup, m_bo.inout_lookup_filter, m_bo.out_components, 0, m_num_nodes[ev]);
+    xrt::run run;
+    if(tid == 0){
+      run = m_bo[tid].kernel( m_bo[0].in_full_graph, NULL, NULL,
+                              m_bo[0].in_scores, NULL, NULL,
+                              m_bo[0].inout_graph, NULL, NULL,
+                              m_bo[0].inout_lookup, NULL, NULL,
+                              m_bo[0].inout_lookup_filter, NULL, NULL,
+                              m_bo[0].out_components, NULL, NULL,
+                              m_num_nodes[ev], NULL, NULL,
+                              tid);
+    }
+    else if(tid == 1){
+      run = m_bo[tid].kernel( NULL, m_bo[1].in_full_graph, NULL,
+                              NULL, m_bo[1].in_scores, NULL,
+                              NULL, m_bo[1].inout_graph, NULL,
+                              NULL, m_bo[1].inout_lookup, NULL,
+                              NULL, m_bo[1].inout_lookup_filter, NULL,
+                              NULL, m_bo[1].out_components, NULL,
+                              NULL, m_num_nodes[ev], NULL,
+                              tid);
+    }
+    else if(tid == 2){
+      run = m_bo[tid].kernel( NULL, NULL, m_bo[2].in_full_graph,
+                              NULL, NULL, m_bo[2].in_scores,
+                              NULL, NULL, m_bo[2].inout_graph,
+                              NULL, NULL, m_bo[2].inout_lookup,
+                              NULL, NULL, m_bo[2].inout_lookup_filter,
+                              NULL, NULL, m_bo[2].out_components,
+                              NULL, NULL, m_num_nodes[ev],
+                              tid);
+    }
+
+  // void CCL( unsigned int* in_full_graph_0, unsigned int* in_full_graph_1, unsigned int* in_full_graph_2,
+  //           float* in_scores_0, float* in_scores_1, float* in_scores_2,
+  //           unsigned int* io_graph_0, unsigned int* io_graph_1, unsigned int* io_graph_2,
+  //           unsigned int* io_lookup_0, unsigned int* io_lookup_1, unsigned int* io_lookup_2,
+  //           unsigned int* io_lookup_filter_0, unsigned int* io_lookup_filter_1, unsigned int* io_lookup_filter_2,
+  //           unsigned int* out_components_0, unsigned int* out_components_1, unsigned int* out_components_2,
+  //           unsigned int num_nodes_0, unsigned int num_nodes_1, unsigned int num_nodes_2,
+  //           unsigned int tid);
+
     timing.krnl_started.push_back(std::chrono::system_clock::now());
     std::cout << "[    ] [" << tid << "] [" << ev << "] Wait for Kernel to finish" << std::endl;
     run.wait();
@@ -277,7 +319,7 @@ void exe_kernel(u_int32_t tid,
     // Synchronize device global memory to output buffer
     //
     std::cout << "[    ] [" << tid << "] [" << ev << "] Read back data from Kernel" << std::endl;
-    m_bo.out_components.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+    m_bo[tid].out_components.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
     timing.out_synced.push_back(std::chrono::system_clock::now());
 
     //
@@ -403,15 +445,24 @@ void exe_threads(xrt::device &m_device,
                 std::vector<unsigned int*> m_ev_components, 
                 std::vector<unsigned int> m_ev_nodes){
 
+  // std::cout << "[THRD] Allocate kernel parent buffers" << std::endl;
+  // std::cout << "[    ] 0" << std::endl; xrt::bo parent_full_graph = xrt::bo(m_device, size_full_graph_byte * m_num_threads, m_kernel.group_id(0));
+  // std::cout << "[    ] 1" << std::endl; xrt::bo parent_scores = xrt::bo(m_device, size_scores_byte * m_num_threads, m_kernel.group_id(5)); // 5 + offset));
+  // std::cout << "[    ] 2" << std::endl; xrt::bo parent_graph = xrt::bo(m_device, size_graph_byte * m_num_threads, m_kernel.group_id(10)); // 10 + offset));
+  // std::cout << "[    ] 3" << std::endl; xrt::bo parent_lookup = xrt::bo(m_device, size_lookup_byte * m_num_threads, m_kernel.group_id(15)); // 15 + offset));
+  // std::cout << "[    ] 4" << std::endl; xrt::bo parent_lookup_filter = xrt::bo(m_device, size_lookup_filter_byte * m_num_threads, m_kernel.group_id(20)); // 20 + offset));
+  // std::cout << "[    ] 5" << std::endl; xrt::bo parent_components = xrt::bo(m_device, size_components_byte * m_num_threads, m_kernel.group_id(25)); // 25 + offset));
+
   std::cout << "[THRD] Allocate kernel buffers" << std::endl;
   std::vector<u_int32_t> ev_numbers;
   std::vector<kernel_buffers> bo;
   std::vector<kernel_maps> maps;
   for(u_int32_t i = 0; i < m_num_threads ; i++){
-    ev_numbers.push_back(0);
-    bo.push_back(kernel_buffers(m_device, m_kernel));
-    maps.push_back(kernel_maps(bo[i]));
-    m_thread_time.krnls.push_back(kernel_timing());
+    std::cout << "[    ] " << i << "0" << std::endl; ev_numbers.push_back(0);
+    std::cout << "[    ] " << i << "1" << std::endl; bo.push_back(kernel_buffers(m_device, m_kernel, i));
+    std::cout << "[    ] " << i << "2" << std::endl; maps.push_back(kernel_maps(bo[i]));
+    std::cout << "[    ] " << i << "3" << std::endl; m_thread_time.krnls.push_back(kernel_timing());
+    std::cout << "[    ] " << i << "4" << std::endl;
   }
   
   std::cout << "[THRD] Create event queues for each kernel" << std::endl;
@@ -448,7 +499,7 @@ void exe_threads(xrt::device &m_device,
       t[i] = std::thread(exe_kernel_ooo, i, std::ref(bo[i]), std::ref(maps[i]), std::ref(m_thread_time.krnls[i]), ev_numbers[i], thread_ev_full_graph[i], thread_ev_scores[i], thread_ev_components[i], thread_num_nodes[i]);
   else
     for(u_int32_t i = 0; i < m_num_threads ; i++)
-      t[i] = std::thread(exe_kernel, i, std::ref(bo[i]), std::ref(maps[i]), std::ref(m_thread_time.krnls[i]), ev_numbers[i], thread_ev_full_graph[i], thread_ev_scores[i], thread_ev_components[i], thread_num_nodes[i]);
+      t[i] = std::thread(exe_kernel, i, std::ref(bo), std::ref(maps[i]), std::ref(m_thread_time.krnls[i]), ev_numbers[i], thread_ev_full_graph[i], thread_ev_scores[i], thread_ev_components[i], thread_num_nodes[i]);
 
   m_thread_time.threads_running = std::chrono::system_clock::now();
   std::cout << "[THRD] Wait for threads to end" << std::endl;

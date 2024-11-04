@@ -81,9 +81,9 @@ read output[i_max]
 + CCL kernel for ooo
 + CCL Host-code (+ cfg, etc)
 + kernel-order
-bugfix kernel-order
-compile test and ccl for HW (over night?)
++ compile test and ccl for HW
 run HW, verify timing
+bugfix kernel-order
 test #loops, #threads, kernel-reorder
 */
 

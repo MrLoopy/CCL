@@ -27,7 +27,7 @@
 //
 //============================================
 const u_int32_t num_threads = 2;
-const std::vector<std::string> csv_names = {"dat/dummy.csv", "dat/dummy.csv", "dat/dummy.csv", "dat/dummy.csv", "dat/dummy.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
+const std::vector<std::string> csv_names = {"dat/event005001514.csv", "dat/event005001514.csv", "dat/event005001514.csv", "dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
 const u_int32_t num_events = (const u_int32_t)csv_names.size();
 
 const u_int32_t size_scores = MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;
@@ -632,7 +632,7 @@ int main (int argc, char ** argv){
           correct = false;
           k_errors[ev]++;
           num_errors++;
-          std::cout << "[    ][" << ev << "] " << row << " - expected: " << num_connections << " got: " << ev_out_components[ev][row] << std::endl;
+          // std::cout << "[    ][" << ev << "] " << row << " - expected: " << num_connections << " got: " << ev_out_components[ev][row] << std::endl;
         }
       }
     }

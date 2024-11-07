@@ -27,7 +27,7 @@
 //============================================
 const u_int32_t num_threads = 1;
 const u_int32_t filter_split_factor = FILTER_SPLIT;
-const std::vector<std::string> csv_names = {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; //, "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
+const std::vector<std::string> csv_names = {"dat/event005001514.csv"}; // {"dat/event005001514.csv"}; //, "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
 // {"reg/r_event005008301.csv", "reg/r_event005008302.csv", "reg/r_event005008303.csv", "reg/r_event005008304.csv", "reg/r_event005008306.csv", "reg/r_event005008308.csv", "reg/r_event005008310.csv", "reg/r_event005008312.csv"}
 const u_int32_t num_events = (const u_int32_t)csv_names.size();
 
@@ -638,7 +638,7 @@ int main (int argc, char ** argv){
         residue--;
         for(unsigned int j = 0; j < MAX_FULL_GRAPH_EDGES ; j++){
           maps.in_full_graph_sub_2[base_nodes * MAX_FULL_GRAPH_EDGES + j] = ev_in_full_graph[ev][maps.in_num_nodes[0] * MAX_FULL_GRAPH_EDGES + j];
-          maps.in_full_graph_sub_2[base_nodes * MAX_FULL_GRAPH_EDGES + j] = ev_in_scores[ev][maps.in_num_nodes[0] * MAX_FULL_GRAPH_EDGES + j];
+          maps.in_scores_sub_2[base_nodes * MAX_FULL_GRAPH_EDGES + j] = ev_in_scores[ev][maps.in_num_nodes[0] * MAX_FULL_GRAPH_EDGES + j];
         }
         maps.in_num_nodes[0]++;
       }
@@ -776,7 +776,6 @@ int main (int argc, char ** argv){
 
       bool end_reached = false;
       bool first_free_node = true;
-      std::cout << "[    ] 0" << std::endl;
       bool processed[ev_num_nodes[ev]];
       for(unsigned int i = 0; i < ev_num_nodes[ev] ; i++)
         processed[i] = false;
@@ -793,10 +792,6 @@ int main (int argc, char ** argv){
       unsigned int size_of_components[MAX_COMPONENT_SIZE];
       for(unsigned int i = 0; i < MAX_COMPONENT_SIZE ; i++)
         size_of_components[i] = 0;
-
-      std::cout << "[    ] output_size: " << output_size << std::endl;
-      for(unsigned int i = 1; i < output_size ; i++)
-        std::cout << "[    ] " << ev_out_components[ev][output_size] << std::endl;
 
       while(!end_reached){
         // if the index reaches the size of the output, all found components have been processed
@@ -850,8 +845,6 @@ int main (int argc, char ** argv){
           }
         }
       }
-
-      std::cout << "[    ] 2" << std::endl;
 
       // make sure no component has been forgotten
       for(unsigned int i = 0; i < ev_num_nodes[ev] ; i++){

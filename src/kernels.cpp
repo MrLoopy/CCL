@@ -4,9 +4,10 @@
 #include <hls_stream.h>
 
 // Custom includes
-#include <iostream>
+// #include <iostream>
 #include "kernels.hpp"
 
+/*
 static void print_sub_full(unsigned int* sf0, float* ss0, unsigned int nn0, unsigned int* sf1, float* ss1, unsigned int nn1, unsigned int* sf2, float* ss2, unsigned int nn2, unsigned int* sf3, float* ss3, unsigned int nn3) {
   std::cout << "[KRNL] sub_full_graph and sub_score 0 - " << nn0 << std::endl;
   for (unsigned int i = 0; i < nn0; i++){
@@ -49,6 +50,37 @@ static void print_sub_full(unsigned int* sf0, float* ss0, unsigned int nn0, unsi
     std::cout << std::endl;
   }
 }
+static void print_filtered_sub(unsigned int* sg0, unsigned int nn0, unsigned int* sg1, unsigned int nn1, unsigned int* sg2, unsigned int nn2, unsigned int* sg3, unsigned int nn3) {
+  std::cout << "\n[KRNL] sub_filtered_graph 0 - " << nn0 << std::endl;
+  for (unsigned int i = 0; i < nn0; i++){
+    std::cout << "[    ] " << i << " " << sg0[i * MAX_EDGES] << " -";
+    for (unsigned int j = 0; j < 8; j++)
+      std::cout << " " << sg0[i * MAX_EDGES + 1 + j];
+    std::cout << std::endl;
+  }
+  std::cout << "[KRNL] sub_filtered_graph 1 - " << nn1 << std::endl;
+  for (unsigned int i = 0; i < nn1; i++){
+    std::cout << "[    ] " << i << " " << sg1[i * MAX_EDGES] << " -";
+    for (unsigned int j = 0; j < 8; j++)
+      std::cout << " " << sg1[i * MAX_EDGES + 1 + j];
+    std::cout << std::endl;
+  }
+  std::cout << "[KRNL] sub_filtered_graph 2 - " << nn2 << std::endl;
+  for (unsigned int i = 0; i < nn2; i++){
+    std::cout << "[    ] " << i << " " << sg2[i * MAX_EDGES] << " -";
+    for (unsigned int j = 0; j < 8; j++)
+      std::cout << " " << sg2[i * MAX_EDGES + 1 + j];
+    std::cout << std::endl;
+  }
+  std::cout << "[KRNL] sub_filtered_graph 0 - " << nn3 << std::endl;
+  for (unsigned int i = 0; i < nn3; i++){
+    std::cout << "[    ] " << i << " " << sg3[i * MAX_EDGES] << " -";
+    for (unsigned int j = 0; j < 8; j++)
+      std::cout << " " << sg3[i * MAX_EDGES + 1 + j];
+    std::cout << std::endl;
+  }
+}
+*/
 
 static void sub_filter(unsigned int* sub_full, float* sub_scores, unsigned int m_num_nodes, unsigned int* m_sub_graph) {
   unsigned int connections = 0;
@@ -70,6 +102,7 @@ static void sub_filter(unsigned int* sub_full, float* sub_scores, unsigned int m
 }
 
 static void compress( unsigned int* sub_0, unsigned int* sub_1, unsigned int* sub_2, unsigned int* sub_3, unsigned int* m_graph,
+                      unsigned int num_nodes_0, unsigned int num_nodes_1, unsigned int num_nodes_2, unsigned int num_nodes_3,
                       unsigned int* m_lookup, unsigned int* m_lookup_filter, unsigned int& m_graph_size, unsigned int m_num_nodes) {
 
   unsigned int new_from, new_to;
@@ -115,14 +148,14 @@ static void compress( unsigned int* sub_0, unsigned int* sub_1, unsigned int* su
       // copy all connections with new indices
       for(unsigned int i = 0; i < sub_1[row * MAX_EDGES]; i++){
         if(new_from == 0){
-          if(m_lookup_filter[row + 1 * MAX_TOTAL_NODES / FILTER_SPLIT] == 0){
-            m_lookup_filter[row + 1 * MAX_TOTAL_NODES / FILTER_SPLIT] = m_graph_size;
-            m_lookup[m_graph_size] = row + 1 * MAX_TOTAL_NODES / FILTER_SPLIT;
+          if(m_lookup_filter[row + num_nodes_0] == 0){
+            m_lookup_filter[row + num_nodes_0] = m_graph_size;
+            m_lookup[m_graph_size] = row + num_nodes_0;
             new_from = m_graph_size;
             m_graph_size++;
           }
           else
-            new_from = m_lookup_filter[row + 1 * MAX_TOTAL_NODES / FILTER_SPLIT];
+            new_from = m_lookup_filter[row + num_nodes_0];
         }
         // put i in lookup and get out new index
         if(m_lookup_filter[sub_1[row * MAX_EDGES + 1 + i]] == 0){
@@ -146,14 +179,14 @@ static void compress( unsigned int* sub_0, unsigned int* sub_1, unsigned int* su
       // copy all connections with new indices
       for(unsigned int i = 0; i < sub_2[row * MAX_EDGES]; i++){
         if(new_from == 0){
-          if(m_lookup_filter[row + 2 * MAX_TOTAL_NODES / FILTER_SPLIT] == 0){
-            m_lookup_filter[row + 2 * MAX_TOTAL_NODES / FILTER_SPLIT] = m_graph_size;
-            m_lookup[m_graph_size] = row + 2 * MAX_TOTAL_NODES / FILTER_SPLIT;
+          if(m_lookup_filter[row + num_nodes_0 + num_nodes_1] == 0){
+            m_lookup_filter[row + num_nodes_0 + num_nodes_1] = m_graph_size;
+            m_lookup[m_graph_size] = row + num_nodes_0 + num_nodes_1;
             new_from = m_graph_size;
             m_graph_size++;
           }
           else
-            new_from = m_lookup_filter[row + 2 * MAX_TOTAL_NODES / FILTER_SPLIT];
+            new_from = m_lookup_filter[row + num_nodes_0 + num_nodes_1];
         }
         // put i in lookup and get out new index
         if(m_lookup_filter[sub_2[row * MAX_EDGES + 1 + i]] == 0){
@@ -177,14 +210,14 @@ static void compress( unsigned int* sub_0, unsigned int* sub_1, unsigned int* su
       // copy all connections with new indices
       for(unsigned int i = 0; i < sub_3[row * MAX_EDGES]; i++){
         if(new_from == 0){
-          if(m_lookup_filter[row + 3 * MAX_TOTAL_NODES / FILTER_SPLIT] == 0){
-            m_lookup_filter[row + 3 * MAX_TOTAL_NODES / FILTER_SPLIT] = m_graph_size;
-            m_lookup[m_graph_size] = row + 3 * MAX_TOTAL_NODES / FILTER_SPLIT;
+          if(m_lookup_filter[row + num_nodes_0 + num_nodes_1 + num_nodes_2] == 0){
+            m_lookup_filter[row + num_nodes_0 + num_nodes_1 + num_nodes_2] = m_graph_size;
+            m_lookup[m_graph_size] = row + num_nodes_0 + num_nodes_1 + num_nodes_2;
             new_from = m_graph_size;
             m_graph_size++;
           }
           else
-            new_from = m_lookup_filter[row + 3 * MAX_TOTAL_NODES / FILTER_SPLIT];
+            new_from = m_lookup_filter[row + num_nodes_0 + num_nodes_1 + num_nodes_2];
         }
         // put i in lookup and get out new index
         if(m_lookup_filter[sub_3[row * MAX_EDGES + 1 + i]] == 0){
@@ -395,14 +428,14 @@ extern "C" {
 
     #pragma HLS dataflow
 
-    print_sub_full(in_full_graph_sub_0, in_scores_sub_0, in_num_nodes[1], in_full_graph_sub_1, in_scores_sub_1, in_num_nodes[2], in_full_graph_sub_2, in_scores_sub_2, in_num_nodes[3], in_full_graph_sub_3, in_scores_sub_3, in_num_nodes[4]);
+    // print_sub_full(in_full_graph_sub_0, in_scores_sub_0, in_num_nodes[1], in_full_graph_sub_1, in_scores_sub_1, in_num_nodes[2], in_full_graph_sub_2, in_scores_sub_2, in_num_nodes[3], in_full_graph_sub_3, in_scores_sub_3, in_num_nodes[4]);
 
     sub_filter(in_full_graph_sub_0, in_scores_sub_0, in_num_nodes[1], io_graph_sub_0);
     sub_filter(in_full_graph_sub_1, in_scores_sub_1, in_num_nodes[2], io_graph_sub_1);
     sub_filter(in_full_graph_sub_2, in_scores_sub_2, in_num_nodes[3], io_graph_sub_2);
     sub_filter(in_full_graph_sub_3, in_scores_sub_3, in_num_nodes[4], io_graph_sub_3);
 
-    compress(io_graph_sub_0, io_graph_sub_1, io_graph_sub_2, io_graph_sub_3, io_graph_main, io_lookup, io_lookup_filter, graph_size, in_num_nodes[1]);
+    compress(io_graph_sub_0, io_graph_sub_1, io_graph_sub_2, io_graph_sub_3, io_graph_main, in_num_nodes[1], in_num_nodes[2], in_num_nodes[3], in_num_nodes[4], io_lookup, io_lookup_filter, graph_size, in_num_nodes[1]);
 
     compute_core(io_graph_main, graph_size, outStream_components, io_lookup);
     write_components(out_components, outStream_components);

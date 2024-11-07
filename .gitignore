@@ -11,8 +11,5 @@ vivado*
 .ipcache/
 condor*
 nohup.out
-dat/u_event005001604.csv
-dat/u_event005001608.csv
-dat/u_event005001614.csv
-dat/u_event005001670.csv
+dat/*.csv
 

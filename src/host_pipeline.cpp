@@ -25,29 +25,20 @@
 // Global parameters
 //
 //============================================
-const u_int32_t num_threads = 1;
-const u_int32_t filter_split_factor = FILTER_SPLIT;
-const std::vector<std::string> csv_names = {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; //, "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
-// {"reg/r_event005008301.csv", "reg/r_event005008302.csv", "reg/r_event005008303.csv", "reg/r_event005008304.csv", "reg/r_event005008306.csv", "reg/r_event005008308.csv", "reg/r_event005008310.csv", "reg/r_event005008312.csv"}
+const bool ooo = false;
+const u_int32_t num_threads = 2;
+const std::vector<std::string> csv_names = {"dat/dummy.csv", "dat/dummy.csv"}; // {"dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
 const u_int32_t num_events = (const u_int32_t)csv_names.size();
 
-u_int32_t size_num_nodes = 5;
-u_int32_t size_split_graph = MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES / FILTER_SPLIT;
 u_int32_t size_full_graph = MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;
-u_int32_t size_split_scores = MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES / FILTER_SPLIT;
 u_int32_t size_scores = MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;
-u_int32_t size_sub_graph = MAX_TOTAL_NODES * MAX_EDGES / FILTER_SPLIT;
 u_int32_t size_graph = MAX_TRUE_NODES * MAX_EDGES;
 u_int32_t size_lookup = MAX_TRUE_NODES;
 u_int32_t size_lookup_filter = MAX_TOTAL_NODES;
 u_int32_t size_components = MAX_TRUE_NODES + MAX_COMPONENTS;
 
-size_t size_num_nodes_byte = sizeof(unsigned int) * size_num_nodes;
-size_t size_split_graph_byte = sizeof(unsigned int) * size_split_graph;
 size_t size_full_graph_byte = sizeof(unsigned int) * size_full_graph;
-size_t size_split_scores_byte = sizeof(float) * size_split_scores;
 size_t size_scores_byte = sizeof(float) * size_scores;
-size_t size_sub_graph_byte = sizeof(unsigned int) * size_sub_graph;
 size_t size_graph_byte = sizeof(unsigned int) * size_graph;
 size_t size_lookup_byte = sizeof(unsigned int) * size_lookup;
 size_t size_lookup_filter_byte = sizeof(unsigned int) * size_lookup_filter;
@@ -74,78 +65,35 @@ struct thread_timing{
 struct kernel_buffers{
   xrt::device device;
   xrt::kernel kernel;
-  xrt::bo in_num_nodes;
-  xrt::bo in_full_graph_sub_0;
-  xrt::bo in_full_graph_sub_1;
-  xrt::bo in_full_graph_sub_2;
-  xrt::bo in_full_graph_sub_3;
-  xrt::bo in_scores_sub_0;
-  xrt::bo in_scores_sub_1;
-  xrt::bo in_scores_sub_2;
-  xrt::bo in_scores_sub_3;
-  xrt::bo inout_graph_sub_0;
-  xrt::bo inout_graph_sub_1;
-  xrt::bo inout_graph_sub_2;
-  xrt::bo inout_graph_sub_3;
-  xrt::bo inout_graph_main;
+  xrt::bo in_full_graph;
+  xrt::bo in_scores;
+  xrt::bo inout_graph;
   xrt::bo inout_lookup;
   xrt::bo inout_lookup_filter;
   xrt::bo out_components;
-  kernel_buffers(xrt::device &m_device, xrt::kernel &m_kernel){
+  kernel_buffers(xrt::device &m_device, xrt::kernel &m_kernel, u_int32_t offset, u_int32_t st = 3){
     device = m_device;
     kernel = m_kernel;
-    in_num_nodes = xrt::bo(device, size_num_nodes_byte, kernel.group_id(0));
-    in_full_graph_sub_0 = xrt::bo(device, size_split_graph_byte, kernel.group_id(1));
-    in_full_graph_sub_1 = xrt::bo(device, size_split_graph_byte, kernel.group_id(2));
-    in_full_graph_sub_2 = xrt::bo(device, size_split_graph_byte, kernel.group_id(3));
-    in_full_graph_sub_3 = xrt::bo(device, size_split_graph_byte, kernel.group_id(4));
-    in_scores_sub_0 = xrt::bo(device, size_split_scores_byte, kernel.group_id(5));
-    in_scores_sub_1 = xrt::bo(device, size_split_scores_byte, kernel.group_id(6));
-    in_scores_sub_2 = xrt::bo(device, size_split_scores_byte, kernel.group_id(7));
-    in_scores_sub_3 = xrt::bo(device, size_split_scores_byte, kernel.group_id(8));
-    inout_graph_sub_0 = xrt::bo(device, size_sub_graph_byte, kernel.group_id(9));
-    inout_graph_sub_1 = xrt::bo(device, size_sub_graph_byte, kernel.group_id(10));
-    inout_graph_sub_2 = xrt::bo(device, size_sub_graph_byte, kernel.group_id(11));
-    inout_graph_sub_3 = xrt::bo(device, size_sub_graph_byte, kernel.group_id(12));
-    inout_graph_main = xrt::bo(device, size_graph_byte, kernel.group_id(13));
-    inout_lookup = xrt::bo(device, size_lookup_byte, kernel.group_id(14));
-    inout_lookup_filter = xrt::bo(device, size_lookup_filter_byte, kernel.group_id(15));
-    out_components = xrt::bo(device, size_components_byte, kernel.group_id(16));
+    std::cout << "[    ]    " << offset << " 0" << std::endl; in_full_graph = xrt::bo(device, size_full_graph_byte, kernel.group_id(0 * st + offset));
+    std::cout << "[    ]    " << offset << " 1" << std::endl; in_scores = xrt::bo(device, size_scores_byte, kernel.group_id(1 * st + offset));
+    std::cout << "[    ]    " << offset << " 2" << std::endl; inout_graph = xrt::bo(device, size_graph_byte, kernel.group_id(2 * st + offset));
+    std::cout << "[    ]    " << offset << " 3" << std::endl; inout_lookup = xrt::bo(device, size_lookup_byte, kernel.group_id(3 * st + offset));
+    std::cout << "[    ]    " << offset << " 4" << std::endl; inout_lookup_filter = xrt::bo(device, size_lookup_filter_byte, kernel.group_id(4 * st + offset));
+    std::cout << "[    ]    " << offset << " 5" << std::endl; out_components = xrt::bo(device, size_components_byte, kernel.group_id(5 * st + offset));
+    std::cout << "[    ]    " << offset << " 6" << std::endl;
   }
 };
 struct kernel_maps{
-  unsigned int* in_num_nodes;
-  unsigned int* in_full_graph_sub_0;
-  unsigned int* in_full_graph_sub_1;
-  unsigned int* in_full_graph_sub_2;
-  unsigned int* in_full_graph_sub_3;
-  float* in_scores_sub_0;
-  float* in_scores_sub_1;
-  float* in_scores_sub_2;
-  float* in_scores_sub_3;
-  unsigned int* inout_graph_sub_0;
-  unsigned int* inout_graph_sub_1;
-  unsigned int* inout_graph_sub_2;
-  unsigned int* inout_graph_sub_3;
-  unsigned int* inout_graph_main;
+  unsigned int* in_full_graph;
+  float* in_scores;
+  unsigned int* inout_graph;
   unsigned int* inout_lookup;
   unsigned int* inout_lookup_filter;
   unsigned int* out_components;
   kernel_maps(kernel_buffers &m_bo){
-    in_num_nodes = m_bo.in_num_nodes.map<unsigned int*>();
-    in_full_graph_sub_0 = m_bo.in_full_graph_sub_0.map<unsigned int*>();
-    in_full_graph_sub_1 = m_bo.in_full_graph_sub_1.map<unsigned int*>();
-    in_full_graph_sub_2 = m_bo.in_full_graph_sub_2.map<unsigned int*>();
-    in_full_graph_sub_3 = m_bo.in_full_graph_sub_3.map<unsigned int*>();
-    in_scores_sub_0 = m_bo.in_scores_sub_0.map<float*>();
-    in_scores_sub_1 = m_bo.in_scores_sub_1.map<float*>();
-    in_scores_sub_2 = m_bo.in_scores_sub_2.map<float*>();
-    in_scores_sub_3 = m_bo.in_scores_sub_3.map<float*>();
-    inout_graph_sub_0 = m_bo.inout_graph_sub_0.map<unsigned int*>();
-    inout_graph_sub_1 = m_bo.inout_graph_sub_1.map<unsigned int*>();
-    inout_graph_sub_2 = m_bo.inout_graph_sub_2.map<unsigned int*>();
-    inout_graph_sub_3 = m_bo.inout_graph_sub_3.map<unsigned int*>();
-    inout_graph_main = m_bo.inout_graph_main.map<unsigned int*>();
+    in_full_graph = m_bo.in_full_graph.map<unsigned int*>();
+    in_scores = m_bo.in_scores.map<float*>();
+    inout_graph = m_bo.inout_graph.map<unsigned int*>();
     inout_lookup = m_bo.inout_lookup.map<unsigned int*>();
     inout_lookup_filter = m_bo.inout_lookup_filter.map<unsigned int*>();
     out_components = m_bo.out_components.map<unsigned int*>();
@@ -168,48 +116,32 @@ bool missmatch_found(float a, float b, float cutoff = 0.5){
   return false;
 }
 void print_global_prameters(void){
-  std::cout << "[INFO] Number of events:      " << num_events << std::endl;
-  std::cout << "[    ] Filter split factor:   " << filter_split_factor << std::endl;
-  std::cout << "[INFO] Size of num_nodes:     ";
-  if(size_num_nodes_byte > 1024 * 1024) std::cout << size_num_nodes_byte / (1024 * 1024) << " MB" << std::endl;
-  else if(size_num_nodes_byte > 1024) std::cout << size_num_nodes_byte / 1024 << " KB" << std::endl;
-  else std::cout << size_num_nodes_byte << " Bytes" << std::endl;
-  std::cout << "[    ] Size of split_graph:   ";
-  if(size_split_graph_byte > 1024 * 1024) std::cout << size_split_graph_byte / (1024 * 1024) << " MB" << std::endl;
-  else if(size_split_graph_byte > 1024) std::cout << size_split_graph_byte / 1024 << " KB" << std::endl;
-  else std::cout << size_split_graph_byte << " Bytes" << std::endl;
-  std::cout << "[    ] Size of full_graph:    ";
+  std::cout << "[INFO] Number of threads:     " << num_threads << std::endl;
+  std::cout << "[    ] Number of events:      " << num_events << std::endl;
+  std::cout << "[INFO] Size of full_graph:    ";
   if(size_full_graph_byte > 1024 * 1024) std::cout << size_full_graph_byte / (1024 * 1024) << " MB" << std::endl;
   else if(size_full_graph_byte > 1024) std::cout << size_full_graph_byte / 1024 << " KB" << std::endl;
-  else std::cout << size_full_graph_byte << " Bytes" << std::endl;
-  std::cout << "[    ] Size of split_scores:  ";
-  if(size_split_scores_byte > 1024 * 1024) std::cout << size_split_scores_byte / (1024 * 1024) << " MB" << std::endl;
-  else if(size_split_scores_byte > 1024) std::cout << size_split_scores_byte / 1024 << " KB" << std::endl;
-  else std::cout << size_split_scores_byte << " Bytes" << std::endl;
+  else std::cout << size_full_graph_byte / 1024 << " Bytes" << std::endl;
   std::cout << "[    ] Size of scores:        ";
   if(size_scores_byte > 1024 * 1024) std::cout << size_scores_byte / (1024 * 1024) << " MB" << std::endl;
   else if(size_scores_byte > 1024) std::cout << size_scores_byte / 1024 << " KB" << std::endl;
-  else std::cout << size_scores_byte << " Bytes" << std::endl;
-  std::cout << "[    ] Size of sub-graph:     ";
-  if(size_sub_graph_byte > 1024 * 1024) std::cout << size_sub_graph_byte / (1024 * 1024) << " MB" << std::endl;
-  else if(size_sub_graph_byte > 1024) std::cout << size_sub_graph_byte / 1024 << " KB" << std::endl;
-  else std::cout << size_sub_graph_byte << " Bytes" << std::endl;
+  else std::cout << size_scores_byte / 1024 << " Bytes" << std::endl;
   std::cout << "[    ] Size of graph:         ";
   if(size_graph_byte > 1024 * 1024) std::cout << size_graph_byte / (1024 * 1024) << " MB" << std::endl;
   else if(size_graph_byte > 1024) std::cout << size_graph_byte / 1024 << " KB" << std::endl;
-  else std::cout << size_graph_byte << " Bytes" << std::endl;
+  else std::cout << size_graph_byte / 1024 << " Bytes" << std::endl;
   std::cout << "[    ] Size of lookup:        ";
   if(size_lookup_byte > 1024 * 1024) std::cout << size_lookup_byte / (1024 * 1024) << " MB" << std::endl;
   else if(size_lookup_byte > 1024) std::cout << size_lookup_byte / 1024 << " KB" << std::endl;
-  else std::cout << size_lookup_byte << " Bytes" << std::endl;
+  else std::cout << size_lookup_byte / 1024 << " Bytes" << std::endl;
   std::cout << "[    ] Size of lookup_filter: ";
   if(size_lookup_filter_byte > 1024 * 1024) std::cout << size_lookup_filter_byte / (1024 * 1024) << " MB" << std::endl;
   else if(size_lookup_filter_byte > 1024) std::cout << size_lookup_filter_byte / 1024 << " KB" << std::endl;
-  else std::cout << size_lookup_filter_byte << " Bytes" << std::endl;
+  else std::cout << size_lookup_filter_byte / 1024 << " Bytes" << std::endl;
   std::cout << "[    ] Size of components:    ";
   if(size_components_byte > 1024 * 1024) std::cout << size_components_byte / (1024 * 1024) << " MB" << std::endl;
   else if(size_components_byte > 1024) std::cout << size_components_byte / 1024 << " KB" << std::endl;
-  else std::cout << size_components_byte << " Bytes" << std::endl;
+  else std::cout << size_components_byte / 1024 << " Bytes" << std::endl;
 }
 void print_thread_time(thread_timing &timing){
   std::chrono::duration<double> duration;
@@ -290,56 +222,292 @@ void print_thread_time(thread_timing &timing){
   std::cout << "[    ] Wall clock time: " << std::setw(9) << duration.count() * 1000 << "  " << std::setw(9) << duration.count() * 1000 / ev << "\n[    ]" << std::endl;
 
 }
-void print_kernel_time(kernel_timing &timing){
-  std::chrono::duration<double> duration;
-  std::vector<std::chrono::duration<double>> totals;
-  for(u_int32_t i = 0; i < 8 ; i++) totals.push_back(timing.init_start - timing.init_start);
-  int w = 9;
-  std::cout << std::fixed << std::setprecision(3);
 
-  std::cout << "[    ]\n[INFO] Write time stemps" << std::endl;
-  std::cout << "[    ] Start at:                0.000 ms" << std::endl;
-  duration = timing.final_end - timing.init_start;
-  std::cout << "[    ] Total duration:      " << std::setw(w) << duration.count() * 1000 << " ms" << std::endl;
+// execute kernel
+void exe_kernel(u_int32_t tid,
+                std::vector<kernel_buffers> &m_bo, 
+                kernel_maps &m_map, 
+                kernel_timing &timing, 
+                u_int32_t m_num_events, 
+                std::vector<unsigned int*> m_ev_full_graph, 
+                std::vector<float*> m_ev_score, 
+                std::vector<unsigned int*> m_ev_components, 
+                std::vector<unsigned int> m_num_nodes){
 
-  std::cout << "[    ]\n[    ] Event time stemps [ms]" << std::endl;
-  for(u_int32_t ev = 0; ev < timing.iterations ; ev++){
-    std::cout << "[    ] Event:           " << ev << std::endl;
-    duration = timing.in_written[ev] - timing.init_start;
-    if(ev == 0) totals[1] += timing.in_written[0] - timing.init_start;
-    else totals[1] += timing.in_written[ev] - timing.out_written[ev - 1];
-    std::cout << "[    ] Input written:   " << std::setw(w) << duration.count() * 1000 << " " << std::endl;
-    duration = timing.in_synced[ev] - timing.init_start;
-    totals[2] += timing.in_synced[ev] - timing.in_written[ev];
-    std::cout << "[    ] Input synced:    " << std::setw(w) << duration.count() * 1000 << " " << std::endl;
-    duration = timing.krnl_started[ev] - timing.init_start;
-    totals[3] += timing.krnl_started[ev] - timing.in_synced[ev];
-    std::cout << "[    ] Kernel started:  " << std::setw(w) << duration.count() * 1000 << " " << std::endl;
-    duration = timing.krnl_ended[ev] - timing.init_start;
-    totals[4] += timing.krnl_ended[ev] - timing.krnl_started[ev];
-    std::cout << "[    ] Kernel ended:    " << std::setw(w) << duration.count() * 1000 << " " << std::endl;
-    duration = timing.out_synced[ev] - timing.init_start;
-    totals[5] += timing.out_synced[ev] - timing.krnl_ended[ev];
-    std::cout << "[    ] Output synced:   " << std::setw(w) << duration.count() * 1000 << " " << std::endl;
-    duration = timing.out_written[ev] - timing.init_start;
-    totals[6] += timing.out_written[ev] - timing.out_synced[ev];
-    std::cout << "[    ] Output written:  " << std::setw(w) << duration.count() * 1000 << " " << std::endl;
-    duration = timing.krnl_ended[ev] - timing.in_synced[ev];
-    std::cout << "[    ] Kernel delta:    " << std::setw(w) << duration.count() * 1000 << " " << std::endl;
-    std::cout << "[    ]" << std::endl;
+  timing.iterations = m_num_events;
+  timing.init_start = std::chrono::system_clock::now();
+
+  // Event loop
+  for(unsigned int ev = 0; ev < m_num_events ; ev++){
+    //
+    // Write event buffer to global memory buffer
+    //
+    std::cout << "[KRNL] [" << tid << "] [" << ev << "] Write Event to Global Memory Buffer" << std::endl;
+    for(unsigned int i = 0; i < size_scores ; i++){
+      m_map.in_full_graph[i] = m_ev_full_graph[ev][i];
+      m_map.in_scores[i] = m_ev_score[ev][i];
+    }
+    std::fill(m_map.inout_graph, m_map.inout_graph + size_graph, 0.0);
+    std::fill(m_map.inout_lookup, m_map.inout_lookup + size_lookup, 0);
+    std::fill(m_map.inout_lookup_filter, m_map.inout_lookup_filter + size_lookup_filter, 0);
+    std::fill(m_map.out_components, m_map.out_components + size_components, 0);
+    timing.in_written.push_back(std::chrono::system_clock::now());
+
+    //
+    // Synchronize input buffer data to device global memory
+    //
+    std::cout << "[    ] [" << tid << "] [" << ev << "] Synchronize input buffer data to device global memory" << std::endl;
+    m_bo[tid].in_full_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    m_bo[tid].in_scores.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    m_bo[tid].inout_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    m_bo[tid].inout_lookup.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    m_bo[tid].inout_lookup_filter.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    timing.in_synced.push_back(std::chrono::system_clock::now());
+
+    //
+    // Execute Kernel
+    //
+    std::cout << "[    ] [" << tid << "] [" << ev << "] Start Kernel" << std::endl;
+    // auto run = m_bo.kernel(m_bo.in_full_graph, m_bo.in_scores, m_bo.inout_graph, m_bo.inout_lookup, m_bo.inout_lookup_filter, m_bo.out_components, 0, m_num_nodes[ev]);
+    xrt::run run;
+    if(tid == 0){
+      run = m_bo[tid].kernel( m_bo[0].in_full_graph, NULL, NULL,
+                              m_bo[0].in_scores, NULL, NULL,
+                              m_bo[0].inout_graph, NULL, NULL,
+                              m_bo[0].inout_lookup, NULL, NULL,
+                              m_bo[0].inout_lookup_filter, NULL, NULL,
+                              m_bo[0].out_components, NULL, NULL,
+                              m_num_nodes[ev], NULL, NULL,
+                              tid);
+    }
+    else if(tid == 1){
+      run = m_bo[tid].kernel( NULL, m_bo[1].in_full_graph, NULL,
+                              NULL, m_bo[1].in_scores, NULL,
+                              NULL, m_bo[1].inout_graph, NULL,
+                              NULL, m_bo[1].inout_lookup, NULL,
+                              NULL, m_bo[1].inout_lookup_filter, NULL,
+                              NULL, m_bo[1].out_components, NULL,
+                              NULL, m_num_nodes[ev], NULL,
+                              tid);
+    }
+    else if(tid == 2){
+      run = m_bo[tid].kernel( NULL, NULL, m_bo[2].in_full_graph,
+                              NULL, NULL, m_bo[2].in_scores,
+                              NULL, NULL, m_bo[2].inout_graph,
+                              NULL, NULL, m_bo[2].inout_lookup,
+                              NULL, NULL, m_bo[2].inout_lookup_filter,
+                              NULL, NULL, m_bo[2].out_components,
+                              NULL, NULL, m_num_nodes[ev],
+                              tid);
+    }
+
+  // void CCL( unsigned int* in_full_graph_0, unsigned int* in_full_graph_1, unsigned int* in_full_graph_2,
+  //           float* in_scores_0, float* in_scores_1, float* in_scores_2,
+  //           unsigned int* io_graph_0, unsigned int* io_graph_1, unsigned int* io_graph_2,
+  //           unsigned int* io_lookup_0, unsigned int* io_lookup_1, unsigned int* io_lookup_2,
+  //           unsigned int* io_lookup_filter_0, unsigned int* io_lookup_filter_1, unsigned int* io_lookup_filter_2,
+  //           unsigned int* out_components_0, unsigned int* out_components_1, unsigned int* out_components_2,
+  //           unsigned int num_nodes_0, unsigned int num_nodes_1, unsigned int num_nodes_2,
+  //           unsigned int tid);
+
+    timing.krnl_started.push_back(std::chrono::system_clock::now());
+    std::cout << "[    ] [" << tid << "] [" << ev << "] Wait for Kernel to finish" << std::endl;
+    run.wait();
+    timing.krnl_ended.push_back(std::chrono::system_clock::now());
+
+    //
+    // Synchronize device global memory to output buffer
+    //
+    std::cout << "[    ] [" << tid << "] [" << ev << "] Read back data from Kernel" << std::endl;
+    m_bo[tid].out_components.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+    timing.out_synced.push_back(std::chrono::system_clock::now());
+
+    //
+    // Read event buffer from global memory buffer
+    //
+    std::cout << "[    ] [" << tid << "] [" << ev << "] Write results from global memory back to event buffer" << std::endl;
+    for(unsigned int i = 0; i < size_components ; i++)
+      m_ev_components[ev][i] = m_map.out_components[i];
+    timing.out_written.push_back(std::chrono::system_clock::now());
+    
   }
 
-  u_int32_t ev = timing.iterations;
-  std::cout << "[    ] Total and average duration [ms] for " << ev << " events" << std::endl;
-  std::cout << "[    ] Write inputs:    " << std::setw(9) << totals[1].count() * 1000 << "  " << std::setw(9) << totals[1].count() * 1000 / ev << std::endl;
-  std::cout << "[    ] Sync inputs:     " << std::setw(9) << totals[2].count() * 1000 << "  " << std::setw(9) << totals[2].count() * 1000 / ev << std::endl;
-  std::cout << "[    ] Start kernel:    " << std::setw(9) << totals[3].count() * 1000 << "  " << std::setw(9) << totals[3].count() * 1000 / ev << std::endl;
-  std::cout << "[    ] Kernel time:     " << std::setw(9) << (totals[3].count() + totals[4].count()) * 1000 << "  " << std::setw(9) << (totals[3].count() + totals[4].count()) * 1000 / ev << std::endl;
-  std::cout << "[    ] Sync output:     " << std::setw(9) << totals[5].count() * 1000 << "  " << std::setw(9) << totals[5].count() * 1000 / ev << std::endl;
-  std::cout << "[    ] Write output:    " << std::setw(9) << totals[6].count() * 1000 << "  " << std::setw(9) << totals[6].count() * 1000 / ev << "\n[    ]" << std::endl;
-  duration = timing.final_end - timing.init_start;
-  std::cout << "[    ] Wall clock time: " << std::setw(9) << duration.count() * 1000 << "  " << std::setw(9) << duration.count() * 1000 / ev << "\n[    ]" << std::endl;
+  timing.final_end = std::chrono::system_clock::now();
+}
 
+// execute kernel
+void exe_kernel_ooo(u_int32_t tid,
+                kernel_buffers &m_bo, 
+                kernel_maps &m_map, 
+                kernel_timing &timing, 
+                u_int32_t m_num_events, 
+                std::vector<unsigned int*> m_ev_full_graph, 
+                std::vector<float*> m_ev_score, 
+                std::vector<unsigned int*> m_ev_components, 
+                std::vector<unsigned int> m_num_nodes){
+
+  timing.iterations = m_num_events;
+  timing.init_start = std::chrono::system_clock::now();
+
+  //
+  // [0] Write event buffer to global memory buffer
+  //
+  std::cout << "[    ] [" << tid << "] [" << 0 << "] wr" << std::endl;
+  for(unsigned int i = 0; i < size_scores ; i++){
+    m_map.in_full_graph[i] = m_ev_full_graph[0][i];
+    m_map.in_scores[i] = m_ev_score[0][i];
+  }
+  std::fill(m_map.inout_graph, m_map.inout_graph + size_graph, 0.0);
+  std::fill(m_map.inout_lookup, m_map.inout_lookup + size_lookup, 0);
+  std::fill(m_map.inout_lookup_filter, m_map.inout_lookup_filter + size_lookup_filter, 0);
+  std::fill(m_map.out_components, m_map.out_components + size_components, 0);
+  timing.in_written.push_back(std::chrono::system_clock::now());
+
+  //
+  // Event loop
+  //
+  for(unsigned int ev = 0; ev < m_num_events ; ev++){
+    //
+    // Synchronize input buffer data to device global memory
+    //
+    std::cout << "[    ] [" << tid << "] [" << ev << "] sy-w" << std::endl;
+    m_bo.in_full_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    m_bo.in_scores.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    m_bo.inout_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    m_bo.inout_lookup.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    m_bo.inout_lookup_filter.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    timing.in_synced.push_back(std::chrono::system_clock::now());
+
+    //
+    // Start Kernel
+    //
+    std::cout << "[    ] [" << tid << "] [" << ev << "] st" << std::endl;
+    auto run = m_bo.kernel(m_bo.in_full_graph, m_bo.in_scores, m_bo.inout_graph, m_bo.inout_lookup, m_bo.inout_lookup_filter, m_bo.out_components, 0, m_num_nodes[ev]);
+    timing.krnl_started.push_back(std::chrono::system_clock::now());
+
+    //
+    // [i + 1] Write event buffer to global memory buffer
+    //
+    if(ev < m_num_events - 1){
+      std::cout << "[    ] [" << tid << "] [" << ev + 1 << "] wr" << std::endl;
+      for(unsigned int i = 0; i < size_scores ; i++){
+        m_map.in_full_graph[i] = m_ev_full_graph[ev + 1][i];
+        m_map.in_scores[i] = m_ev_score[ev + 1][i];
+      }
+      timing.in_written.push_back(std::chrono::system_clock::now());
+    }
+
+    //
+    // [i - 1] Read event buffer from global memory buffer
+    //
+    if(ev > 0){
+      std::cout << "[    ] [" << tid << "] [" << ev - 1 << "] re" << std::endl;
+      for(unsigned int i = 0; i < size_components ; i++)
+        m_ev_components[ev - 1][i] = m_map.out_components[i];
+      timing.out_written.push_back(std::chrono::system_clock::now());
+    }
+
+    //
+    // Wait for Kernel
+    //
+    std::cout << "[    ] [" << tid << "] [" << ev << "] wa" << std::endl;
+    run.wait();
+    timing.krnl_ended.push_back(std::chrono::system_clock::now());
+
+    //
+    // Synchronize device global memory to output buffer
+    //
+    std::cout << "[    ] [" << tid << "] [" << ev << "] sy-r" << std::endl;
+    m_bo.out_components.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+    timing.out_synced.push_back(std::chrono::system_clock::now());
+
+  }
+  //
+  // [max] Read event buffer from global memory buffer
+  //
+  std::cout << "[    ] [" << tid << "] [max] re" << std::endl;
+  for(unsigned int i = 0; i < size_components ; i++)
+    m_ev_components[m_num_events - 1][i] = m_map.out_components[i];
+  timing.out_written.push_back(std::chrono::system_clock::now());
+    
+
+  timing.final_end = std::chrono::system_clock::now();
+}
+
+// execute threads
+void exe_threads(xrt::device &m_device, 
+                xrt::kernel &m_kernel, 
+                thread_timing &m_thread_time, 
+                u_int32_t m_num_events, 
+                u_int32_t m_num_threads, 
+                std::vector<unsigned int*> m_ev_full_graph, 
+                std::vector<float*> m_ev_score, 
+                std::vector<unsigned int*> m_ev_components, 
+                std::vector<unsigned int> m_ev_nodes){
+
+  // std::cout << "[THRD] Allocate kernel parent buffers" << std::endl;
+  // std::cout << "[    ] 0" << std::endl; xrt::bo parent_full_graph = xrt::bo(m_device, size_full_graph_byte * m_num_threads, m_kernel.group_id(0));
+  // std::cout << "[    ] 1" << std::endl; xrt::bo parent_scores = xrt::bo(m_device, size_scores_byte * m_num_threads, m_kernel.group_id(5)); // 5 + offset));
+  // std::cout << "[    ] 2" << std::endl; xrt::bo parent_graph = xrt::bo(m_device, size_graph_byte * m_num_threads, m_kernel.group_id(10)); // 10 + offset));
+  // std::cout << "[    ] 3" << std::endl; xrt::bo parent_lookup = xrt::bo(m_device, size_lookup_byte * m_num_threads, m_kernel.group_id(15)); // 15 + offset));
+  // std::cout << "[    ] 4" << std::endl; xrt::bo parent_lookup_filter = xrt::bo(m_device, size_lookup_filter_byte * m_num_threads, m_kernel.group_id(20)); // 20 + offset));
+  // std::cout << "[    ] 5" << std::endl; xrt::bo parent_components = xrt::bo(m_device, size_components_byte * m_num_threads, m_kernel.group_id(25)); // 25 + offset));
+
+  std::cout << "[THRD] Allocate kernel buffers" << std::endl;
+  std::vector<u_int32_t> ev_numbers;
+  std::vector<kernel_buffers> bo;
+  std::vector<kernel_maps> maps;
+  for(u_int32_t i = 0; i < m_num_threads ; i++){
+    std::cout << "[    ] " << i << "0" << std::endl; ev_numbers.push_back(0);
+    std::cout << "[    ] " << i << "1" << std::endl; bo.push_back(kernel_buffers(m_device, m_kernel, i));
+    std::cout << "[    ] " << i << "2" << std::endl; maps.push_back(kernel_maps(bo[i]));
+    std::cout << "[    ] " << i << "3" << std::endl; m_thread_time.krnls.push_back(kernel_timing());
+    std::cout << "[    ] " << i << "4" << std::endl;
+  }
+  
+  std::cout << "[THRD] Create event queues for each kernel" << std::endl;
+  std::vector<std::vector<unsigned int*>> thread_ev_full_graph(m_num_threads);
+  std::vector<std::vector<float*>> thread_ev_scores(m_num_threads);
+  std::vector<std::vector<unsigned int*>> thread_ev_components(m_num_threads);
+  std::vector<std::vector<unsigned int>> thread_num_nodes(m_num_threads);
+  u_int32_t residue = m_num_events % m_num_threads;
+  u_int32_t ev = 0;
+  for(u_int32_t k = 0; k < m_num_events / m_num_threads ; k++)
+    for(u_int32_t i = 0; i < m_num_threads ; i++){
+      thread_ev_full_graph[i].push_back(m_ev_full_graph[ev]);
+      thread_ev_scores[i].push_back(m_ev_score[ev]);
+      thread_ev_components[i].push_back(m_ev_components[ev]);
+      thread_num_nodes[i].push_back(m_ev_nodes[ev]);
+      ev_numbers[i]++;
+      ev++;
+    }
+  for(u_int32_t i = 0; i < residue ; i++){
+    thread_ev_full_graph[i].push_back(m_ev_full_graph[ev]);
+    thread_ev_scores[i].push_back(m_ev_score[ev]);
+    thread_ev_components[i].push_back(m_ev_components[ev]);
+    thread_num_nodes[i].push_back(m_ev_nodes[ev]);
+    ev_numbers[i]++;
+    ev++;
+  }
+
+  std::cout << "[THRD] Start threads" << std::endl;
+  std::vector<std::thread> t(m_num_threads);
+  m_thread_time.max_iterations = ev_numbers[0];
+  m_thread_time.start_threads = std::chrono::system_clock::now();
+  if(ooo)
+    for(u_int32_t i = 0; i < m_num_threads ; i++)
+      t[i] = std::thread(exe_kernel_ooo, i, std::ref(bo[i]), std::ref(maps[i]), std::ref(m_thread_time.krnls[i]), ev_numbers[i], thread_ev_full_graph[i], thread_ev_scores[i], thread_ev_components[i], thread_num_nodes[i]);
+  else
+    for(u_int32_t i = 0; i < m_num_threads ; i++)
+      t[i] = std::thread(exe_kernel, i, std::ref(bo), std::ref(maps[i]), std::ref(m_thread_time.krnls[i]), ev_numbers[i], thread_ev_full_graph[i], thread_ev_scores[i], thread_ev_components[i], thread_num_nodes[i]);
+
+  m_thread_time.threads_running = std::chrono::system_clock::now();
+  std::cout << "[THRD] Wait for threads to end" << std::endl;
+  for(u_int32_t i = 0; i < m_num_threads ; i++)
+    t[i].join();
+  m_thread_time.threads_done = std::chrono::system_clock::now();
+
+  std::cout << "[THRD] Threads finished" << std::endl;
 }
 
 int main (int argc, char ** argv){
@@ -397,8 +565,6 @@ int main (int argc, char ** argv){
   std::vector<float*> ev_in_scores;
   std::vector<unsigned int*> ev_out_components;
   std::vector<unsigned int> ev_num_edges;
-  std::vector<unsigned int> ev_real_edges;
-  std::vector<unsigned int> ev_true_edges;
   std::vector<unsigned int> ev_num_nodes;
   std::vector<std::vector<unsigned int>> ev_ref_labels;
 
@@ -484,8 +650,6 @@ int main (int argc, char ** argv){
     //
     // Add structures for this event
     //
-    ev_real_edges.push_back(0);
-    ev_true_edges.push_back(0);
     ev_ref_labels.push_back(ref_labels);
     ev_in_full_graph.push_back(new unsigned int[size_full_graph]);
     std::fill(ev_in_full_graph[ev], ev_in_full_graph[ev] + size_full_graph, 0);
@@ -509,8 +673,6 @@ int main (int argc, char ** argv){
             new_node = false;
             if(missmatch_found(ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + j], scores[i], 0.5)){
               score_missmatch++;
-              if(ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + j] < 0.5)
-                ev_true_edges[ev]++;
               ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + j] = 1.0;
             }
           }
@@ -519,9 +681,6 @@ int main (int argc, char ** argv){
           ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_to[i];
           ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES]] = scores[i];
           ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES]++;
-          ev_real_edges[ev]++;
-          if(scores[i] > 0.5)
-            ev_true_edges[ev]++;
         }
       }
       else
@@ -536,8 +695,6 @@ int main (int argc, char ** argv){
             new_node = false;
             if(missmatch_found(ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + j], scores[i], 0.5)){
               score_missmatch++;
-              if(ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + j] < 0.5)
-                ev_true_edges[ev]++;
               ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + j] = 1.0;
             }
           }
@@ -546,237 +703,48 @@ int main (int argc, char ** argv){
           ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_from[i];
           ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES]] = scores[i];
           ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES]++;
-          ev_real_edges[ev]++;
-          if(scores[i] > 0.5)
-            ev_true_edges[ev]++;
         }
       }
       else
           std::cout << "[WARNING] Full graph data structure is exceeded!\n[       ] Row " << edge_to[i] << " is already full and can not take in node " << edge_from[i] << " anymore" << std::endl;
     }
-    std::cout << "; real #edges: " << ev_real_edges[ev] / 2 << "; #true-edges: " << ev_true_edges[ev] / 2 << "; score missmatches: " << score_missmatch << "; done" << std::endl;
+    std::cout << "; score missmatches: " << score_missmatch << "; done" << std::endl;
   }
 
   //============================================
   //
-  // Allocate kernel buffers
+  // Run threads which run kernels
   //
   //============================================
-  std::cout << "[INFO] Allocate kernel buffers" << std::endl;
-  kernel_buffers bo(targetDevice, krnl);
-  kernel_maps maps(bo);
-
-  //============================================
-  //
-  // Start computing events
-  //
-  //============================================
-  std::cout << "[INFO] Start computing events" << std::endl;
-  kernel_timing timing;
-  timing.iterations = num_events;
-  timing.init_start = std::chrono::system_clock::now();
-
-  // Event loop
-  for(unsigned int ev = 0; ev < num_events ; ev++){
-    //
-    // Write event buffer to global memory buffer
-    //
-    std::cout << "[    ] [" << ev << "] Write Event to Global Memory Buffer" << std::endl;
-    u_int32_t residue = ev_num_nodes[ev] % filter_split_factor;
-    u_int32_t base_nodes = ev_num_nodes[ev] / filter_split_factor;
-    // filter_split_factor > 0
-    for(unsigned int i = 0; i < base_nodes ; i++){
-      for(unsigned int j = 0; j < MAX_FULL_GRAPH_EDGES ; j++){
-        maps.in_full_graph_sub_0[i * MAX_FULL_GRAPH_EDGES + j] = ev_in_full_graph[ev][maps.in_num_nodes[0] * MAX_FULL_GRAPH_EDGES + j];
-        maps.in_scores_sub_0[i * MAX_FULL_GRAPH_EDGES + j] = ev_in_scores[ev][maps.in_num_nodes[0] * MAX_FULL_GRAPH_EDGES + j];
-      }
-      maps.in_num_nodes[0]++;
-    }
-    if(residue > 0){
-      residue--;
-      for(unsigned int j = 0; j < MAX_FULL_GRAPH_EDGES ; j++){
-        maps.in_full_graph_sub_0[base_nodes * MAX_FULL_GRAPH_EDGES + j] = ev_in_full_graph[ev][maps.in_num_nodes[0] * MAX_FULL_GRAPH_EDGES + j];
-        maps.in_scores_sub_0[base_nodes * MAX_FULL_GRAPH_EDGES + j] = ev_in_scores[ev][maps.in_num_nodes[0] * MAX_FULL_GRAPH_EDGES + j];
-      }
-      maps.in_num_nodes[0]++;
-    }
-    maps.in_num_nodes[1] = maps.in_num_nodes[0];
-    std::cout << "[    ] [" << ev << "] " << ev_num_nodes[ev] << " nodes split on " << filter_split_factor << " memory structures: ( " << maps.in_num_nodes[1];
-    // filter_split_factor > 1
-    if(filter_split_factor > 1){
-      for(unsigned int i = 0; i < base_nodes ; i++){
-        for(unsigned int j = 0; j < MAX_FULL_GRAPH_EDGES ; j++){
-          maps.in_full_graph_sub_1[i * MAX_FULL_GRAPH_EDGES + j] = ev_in_full_graph[ev][maps.in_num_nodes[0] * MAX_FULL_GRAPH_EDGES + j];
-          maps.in_scores_sub_1[i * MAX_FULL_GRAPH_EDGES + j] = ev_in_scores[ev][maps.in_num_nodes[0] * MAX_FULL_GRAPH_EDGES + j];
-        }
-        maps.in_num_nodes[0]++;
-      }
-      if(residue > 0){
-        residue--;
-        for(unsigned int j = 0; j < MAX_FULL_GRAPH_EDGES ; j++){
-          maps.in_full_graph_sub_1[base_nodes * MAX_FULL_GRAPH_EDGES + j] = ev_in_full_graph[ev][maps.in_num_nodes[0] * MAX_FULL_GRAPH_EDGES + j];
-          maps.in_scores_sub_1[base_nodes * MAX_FULL_GRAPH_EDGES + j] = ev_in_scores[ev][maps.in_num_nodes[0] * MAX_FULL_GRAPH_EDGES + j];
-        }
-        maps.in_num_nodes[0]++;
-      }
-      maps.in_num_nodes[2] = maps.in_num_nodes[0] - maps.in_num_nodes[1];
-      std::cout << " / " << maps.in_num_nodes[2];
-    }
-    else
-      std::cout << " )" << std::endl;
-
-    // filter_split_factor > 2
-    if(filter_split_factor > 2){
-      for(unsigned int i = 0; i < base_nodes ; i++){
-        for(unsigned int j = 0; j < MAX_FULL_GRAPH_EDGES ; j++){
-          maps.in_full_graph_sub_2[i * MAX_FULL_GRAPH_EDGES + j] = ev_in_full_graph[ev][maps.in_num_nodes[0] * MAX_FULL_GRAPH_EDGES + j];
-          maps.in_scores_sub_2[i * MAX_FULL_GRAPH_EDGES + j] = ev_in_scores[ev][maps.in_num_nodes[0] * MAX_FULL_GRAPH_EDGES + j];
-        }
-        maps.in_num_nodes[0]++;
-      }
-      if(residue > 0){
-        residue--;
-        for(unsigned int j = 0; j < MAX_FULL_GRAPH_EDGES ; j++){
-          maps.in_full_graph_sub_2[base_nodes * MAX_FULL_GRAPH_EDGES + j] = ev_in_full_graph[ev][maps.in_num_nodes[0] * MAX_FULL_GRAPH_EDGES + j];
-          maps.in_full_graph_sub_2[base_nodes * MAX_FULL_GRAPH_EDGES + j] = ev_in_scores[ev][maps.in_num_nodes[0] * MAX_FULL_GRAPH_EDGES + j];
-        }
-        maps.in_num_nodes[0]++;
-      }
-      maps.in_num_nodes[3] = maps.in_num_nodes[0] - maps.in_num_nodes[1] - maps.in_num_nodes[2];
-      for(unsigned int i = 0; i < base_nodes ; i++){
-        for(unsigned int j = 0; j < MAX_FULL_GRAPH_EDGES ; j++){
-          maps.in_full_graph_sub_3[i * MAX_FULL_GRAPH_EDGES + j] = ev_in_full_graph[ev][maps.in_num_nodes[0] * MAX_FULL_GRAPH_EDGES + j];
-          maps.in_scores_sub_3[i * MAX_FULL_GRAPH_EDGES + j] = ev_in_scores[ev][maps.in_num_nodes[0] * MAX_FULL_GRAPH_EDGES + j];
-        }
-        maps.in_num_nodes[0]++;
-      }
-      if(residue > 0){
-        residue--;
-        for(unsigned int j = 0; j < MAX_FULL_GRAPH_EDGES ; j++){
-          maps.in_full_graph_sub_3[base_nodes * MAX_FULL_GRAPH_EDGES + j] = ev_in_full_graph[ev][maps.in_num_nodes[0] * MAX_FULL_GRAPH_EDGES + j];
-          maps.in_scores_sub_3[base_nodes * MAX_FULL_GRAPH_EDGES + j] = ev_in_scores[ev][maps.in_num_nodes[0] * MAX_FULL_GRAPH_EDGES + j];
-        }
-        maps.in_num_nodes[0]++;
-      }
-      maps.in_num_nodes[4] = maps.in_num_nodes[0] - maps.in_num_nodes[1] - maps.in_num_nodes[2] - maps.in_num_nodes[3];
-      std::cout << " / " << maps.in_num_nodes[3] << " / " << maps.in_num_nodes[4];
-    }
-    else
-      std::cout << " )" << std::endl;
-    
-    {
-    if(filter_split_factor > 4)
-      std::cout << " split_factor too large";
-    else
-      std::cout << " )" << std::endl;
-
-    if(maps.in_num_nodes[0] == ev_num_nodes[ev])
-      std::cout << "[    ] [" << ev << "] maps.in_num_nodes[0] == ev_num_nodes[ev] - " << maps.in_num_nodes[0] << std::endl;
-    else
-      std::cout << "[    ] [" << ev << "] maps.in_num_nodes[0] != ev_num_nodes[ev] - " << maps.in_num_nodes[0] << " != " << ev_num_nodes[ev] << std::endl;
-    }
-
-    std::fill(maps.inout_graph_sub_0, maps.inout_graph_sub_0 + size_graph, 0);
-    std::fill(maps.inout_graph_sub_1, maps.inout_graph_sub_1 + size_graph, 0);
-    std::fill(maps.inout_graph_sub_2, maps.inout_graph_sub_2 + size_graph, 0);
-    std::fill(maps.inout_graph_sub_3, maps.inout_graph_sub_3 + size_graph, 0);
-    std::fill(maps.inout_graph_main, maps.inout_graph_main + size_graph, 0);
-    std::fill(maps.inout_lookup, maps.inout_lookup + size_lookup, 0);
-    std::fill(maps.inout_lookup_filter, maps.inout_lookup_filter + size_lookup_filter, 0);
-    std::fill(maps.out_components, maps.out_components + size_components, 0);
-    timing.in_written.push_back(std::chrono::system_clock::now());
-
-    //
-    // Synchronize input buffer data to device global memory
-    //
-    std::cout << "[    ] [" << ev << "] Synchronize input buffer data to device global memory" << std::endl;
-    bo.in_num_nodes.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.in_full_graph_sub_0.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.in_full_graph_sub_1.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.in_full_graph_sub_2.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.in_full_graph_sub_3.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.in_scores_sub_0.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.in_scores_sub_1.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.in_scores_sub_2.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.in_scores_sub_3.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.inout_graph_sub_0.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.inout_graph_sub_1.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.inout_graph_sub_2.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.inout_graph_sub_3.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.inout_graph_main.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.inout_lookup.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.inout_lookup_filter.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    timing.in_synced.push_back(std::chrono::system_clock::now());
-
-    //
-    // Execute Kernel
-    //
-    std::cout << "[    ] [" << ev << "] in_num_nodes: " << maps.in_num_nodes[0] << std::endl;
-    std::cout << "[    ] [" << ev << "] Start Kernel" << std::endl;
-    auto run = bo.kernel( bo.in_num_nodes,
-                          bo.in_full_graph_sub_0, bo.in_full_graph_sub_1, bo.in_full_graph_sub_2, bo.in_full_graph_sub_3,
-                          bo.in_scores_sub_0, bo.in_scores_sub_1, bo.in_scores_sub_2, bo.in_scores_sub_3,
-                          bo.inout_graph_sub_0, bo.inout_graph_sub_1, bo.inout_graph_sub_2, bo.inout_graph_sub_3,
-                          bo.inout_graph_main, bo.inout_lookup, bo.inout_lookup_filter, bo.out_components);
-    timing.krnl_started.push_back(std::chrono::system_clock::now());
-    std::cout << "[    ] [" << ev << "] Wait for Kernel to finish" << std::endl;
-    run.wait();
-    timing.krnl_ended.push_back(std::chrono::system_clock::now());
-
-    //
-    // Synchronize device global memory to output buffer
-    //
-    std::cout << "[    ] [" << ev << "] Read back data from Kernel" << std::endl;
-    bo.out_components.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
-    timing.out_synced.push_back(std::chrono::system_clock::now());
-
-    //
-    // Read event buffer from global memory buffer
-    //
-    std::cout << "[    ] [" << ev << "] Write results from global memory back to event buffer" << std::endl;
-    for(unsigned int i = 0; i < size_components ; i++)
-      ev_out_components[ev][i] = maps.out_components[i];
-    timing.out_written.push_back(std::chrono::system_clock::now());
-  }
-
-  timing.final_end = std::chrono::system_clock::now();
+  thread_timing thread_time;
+  std::cout << "[INFO] Start exe_thread()" << std::endl;
+  exe_threads(targetDevice, krnl, thread_time, num_events, num_threads, ev_in_full_graph, ev_in_scores, ev_out_components, ev_num_nodes);
 
   //============================================
   //
   // Write time stemps / durations
   //
   //============================================
-  print_kernel_time(timing);
-  // print_thread_time(thread_time);
+  print_thread_time(thread_time);
 
   //============================================
   //
   // Validate results
   //
   //============================================
-  std::cout << "[INFO] Validate results" << std::endl;
   {
+    std::cout << "[INFO] Validate results" << std::endl;
     bool correct = true;
     std::vector<bool> k_correct;
     unsigned int num_errors = 0;
-    unsigned int num_errors_0 = 0;
-    unsigned int num_errors_1 = 0;
-    unsigned int num_errors_2 = 0;
     std::vector<unsigned int> k_errors;
-    std::vector<unsigned int> k_errors_0;
-    std::vector<unsigned int> k_errors_1;
-    std::vector<unsigned int> k_errors_2;
 
     for(unsigned int ev = 0; ev < num_events ; ev++){
       k_correct.push_back(true);
       k_errors.push_back(0);
-      k_errors_0.push_back(0);
-      k_errors_1.push_back(0);
-      k_errors_2.push_back(0);
 
       bool end_reached = false;
       bool first_free_node = true;
-      std::cout << "[    ] 0" << std::endl;
       bool processed[ev_num_nodes[ev]];
       for(unsigned int i = 0; i < ev_num_nodes[ev] ; i++)
         processed[i] = false;
@@ -794,9 +762,6 @@ int main (int argc, char ** argv){
       for(unsigned int i = 0; i < MAX_COMPONENT_SIZE ; i++)
         size_of_components[i] = 0;
 
-      std::cout << "[    ] output_size: " << output_size << std::endl;
-      for(unsigned int i = 1; i < output_size ; i++)
-        std::cout << "[    ] " << ev_out_components[ev][output_size] << std::endl;
 
       while(!end_reached){
         // if the index reaches the size of the output, all found components have been processed
@@ -824,10 +789,8 @@ int main (int argc, char ** argv){
             // if a missmatch has been found, there is an error in the solution
             if(label != ev_ref_labels[ev][node]){
               num_errors++;
-              num_errors_0++;
               correct = false;
               k_errors[ev]++;
-              k_errors_0[ev]++;
               k_correct[ev] = false;
               // std::cout << "[WARNING] Wrong result. The two following nodes should not be part of the same component" << std::endl;
               // std::cout << "[       ] node " << first_node << " has label " << label << " ; node " << node << " has label " << ev_ref_labels[ev][node] << std::endl;
@@ -838,10 +801,8 @@ int main (int argc, char ** argv){
           for(unsigned int i = 0; i < ev_num_nodes[ev] ; i++){
             if(!processed[i] && ev_ref_labels[ev][i] == label){
               num_errors++;
-              num_errors_1++;
               correct = false;
               k_errors[ev]++;
-              k_errors_1[ev]++;
               k_correct[ev] = false;
               processed[i] = true;
               // std::cout << "[WARNING] Wrong result. The following node should also be part of the last component" << std::endl;
@@ -850,9 +811,6 @@ int main (int argc, char ** argv){
           }
         }
       }
-
-      std::cout << "[    ] 2" << std::endl;
-
       // make sure no component has been forgotten
       for(unsigned int i = 0; i < ev_num_nodes[ev] ; i++){
         if(!processed[i]){
@@ -862,10 +820,8 @@ int main (int argc, char ** argv){
           }
           else if(label != ev_ref_labels[ev][i]){
             num_errors++;
-            num_errors_2++;
             correct = false;
             k_errors[ev]++;
-            k_errors_2[ev]++;
             k_correct[ev] = false;
             // std::cout << "[WARNING] Wrong result. The following node should be part of a component, but was not" << std::endl;
             // std::cout << "[       ] node " << i << " has label " << ev_ref_labels[ev][i] << " while the label for free nodes should be " << label << std::endl;
@@ -882,7 +838,7 @@ int main (int argc, char ** argv){
         std::cout << "]" << std::endl;
       } else {
         std::cout << "[    ]\n[    ] [" << ev << "] TEST FAILED" << std::endl;
-        std::cout << "[    ] [" << ev << "] " << k_errors[ev] << " found mismatches ( " << k_errors_0[ev] << " / " << k_errors_1[ev] << " / " << k_errors_2[ev] << " )" << std::endl;
+        std::cout << "[    ] [" << ev << "] " << k_errors[ev] << " found mismatches" << std::endl;
       }
     }
 
@@ -891,7 +847,7 @@ int main (int argc, char ** argv){
       std::cout << "[INFO] All results match the expected results" << std::endl;
     } else {
       std::cout << "[       ]\n[WARNING] TEST FAILED\n[       ]" << std::endl;
-      std::cout << "[WARNING] " << num_errors << " total mismatches ( " << num_errors_0 << " / " << num_errors_1 << " / " << num_errors_2 << " )\n[       ]" << std::endl;
+      std::cout << "[WARNING] " << num_errors << " total mismatches\n[       ]" << std::endl;
     }
   }
 

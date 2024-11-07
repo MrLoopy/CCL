@@ -134,7 +134,7 @@ ${OBJDIR}/test_kernels.xo: ${FPGA_PATH2SRC}/test_kernels.cpp
 	$(VV) -g -c -t ${XCL_EMULATION_MODE_CHANGED} \
 	       	--platform ${FPGA_PLATFORM} \
 	       	--config ${FPGA_PATH2CONF}/test_u280.cfg \
-	       	-k PIPE_TEST \
+	       	-k CCL \
 	       	-I ${FPGA_PATH2INC} ${FPGA_PATH2SRC}/test_kernels.cpp -o ${OBJDIR}/test_kernels.xo
 
 # TODO GET RID OF LOG FILES

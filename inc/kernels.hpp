@@ -12,23 +12,18 @@
 #define MAX_COMPONENT_SIZE 128          // 2^7  maximum number of nodes, that can be part of the same component [81]
 #define MAX_TRUE_NODES 65536            // 2^16 maximum number of nodes, that have high-score connections and are therefor part of components [31991] 32768
 #define MAX_COMPONENTS 8192             // 2^13 maximum number of different components [4200]
+
+#define FILTER_SPLIT 4
+
 // #define CSV_FILE "dat/dummy.csv"
 // #define CSV_FILE "dat/dummy_long.csv"
 #define CSV_FILE "dat/event005001514.csv"
 
-struct node_information{
-  bool processed = false;
-  unsigned int connections = 0;
-};
-
 extern "C" {
-  void CCL( unsigned int* in_full_graph_0, unsigned int* in_full_graph_1, unsigned int* in_full_graph_2,
-            float* in_scores_0, float* in_scores_1, float* in_scores_2,
-            unsigned int* io_graph_0, unsigned int* io_graph_1, unsigned int* io_graph_2,
-            unsigned int* io_lookup_0, unsigned int* io_lookup_1, unsigned int* io_lookup_2,
-            unsigned int* io_lookup_filter_0, unsigned int* io_lookup_filter_1, unsigned int* io_lookup_filter_2,
-            unsigned int* out_components_0, unsigned int* out_components_1, unsigned int* out_components_2,
-            unsigned int num_nodes_0, unsigned int num_nodes_1, unsigned int num_nodes_2,
-            unsigned int tid);
+  void CCL( unsigned int* in_num_nodes,
+            unsigned int* in_full_graph_sub_0, unsigned int* in_full_graph_sub_1, unsigned int* in_full_graph_sub_2, unsigned int* in_full_graph_sub_3,
+            float* in_scores_sub_0, float* in_scores_sub_1, float* in_scores_sub_2, float* in_scores_sub_3,
+            unsigned int* io_graph_sub_0, unsigned int* io_graph_sub_1, unsigned int* io_graph_sub_2, unsigned int* io_graph_sub_3,
+            unsigned int* io_graph_main, unsigned int* io_lookup, unsigned int* io_lookup_filter, unsigned int* out_components);
 }
 #endif // KERNELS_H

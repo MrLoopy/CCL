@@ -26,19 +26,24 @@
 // Global parameters
 //
 //============================================
-const u_int32_t num_threads = 2;
-const std::vector<std::string> csv_names = {"dat/event005001514.csv", "dat/event005001514.csv", "dat/event005001514.csv", "dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
+const u_int32_t num_threads = 1;
+const std::vector<std::string> csv_names = {"dat/reg/r_event005008301.csv", "dat/reg/r_event005008302.csv", "dat/reg/r_event005008303.csv", "dat/reg/r_event005008304.csv", "dat/reg/r_event005008306.csv", "dat/reg/r_event005008308.csv", "dat/reg/r_event005008310.csv", "dat/reg/r_event005008312.csv"}; // {"dat/event005001514.csv", "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
 const u_int32_t num_events = (const u_int32_t)csv_names.size();
+const float cutoff = 0.8;
 
-const u_int32_t size_scores = MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;
-const u_int32_t size_graph = MAX_TRUE_NODES * MAX_FULL_GRAPH_EDGES;
-const u_int32_t size_lookup = MAX_TRUE_NODES;
-const u_int32_t size_components = MAX_TOTAL_NODES;
+u_int32_t size_full_graph = MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;
+u_int32_t size_scores = MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;
+u_int32_t size_graph = MAX_TRUE_NODES * MAX_EDGES;
+u_int32_t size_lookup = MAX_TRUE_NODES;
+u_int32_t size_lookup_filter = MAX_TOTAL_NODES;
+u_int32_t size_components = MAX_TRUE_NODES + MAX_COMPONENTS;
 
-const size_t size_scores_byte = sizeof(float) * size_scores;
-const size_t size_graph_byte = sizeof(float) * size_graph;
-const size_t size_lookup_byte = sizeof(unsigned int) * size_lookup;
-const size_t size_components_byte = sizeof(unsigned int) * (size_components);
+size_t size_full_graph_byte = sizeof(unsigned int) * size_full_graph;
+size_t size_scores_byte = sizeof(float) * size_scores;
+size_t size_graph_byte = sizeof(unsigned int) * size_graph;
+size_t size_lookup_byte = sizeof(unsigned int) * size_lookup;
+size_t size_lookup_filter_byte = sizeof(unsigned int) * size_lookup_filter;
+size_t size_components_byte = sizeof(unsigned int) * size_components;
 
 template <typename S>
 std::ostream& operator<<(std::ostream& os, const std::vector<S>& vector){
@@ -70,28 +75,36 @@ struct thread_timing{
 struct kernel_buffers{
   xrt::device device;
   xrt::kernel kernel;
+  xrt::bo in_full_graph;
   xrt::bo in_scores;
   xrt::bo inout_graph;
   xrt::bo inout_lookup;
+  xrt::bo inout_lookup_filter;
   xrt::bo out_components;
   kernel_buffers(xrt::device &m_device, xrt::kernel &m_kernel){
     device = m_device;
     kernel = m_kernel;
-    in_scores = xrt::bo(device, size_scores_byte, m_kernel.group_id(0));
-    inout_graph = xrt::bo(device, size_graph_byte, m_kernel.group_id(1));
-    inout_lookup = xrt::bo(device, size_lookup_byte, m_kernel.group_id(2));
-    out_components = xrt::bo(device, size_components_byte, m_kernel.group_id(3));
+    in_full_graph = xrt::bo(device, size_full_graph_byte, kernel.group_id(0));
+    in_scores = xrt::bo(device, size_scores_byte, kernel.group_id(1));
+    inout_graph = xrt::bo(device, size_graph_byte, kernel.group_id(2));
+    inout_lookup = xrt::bo(device, size_lookup_byte, kernel.group_id(3));
+    inout_lookup_filter = xrt::bo(device, size_lookup_filter_byte, kernel.group_id(4));
+    out_components = xrt::bo(device, size_components_byte, kernel.group_id(5));
   }
 };
 struct kernel_maps{
+  unsigned int* in_full_graph;
   float* in_scores;
-  float* inout_graph;
+  unsigned int* inout_graph;
   unsigned int* inout_lookup;
+  unsigned int* inout_lookup_filter;
   unsigned int* out_components;
   kernel_maps(kernel_buffers &m_bo){
+    in_full_graph = m_bo.in_full_graph.map<unsigned int*>();
     in_scores = m_bo.in_scores.map<float*>();
-    inout_graph = m_bo.inout_graph.map<float*>();
+    inout_graph = m_bo.inout_graph.map<unsigned int*>();
     inout_lookup = m_bo.inout_lookup.map<unsigned int*>();
+    inout_lookup_filter = m_bo.inout_lookup_filter.map<unsigned int*>();
     out_components = m_bo.out_components.map<unsigned int*>();
   }
 };
@@ -103,11 +116,14 @@ bool missmatch_found(float a, float b, float cutoff = 0.5){
     return true;
   return false;
 }
-
 void print_global_prameters(void){
-  std::cout << "[INFO] Number of threads:     " << num_threads << std::endl;
-  std::cout << "[    ] Number of events:      " << num_events << std::endl;
-  std::cout << "[INFO] Size of scores:        ";
+  std::cout << "[INFO] Number of events:      " << num_events << std::endl;
+  std::cout << "[    ] Score-cut at:          " << cutoff << std::endl;
+  std::cout << "[INFO] Size of full_graph:    ";
+  if(size_full_graph_byte > 1024 * 1024) std::cout << size_full_graph_byte / (1024 * 1024) << " MB" << std::endl;
+  else if(size_full_graph_byte > 1024) std::cout << size_full_graph_byte / 1024 << " KB" << std::endl;
+  else std::cout << size_full_graph_byte / 1024 << " Bytes" << std::endl;
+  std::cout << "[    ] Size of scores:        ";
   if(size_scores_byte > 1024 * 1024) std::cout << size_scores_byte / (1024 * 1024) << " MB" << std::endl;
   else if(size_scores_byte > 1024) std::cout << size_scores_byte / 1024 << " KB" << std::endl;
   else std::cout << size_scores_byte / 1024 << " Bytes" << std::endl;
@@ -119,59 +135,14 @@ void print_global_prameters(void){
   if(size_lookup_byte > 1024 * 1024) std::cout << size_lookup_byte / (1024 * 1024) << " MB" << std::endl;
   else if(size_lookup_byte > 1024) std::cout << size_lookup_byte / 1024 << " KB" << std::endl;
   else std::cout << size_lookup_byte / 1024 << " Bytes" << std::endl;
+  std::cout << "[    ] Size of lookup_filter: ";
+  if(size_lookup_filter_byte > 1024 * 1024) std::cout << size_lookup_filter_byte / (1024 * 1024) << " MB" << std::endl;
+  else if(size_lookup_filter_byte > 1024) std::cout << size_lookup_filter_byte / 1024 << " KB" << std::endl;
+  else std::cout << size_lookup_filter_byte / 1024 << " Bytes" << std::endl;
   std::cout << "[    ] Size of components:    ";
   if(size_components_byte > 1024 * 1024) std::cout << size_components_byte / (1024 * 1024) << " MB" << std::endl;
   else if(size_components_byte > 1024) std::cout << size_components_byte / 1024 << " KB" << std::endl;
   else std::cout << size_components_byte / 1024 << " Bytes" << std::endl;
-}
-void print_time_stemps(kernel_timing &timing){
-  std::chrono::duration<double> duration;
-  uint32_t iterations = timing.in_written.size();
-
-  // Format numbers
-  std::cout << std::fixed << std::setprecision(3);
-  
-  std::cout << "[    ]\n[INFO] Write time stemps" << std::endl;
-  std::cout << "[    ] Start at:            0.000 ms" << std::endl;
-  for(unsigned int i = 0; i < iterations ; i++){
-    std::cout << "[    ] Kernel " << i << std::endl;
-    duration = timing.in_written[i] - timing.init_start;
-    std::cout << "[    ][" << i << "] Write inputs: " << std::setw(9) << duration.count() * 1000 << " ms" << std::endl;
-    duration = timing.in_synced[i] - timing.init_start;
-    std::cout << "[    ][" << i << "] Sync inputs:  " << std::setw(9) << duration.count() * 1000 << " ms" << std::endl;
-    duration = timing.krnl_started[i] - timing.init_start;
-    std::cout << "[    ][" << i << "] Start kernel: " << std::setw(9) << duration.count() * 1000 << " ms" << std::endl;
-    duration = timing.krnl_ended[i] - timing.init_start;
-    std::cout << "[    ][" << i << "] End kernel:   " << std::setw(9) << duration.count() * 1000 << " ms" << std::endl;
-    duration = timing.out_synced[i] - timing.init_start;
-    std::cout << "[    ][" << i << "] Sync output:  " << std::setw(9) << duration.count() * 1000 << " ms" << std::endl;
-    duration = timing.out_written[i] - timing.init_start;
-    std::cout << "[    ][" << i << "] Write output: " << std::setw(9) << duration.count() * 1000 << " ms" << std::endl;
-    duration = timing.krnl_ended[i] - timing.krnl_started[i];
-    std::cout << "[    ][" << i << "] Kernel delta: " << std::setw(9) << duration.count() * 1000 << " ms\n[    ]" << std::endl;
-  }
-  std::cout << "[    ] Total and Average " << iterations << " iterations" << std::endl;
-  duration = timing.in_written[0] - timing.init_start;
-  for(unsigned int i = 1; i < iterations ; i++) duration += timing.in_written[i] - timing.out_written[i - 1];
-  std::cout << "[    ][x] Write inputs: " << std::setw(9) << duration.count() * 1000 << " ms\t" << std::setw(9) << duration.count() * 1000 / num_events << " ms" << std::endl;
-  duration = timing.init_start - timing.init_start;
-  for(unsigned int i = 0; i < iterations ; i++) duration += timing.in_synced[i] - timing.in_written[i];
-  std::cout << "[    ][x] Sync inputs:  " << std::setw(9) << duration.count() * 1000 << " ms\t" << std::setw(9) << duration.count() * 1000 / num_events << " ms" << std::endl;
-  duration = timing.init_start - timing.init_start;
-  for(unsigned int i = 0; i < iterations ; i++) duration += timing.krnl_started[i] - timing.in_synced[i];
-  std::cout << "[    ][x] Start kernel: " << std::setw(9) << duration.count() * 1000 << " ms\t" << std::setw(9) << duration.count() * 1000 / num_events << " ms" << std::endl;
-  duration = timing.init_start - timing.init_start;
-  for(unsigned int i = 0; i < iterations ; i++) duration += timing.krnl_ended[i] - timing.krnl_started[i];
-  std::cout << "[    ][x] Kernel time:  " << std::setw(9) << duration.count() * 1000 << " ms\t" << std::setw(9) << duration.count() * 1000 / num_events << " ms" << std::endl;
-  duration = timing.init_start - timing.init_start;
-  for(unsigned int i = 0; i < iterations ; i++) duration += timing.out_synced[i] - timing.krnl_ended[i];
-  std::cout << "[    ][x] Sync output:  " << std::setw(9) << duration.count() * 1000 << " ms\t" << std::setw(9) << duration.count() * 1000 / num_events << " ms" << std::endl;
-  duration = timing.init_start - timing.init_start;
-  for(unsigned int i = 0; i < iterations ; i++) duration += timing.out_written[i] - timing.out_synced[i];
-  std::cout << "[    ][x] Write output: " << std::setw(9) << duration.count() * 1000 << " ms\t" << std::setw(9) << duration.count() * 1000 / num_events << " ms\n[    ]" << std::endl;
-  duration = timing.final_end - timing.init_start;
-  std::cout << "[    ] Total execution: " << std::setw(9) << duration.count() * 1000 << " ms\t" << std::setw(9) << duration.count() * 1000 / num_events << " ms\n[    ]" << std::endl;
-
 }
 void print_thread_time(thread_timing &timing){
   std::chrono::duration<double> duration;
@@ -252,127 +223,56 @@ void print_thread_time(thread_timing &timing){
   std::cout << "[    ] Wall clock time: " << std::setw(9) << duration.count() * 1000 << "  " << std::setw(9) << duration.count() * 1000 / ev << "\n[    ]" << std::endl;
 
 }
+void print_kernel_time(kernel_timing &timing){
+  std::chrono::duration<double> duration;
+  std::vector<std::chrono::duration<double>> totals;
+  for(u_int32_t i = 0; i < 8 ; i++) totals.push_back(timing.init_start - timing.init_start);
+  int w = 9;
+  std::cout << std::fixed << std::setprecision(3);
 
-// execute kernel
-void exe_kernel(kernel_buffers &m_bo, 
-                kernel_maps &m_map, 
-                kernel_timing &timing, 
-                u_int32_t m_num_events, 
-                std::vector<float*> m_ev_score, 
-                std::vector<unsigned int*> m_ev_components, 
-                std::vector<unsigned int> m_num_nodes){
+  std::cout << "[    ]\n[INFO] Write time stemps" << std::endl;
+  std::cout << "[    ] Start at:                0.000 ms" << std::endl;
+  duration = timing.final_end - timing.init_start;
+  std::cout << "[    ] Total duration:      " << std::setw(w) << duration.count() * 1000 << " ms" << std::endl;
 
-  timing.iterations = m_num_events;
-  timing.init_start = std::chrono::system_clock::now();
-
-  // Event loop
-  for(unsigned int ev = 0; ev < m_num_events ; ev++){
-    //
-    // Write event buffer to global memory buffer
-    //
-    std::cout << "[KRNL][" << ev << "] Write Event to Global Memory Buffer" << std::endl;
-    for(unsigned int i = 0; i < size_scores ; i++)
-      m_map.in_scores[i] = m_ev_score[ev][i];
-    std::fill(m_map.inout_graph, m_map.inout_graph + size_graph, 0.0);
-    std::fill(m_map.inout_lookup, m_map.inout_lookup + size_lookup, 0);
-    std::fill(m_map.out_components, m_map.out_components + size_components, 0);
-    timing.in_written.push_back(std::chrono::system_clock::now());
-
-    //
-    // Synchronize input buffer data to device global memory
-    //
-    std::cout << "[    ][" << ev << "] Synchronize input buffer data to device global memory" << std::endl;
-    m_bo.in_scores.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    m_bo.inout_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    m_bo.inout_lookup.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    timing.in_synced.push_back(std::chrono::system_clock::now());
-
-    //
-    // Execute Kernel
-    //
-    std::cout << "[    ][" << ev << "] Start Kernel" << std::endl;
-    auto run = m_bo.kernel(m_bo.in_scores, m_bo.inout_graph, m_bo.inout_lookup, m_bo.out_components, m_num_nodes[ev]);
-    timing.krnl_started.push_back(std::chrono::system_clock::now());
-    std::cout << "[    ][" << ev << "] Wait for Kernel to finish" << std::endl;
-    run.wait();
-    timing.krnl_ended.push_back(std::chrono::system_clock::now());
-
-    //
-    // Synchronize device global memory to output buffer
-    //
-    std::cout << "[    ][" << ev << "] Read back data from Kernel" << std::endl;
-    m_bo.out_components.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
-    timing.out_synced.push_back(std::chrono::system_clock::now());
-
-    //
-    // Read event buffer from global memory buffer
-    //
-    std::cout << "[    ][" << ev << "] Write results from global memory back to event buffer" << std::endl;
-    for(unsigned int i = 0; i < size_components ; i++)
-      m_ev_components[ev][i] = m_map.out_components[i];
-    timing.out_written.push_back(std::chrono::system_clock::now());
-    
+  std::cout << "[    ]\n[    ] Event time stemps [ms]" << std::endl;
+  for(u_int32_t ev = 0; ev < timing.iterations ; ev++){
+    std::cout << "[    ] Event:           " << ev << std::endl;
+    duration = timing.in_written[ev] - timing.init_start;
+    if(ev == 0) totals[1] += timing.in_written[0] - timing.init_start;
+    else totals[1] += timing.in_written[ev] - timing.out_written[ev - 1];
+    std::cout << "[    ] Input written:   " << std::setw(w) << duration.count() * 1000 << " " << std::endl;
+    duration = timing.in_synced[ev] - timing.init_start;
+    totals[2] += timing.in_synced[ev] - timing.in_written[ev];
+    std::cout << "[    ] Input synced:    " << std::setw(w) << duration.count() * 1000 << " " << std::endl;
+    duration = timing.krnl_started[ev] - timing.init_start;
+    totals[3] += timing.krnl_started[ev] - timing.in_synced[ev];
+    std::cout << "[    ] Kernel started:  " << std::setw(w) << duration.count() * 1000 << " " << std::endl;
+    duration = timing.krnl_ended[ev] - timing.init_start;
+    totals[4] += timing.krnl_ended[ev] - timing.krnl_started[ev];
+    std::cout << "[    ] Kernel ended:    " << std::setw(w) << duration.count() * 1000 << " " << std::endl;
+    duration = timing.out_synced[ev] - timing.init_start;
+    totals[5] += timing.out_synced[ev] - timing.krnl_ended[ev];
+    std::cout << "[    ] Output synced:   " << std::setw(w) << duration.count() * 1000 << " " << std::endl;
+    duration = timing.out_written[ev] - timing.init_start;
+    totals[6] += timing.out_written[ev] - timing.out_synced[ev];
+    std::cout << "[    ] Output written:  " << std::setw(w) << duration.count() * 1000 << " " << std::endl;
+    duration = timing.krnl_ended[ev] - timing.in_synced[ev];
+    std::cout << "[    ] Kernel delta:    " << std::setw(w) << duration.count() * 1000 << " " << std::endl;
+    std::cout << "[    ]" << std::endl;
   }
 
-  timing.final_end = std::chrono::system_clock::now();
-}
+  u_int32_t ev = timing.iterations;
+  std::cout << "[    ] Total and average duration [ms] for " << ev << " events" << std::endl;
+  std::cout << "[    ] Write inputs:    " << std::setw(9) << totals[1].count() * 1000 << "  " << std::setw(9) << totals[1].count() * 1000 / ev << std::endl;
+  std::cout << "[    ] Sync inputs:     " << std::setw(9) << totals[2].count() * 1000 << "  " << std::setw(9) << totals[2].count() * 1000 / ev << std::endl;
+  std::cout << "[    ] Start kernel:    " << std::setw(9) << totals[3].count() * 1000 << "  " << std::setw(9) << totals[3].count() * 1000 / ev << std::endl;
+  std::cout << "[    ] Kernel time:     " << std::setw(9) << (totals[3].count() + totals[4].count()) * 1000 << "  " << std::setw(9) << (totals[3].count() + totals[4].count()) * 1000 / ev << std::endl;
+  std::cout << "[    ] Sync output:     " << std::setw(9) << totals[5].count() * 1000 << "  " << std::setw(9) << totals[5].count() * 1000 / ev << std::endl;
+  std::cout << "[    ] Write output:    " << std::setw(9) << totals[6].count() * 1000 << "  " << std::setw(9) << totals[6].count() * 1000 / ev << "\n[    ]" << std::endl;
+  duration = timing.final_end - timing.init_start;
+  std::cout << "[    ] Wall clock time: " << std::setw(9) << duration.count() * 1000 << "  " << std::setw(9) << duration.count() * 1000 / ev << "\n[    ]" << std::endl;
 
-// execute threads
-void exe_threads(xrt::device &m_device, 
-                xrt::kernel &m_kernel, 
-                thread_timing &m_thread_time, 
-                u_int32_t m_num_events, 
-                u_int32_t m_num_threads, 
-                std::vector<float*> m_ev_score, 
-                std::vector<unsigned int*> m_ev_components, 
-                std::vector<unsigned int> m_ev_nodes){
-
-  std::cout << "[THRD] Allocate kernel buffers" << std::endl;
-  std::vector<u_int32_t> ev_numbers;
-  std::vector<kernel_buffers> bo;
-  std::vector<kernel_maps> maps;
-  for(u_int32_t i = 0; i < m_num_threads ; i++){
-    ev_numbers.push_back(0);
-    bo.push_back(kernel_buffers(m_device, m_kernel)); // + i, 5 + i, 10 + i, 15 + i));
-    maps.push_back(kernel_maps(bo[i]));
-    m_thread_time.krnls.push_back(kernel_timing());
-  }
-  
-  std::cout << "[THRD] Create event queues for each kernel" << std::endl;
-  std::vector<std::vector<float*>> thread_ev_scores(m_num_threads);
-  std::vector<std::vector<unsigned int*>> thread_ev_components(m_num_threads);
-  std::vector<std::vector<unsigned int>> thread_num_nodes(m_num_threads);
-  u_int32_t residue = m_num_events % m_num_threads;
-  u_int32_t ev = 0;
-  for(u_int32_t k = 0; k < m_num_events / m_num_threads ; k++)
-    for(u_int32_t i = 0; i < m_num_threads ; i++){
-      thread_ev_scores[i].push_back(m_ev_score[ev]);
-      thread_ev_components[i].push_back(m_ev_components[ev]);
-      thread_num_nodes[i].push_back(m_ev_nodes[ev]);
-      ev_numbers[i]++;
-      ev++;
-    }
-  for(u_int32_t i = 0; i < residue ; i++){
-    thread_ev_scores[i].push_back(m_ev_score[ev]);
-    thread_ev_components[i].push_back(m_ev_components[ev]);
-    thread_num_nodes[i].push_back(m_ev_nodes[ev]);
-    ev_numbers[i]++;
-    ev++;
-  }
-
-  std::cout << "[THRD] Start threads" << std::endl;
-  std::vector<std::thread> t(m_num_threads);
-  m_thread_time.max_iterations = ev_numbers[0];
-  m_thread_time.start_threads = std::chrono::system_clock::now();
-  for(u_int32_t i = 0; i < m_num_threads ; i++)
-    t[i] = std::thread(exe_kernel, std::ref(bo[i]), std::ref(maps[i]), std::ref(m_thread_time.krnls[i]), ev_numbers[i], thread_ev_scores[i], thread_ev_components[i], thread_num_nodes[i]);
-  m_thread_time.threads_running = std::chrono::system_clock::now();
-  std::cout << "[THRD] Wait for threads to end" << std::endl;
-  for(u_int32_t i = 0; i < m_num_threads ; i++)
-    t[i].join();
-  m_thread_time.threads_done = std::chrono::system_clock::now();
-
-  std::cout << "[THRD] Threads finished" << std::endl;
 }
 
 int main (int argc, char ** argv){
@@ -413,7 +313,7 @@ int main (int argc, char ** argv){
   // Define Kernel Function to be executed on Device
   //
   //============================================
-  auto krnl = xrt::kernel(targetDevice, ConfigID, "PIPE_TEST", xrt::kernel::cu_access_mode::exclusive);
+  auto krnl = xrt::kernel(targetDevice, ConfigID, "CCL", xrt::kernel::cu_access_mode::exclusive);
 
   //============================================
   //
@@ -427,25 +327,26 @@ int main (int argc, char ** argv){
   // Allocate Host Memory for each event
   //
   //============================================
-  std::vector<float*> ev_in_score;
+  std::vector<unsigned int*> ev_in_full_graph;
+  std::vector<float*> ev_in_scores;
   std::vector<unsigned int*> ev_out_components;
   std::vector<unsigned int> ev_num_edges;
+  std::vector<unsigned int> ev_real_edges;
+  std::vector<unsigned int> ev_true_edges;
   std::vector<unsigned int> ev_num_nodes;
   std::vector<std::vector<unsigned int>> ev_ref_labels;
-  // dummy-mem for csv->ev::bo
-  unsigned int* graph_cons = new unsigned int[size_scores];
 
   //============================================
   //
   // Prepare Event data
   //
   //============================================
+  std::cout << "[INFO] Prepare Event Data with Data from CSV files" << std::endl;
   for(unsigned int ev = 0; ev < num_events ; ev++){
     //
     // Read CSV-file
     //
-    std::string csv_file_name = csv_names[ev]; // "dat/event005001514.csv"; // "dat/dummy.csv"; //
-    // std::string csv_file_name = CSV_FILE;
+    std::string csv_file_name = csv_names[ev];
     std::vector<unsigned int> edge_from;
     std::vector<unsigned int> edge_to;
     std::vector<unsigned int> ref_labels;
@@ -453,8 +354,10 @@ int main (int argc, char ** argv){
     // create an input file stream from the csv-file
     std::ifstream csv_file(csv_file_name);
     if(not csv_file.is_open()) throw std::runtime_error("Could not open CSV-file");
+
     // read and control the headers
     if(csv_file.good()){
+      std::cout << "[    ] [" << ev << "] CSV-file opened ";
       std::string line, field_0, field_1, field_2, field_3, word;
       unsigned int num_0 = 0;
       unsigned int num_1 = 0;
@@ -469,11 +372,11 @@ int main (int argc, char ** argv){
       std::getline(linestream_first, field_2, ',');
       std::getline(linestream_first, field_3, ',');
       if(field_0 == "edge_from" && field_1 == "edge_to" && field_2 == "scores" && field_3 == "labels\r"){
-        std::cout << "[INFO][" << ev << "] CSV-file opened and correct format detected" << std::endl;
+        std::cout << "and correct format detected; ";
       }
       else{
-        std::cout << "[WARNING][" << ev << "] CSV-file has wrong format" << std::endl;
-        std::cout << "[       ][" << ev << "] edge_from: " << field_0 << " ; edge_to: " << field_1 << " ; scores: " << field_2 << " ; labels: " << field_3 << std::endl;
+        std::cout << "\n[WARNING] [" << ev << "] CSV-file has wrong format" << std::endl;
+        std::cout << "[       ] [" << ev << "] edge_from: " << field_0 << " ; edge_to: " << field_1 << " ; scores: " << field_2 << " ; labels: " << field_3 << std::endl;
       }
       // read second line
       std::getline(csv_file, line);
@@ -490,11 +393,11 @@ int main (int argc, char ** argv){
       if(num_0 == num_1 && num_0 == num_2){
         ev_num_edges.push_back(num_0);
         ev_num_nodes.push_back(num_3);
-        std::cout << "[    ][" << ev << "] Number of edges: " << ev_num_edges[ev] << " number of nodes: " << ev_num_nodes[ev] << std::endl;
+        std::cout << "#edges: " << ev_num_edges[ev] << " #nodes: " << ev_num_nodes[ev];
       }
       else{
-        std::cout << "[WARNING][" << ev << "] number of edges is not consistant in CSV-file" << std::endl;
-        std::cout << "[       ][" << ev << "] length edge_from: " << num_0 << " length edge_to: " << num_1 << " length scores: " << num_2 << std::endl;
+        std::cout << "\n[WARNING] number of edges is not consistant in CSV-file" << std::endl;
+        std::cout << "[       ] length edge_from: " << num_0 << " length edge_to: " << num_1 << " length scores: " << num_2 << std::endl;
       }
       // read rest of the file and store values in vectors
       while(std::getline(csv_file, line)){
@@ -506,157 +409,308 @@ int main (int argc, char ** argv){
         std::getline(linestream, word, ',');
         scores.push_back(std::stof(word));
         if(std::getline(linestream, word, ',')){
-          ref_labels.push_back(std::stoi(word));
+          if(std::stoi(word) < 0)
+            ref_labels.push_back(4294967295); // if -1 -> set to max_value
+          else
+            ref_labels.push_back(std::stoi(word));
         }
       }
     }  
     csv_file.close();
-
+  
     //
     // Add structures for this event
     //
+    ev_real_edges.push_back(0);
+    ev_true_edges.push_back(0);
     ev_ref_labels.push_back(ref_labels);
-    ev_in_score.push_back(new float[size_scores]);
-    std::fill(ev_in_score[ev], ev_in_score[ev] + size_scores, 0.0);
+    ev_in_full_graph.push_back(new unsigned int[size_full_graph]);
+    std::fill(ev_in_full_graph[ev], ev_in_full_graph[ev] + size_full_graph, 0);
+    ev_in_scores.push_back(new float[size_scores]);
+    std::fill(ev_in_scores[ev], ev_in_scores[ev] + size_scores, 0.0);
     ev_out_components.push_back(new unsigned int[size_components]);
     std::fill(ev_out_components[ev], ev_out_components[ev] + size_components, 0);
-  
+
     //
     // Fill event buffers with data from CSV
     //
-    std::cout << "[    ][" << ev << "] Fill full graph data structure with data from CSV-file" << std::endl;
-    for(unsigned int i = 0; i < size_scores ; i++)
-      graph_cons[i] = 0;
-
+    std::cout << "; CSV-data -> event buffers";
     unsigned int score_missmatch = 0;
     for(unsigned int i = 0; i < ev_num_edges[ev] ; i++){
       // if size of table is exceeded write a warning
-      if(graph_cons[edge_from[i] * MAX_FULL_GRAPH_EDGES] < MAX_FULL_GRAPH_EDGES - 1){
+      if(ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES] < MAX_FULL_GRAPH_EDGES - 1){
         // check if node is already present in row, to filter out duplicate edges
         bool new_node = true;
-        for(unsigned int j = 0 ; j < graph_cons[edge_from[i] * MAX_FULL_GRAPH_EDGES] ; j++)
-          if(graph_cons[edge_from[i] * MAX_FULL_GRAPH_EDGES + 1 + j] == edge_to[i]){
+        for(unsigned int j = 0 ; j < ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES] ; j++)
+          if(ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + 1 + j] == edge_to[i]){
             new_node = false;
-            if(missmatch_found(ev_in_score[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + j], scores[i], 0.5)){
+            if(missmatch_found(ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + j], scores[i], 0.5)){
               score_missmatch++;
-              ev_in_score[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + j] = 1.0;
+              if(ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + j] < 0.5)
+                ev_true_edges[ev]++;
+              ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + j] = 1.0;
             }
           }
         if(new_node){
           // fill tables with connections and scores of the edges and keep the number of connections for each node up to date
-          graph_cons[edge_from[i] * MAX_FULL_GRAPH_EDGES + graph_cons[edge_from[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_to[i];
-          ev_in_score[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + graph_cons[edge_from[i] * MAX_FULL_GRAPH_EDGES]] = scores[i];
-          graph_cons[edge_from[i] * MAX_FULL_GRAPH_EDGES]++;
+          ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_to[i];
+          ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES]] = scores[i];
+          ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES]++;
+          ev_real_edges[ev]++;
+          if(scores[i] > 0.5)
+            ev_true_edges[ev]++;
         }
       }
       else
           std::cout << "[WARNING] Full graph data structure is exceeded!\n[       ] Row " << edge_from[i] << " is already full and can not take in node " << edge_to[i] << " anymore" << std::endl;
 
       // if size of table is exceeded write a warning
-      if(graph_cons[edge_to[i] * MAX_FULL_GRAPH_EDGES] < MAX_FULL_GRAPH_EDGES - 1){
+      if(ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES] < MAX_FULL_GRAPH_EDGES - 1){
         // check if node is already present in row, to filter out duplicate edges
         bool new_node = true;
-        for(unsigned int j = 0 ; j < graph_cons[edge_to[i] * MAX_FULL_GRAPH_EDGES] ; j++)
-          if(graph_cons[edge_to[i] * MAX_FULL_GRAPH_EDGES + 1 + j] == edge_from[i]){
+        for(unsigned int j = 0 ; j < ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES] ; j++)
+          if(ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + 1 + j] == edge_from[i]){
             new_node = false;
-            if(missmatch_found(ev_in_score[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + j], scores[i], 0.5)){
+            if(missmatch_found(ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + j], scores[i], 0.5)){
               score_missmatch++;
-              ev_in_score[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + j] = 1.0;
+              if(ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + j] < 0.5)
+                ev_true_edges[ev]++;
+              ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + j] = 1.0;
             }
           }
         if(new_node){
           // fill tables with connections and scores of the edges and keep the number of connections for each node up to date
-          graph_cons[edge_to[i] * MAX_FULL_GRAPH_EDGES + graph_cons[edge_to[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_from[i];
-          ev_in_score[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + graph_cons[edge_to[i] * MAX_FULL_GRAPH_EDGES]] = scores[i];
-          graph_cons[edge_to[i] * MAX_FULL_GRAPH_EDGES]++;
+          ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_from[i];
+          ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES]] = scores[i];
+          ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES]++;
+          ev_real_edges[ev]++;
+          if(scores[i] > 0.5)
+            ev_true_edges[ev]++;
         }
       }
       else
           std::cout << "[WARNING] Full graph data structure is exceeded!\n[       ] Row " << edge_to[i] << " is already full and can not take in node " << edge_from[i] << " anymore" << std::endl;
     }
-    if(score_missmatch > 0){
-      std::cout << "[INFO][" << ev << "] Missmatched scores of doubled edges detected and have their scores set to 1.0: " << score_missmatch << std::endl;
-      if(score_missmatch % 2 == 0)
-        std::cout << "[    ][" << ev << "] Affected edges: " << score_missmatch / 2  << std::endl;
-    }
+    std::cout << "; real #edges: " << ev_real_edges[ev] / 2 << "; #true-edges: " << ev_true_edges[ev] / 2 << "; score missmatches: " << score_missmatch << "; done" << std::endl;
   }
 
   //============================================
   //
-  // Run threads which run kernels
+  // Allocate kernel buffers
   //
   //============================================
-  thread_timing thread_time;
-  std::vector<kernel_timing> t_timing;
-  std::cout << "[INFO] Start exe_thread()" << std::endl;
-  exe_threads(targetDevice, krnl, thread_time, num_events, num_threads, ev_in_score, ev_out_components, ev_num_nodes);
+  std::cout << "[INFO] Allocate kernel buffers" << std::endl;
+  kernel_buffers bo(targetDevice, krnl);
+  kernel_maps maps(bo);
 
-  // kernel_timing k_timing;
-  // kernel_buffers k_bo = kernel_buffers(targetDevice, krnl);
-  // kernel_maps k_map = kernel_maps(k_bo);
-  // exe_kernel(k_bo, k_map, k_timing, num_events, ev_in_score, ev_out_components, ev_num_nodes);
+  //============================================
+  //
+  // Start computing events
+  //
+  //============================================
+  std::cout << "[INFO] Start computing events" << std::endl;
+  kernel_timing timing;
+  timing.iterations = num_events;
+  timing.init_start = std::chrono::system_clock::now();
+
+  // Event loop
+  for(unsigned int ev = 0; ev < num_events ; ev++){
+    //
+    // Write event buffer to global memory buffer
+    //
+    std::cout << "[    ] [" << ev << "] Write Event to Global Memory Buffer" << std::endl;
+    for(unsigned int i = 0; i < size_scores ; i++){
+      maps.in_full_graph[i] = ev_in_full_graph[ev][i];
+      maps.in_scores[i] = ev_in_scores[ev][i];
+    }
+    std::fill(maps.inout_graph, maps.inout_graph + size_graph, 0.0);
+    std::fill(maps.inout_lookup, maps.inout_lookup + size_lookup, 0);
+    std::fill(maps.inout_lookup_filter, maps.inout_lookup_filter + size_lookup_filter, 0);
+    std::fill(maps.out_components, maps.out_components + size_components, 0);
+    timing.in_written.push_back(std::chrono::system_clock::now());
+
+    //
+    // Synchronize input buffer data to device global memory
+    //
+    std::cout << "[    ] [" << ev << "] Synchronize input buffer data to device global memory" << std::endl;
+    bo.in_full_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.in_scores.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.inout_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.inout_lookup.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.inout_lookup_filter.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    timing.in_synced.push_back(std::chrono::system_clock::now());
+
+    //
+    // Execute Kernel
+    //
+    std::cout << "[    ] [" << ev << "] Start Kernel" << std::endl;
+    auto run = bo.kernel(bo.in_full_graph, bo.in_scores, bo.inout_graph, bo.inout_lookup, bo.inout_lookup_filter, bo.out_components, ev_num_nodes[ev], cutoff);
+    timing.krnl_started.push_back(std::chrono::system_clock::now());
+    std::cout << "[    ] [" << ev << "] Wait for Kernel to finish" << std::endl;
+    run.wait();
+    timing.krnl_ended.push_back(std::chrono::system_clock::now());
+
+    //
+    // Synchronize device global memory to output buffer
+    //
+    std::cout << "[    ] [" << ev << "] Read back data from Kernel" << std::endl;
+    bo.out_components.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+    timing.out_synced.push_back(std::chrono::system_clock::now());
+
+    //
+    // Read event buffer from global memory buffer
+    //
+    std::cout << "[    ] [" << ev << "] Write results from global memory back to event buffer" << std::endl;
+    for(unsigned int i = 0; i < size_components ; i++)
+      ev_out_components[ev][i] = maps.out_components[i];
+    timing.out_written.push_back(std::chrono::system_clock::now());
+  }
+
+  timing.final_end = std::chrono::system_clock::now();
 
   //============================================
   //
   // Write time stemps / durations
   //
   //============================================
-  print_thread_time(thread_time);
-  // for(u_int32_t i = 0; i < num_threads ; i++)
-    // print_time_stemps(t_timing[i]);
+  print_kernel_time(timing);
 
   //============================================
   //
   // Validate results
   //
   //============================================
-  std::cout << "[INFO] Validate results" << std::endl;    // parameter for each event
+  std::cout << "[INFO] Validate results" << std::endl;
   {
-    const float cutoff = 0.5;
     bool correct = true;
     std::vector<bool> k_correct;
     unsigned int num_errors = 0;
+    unsigned int num_errors_0 = 0;
+    unsigned int num_errors_1 = 0;
+    unsigned int num_errors_2 = 0;
     std::vector<unsigned int> k_errors;
-    unsigned int num_connections = 0;
+    std::vector<unsigned int> k_errors_0;
+    std::vector<unsigned int> k_errors_1;
+    std::vector<unsigned int> k_errors_2;
 
     for(unsigned int ev = 0; ev < num_events ; ev++){
       k_correct.push_back(true);
       k_errors.push_back(0);
-      for (unsigned int row = 0; row < ev_num_nodes[ev]; row++){
-        num_connections = 0;
-        for (unsigned int i = 0; i < MAX_FULL_GRAPH_EDGES; i++)
-          if(ev_in_score[ev][row * MAX_FULL_GRAPH_EDGES + i] > cutoff)
-            num_connections++;
-        if(ev_out_components[ev][row] != num_connections){
-          k_correct[ev] = false;
-          correct = false;
-          k_errors[ev]++;
-          num_errors++;
-          // std::cout << "[    ][" << ev << "] " << row << " - expected: " << num_connections << " got: " << ev_out_components[ev][row] << std::endl;
+      k_errors_0.push_back(0);
+      k_errors_1.push_back(0);
+      k_errors_2.push_back(0);
+
+      bool end_reached = false;
+      bool first_free_node = true;
+      bool processed[ev_num_nodes[ev]];
+      for(unsigned int i = 0; i < ev_num_nodes[ev] ; i++)
+        processed[i] = false;
+      unsigned int component_size = 0;
+      unsigned int node = 0;
+      unsigned int first_node = 0;
+      unsigned int label = 0;
+      unsigned int idx = 1;
+      unsigned int output_size = ev_out_components[ev][0];
+
+      // count #components, #comp_nodes, comp_sizes
+      unsigned int num_components = 0;
+      unsigned int num_component_nodes = 0;
+      unsigned int size_of_components[MAX_COMPONENT_SIZE];
+      for(unsigned int i = 0; i < MAX_COMPONENT_SIZE ; i++)
+        size_of_components[i] = 0;
+
+
+      while(!end_reached){
+        // if the index reaches the size of the output, all found components have been processed
+        if(idx >= output_size){
+          end_reached = true;
+          break;
         }
+        else{
+          // read the size of the next component and get the label of its first snode
+          component_size = ev_out_components[ev][idx];
+          idx++;
+          size_of_components[component_size]++;
+          num_components++;
+          first_node = ev_out_components[ev][idx];
+          idx++;
+          num_component_nodes++;
+          label = ev_ref_labels[ev][first_node];
+          processed[first_node] = true;
+          // iterate through the rest of the component and compare each label to the one of the first node
+          // this makes sure, that each found component is also a component in the reference
+          for(unsigned int i = 1; i < component_size ; i++){
+            node = ev_out_components[ev][idx];
+            idx++;
+            num_component_nodes++;
+            // if a missmatch has been found, there is an error in the solution
+            if(label != ev_ref_labels[ev][node]){
+              num_errors++;
+              num_errors_0++;
+              correct = false;
+              k_errors[ev]++;
+              k_errors_0[ev]++;
+              k_correct[ev] = false;
+              // std::cout << "[WARNING] Wrong result. The two following nodes should not be part of the same component" << std::endl;
+              // std::cout << "[       ] node " << first_node << " has label " << label << " ; node " << node << " has label " << ev_ref_labels[ev][node] << std::endl;
+            }
+            processed[node] = true;
+          }
+          // iterate through all reference-labels and make sure that no other nodes were supposed to be part of that component
+          for(unsigned int i = 0; i < ev_num_nodes[ev] ; i++){
+            if(!processed[i] && ev_ref_labels[ev][i] == label){
+              num_errors++;
+              num_errors_1++;
+              correct = false;
+              k_errors[ev]++;
+              k_errors_1[ev]++;
+              k_correct[ev] = false;
+              processed[i] = true;
+              // std::cout << "[WARNING] Wrong result. The following node should also be part of the last component" << std::endl;
+              // std::cout << "[       ] component with label " << label << " did not include node " << i << " with the label" << ev_ref_labels[ev][i] << std::endl;
+            }
+          }
+        }
+      }
+      // make sure no component has been forgotten
+      for(unsigned int i = 0; i < ev_num_nodes[ev] ; i++){
+        if(!processed[i]){
+          if(first_free_node){
+            first_free_node = false;
+            label = ev_ref_labels[ev][i];
+          }
+          else if(label != ev_ref_labels[ev][i]){
+            num_errors++;
+            num_errors_2++;
+            correct = false;
+            k_errors[ev]++;
+            k_errors_2[ev]++;
+            k_correct[ev] = false;
+            // std::cout << "[WARNING] Wrong result. The following node should be part of a component, but was not" << std::endl;
+            // std::cout << "[       ] node " << i << " has label " << ev_ref_labels[ev][i] << " while the label for free nodes should be " << label << std::endl;
+          }
+        }
+      }
+
+      if(k_correct[ev]){
+        std::cout << "[    ]\n[    ] [" << ev << "] TEST PASSED" << std::endl;
+        std::cout << "[    ] [" << ev << "] output-size: " << output_size << " #components: " << num_components << " #component-nodes: " << num_component_nodes << std::endl;
+        std::cout << "[    ] [" << ev << "] #component / comp-size (starting at size 0): [" << size_of_components[0];
+        for(unsigned int i = 1; i < MAX_COMPONENT_SIZE ; i++)
+          std::cout << "," << size_of_components[i];
+        std::cout << "]" << std::endl;
+      } else {
+        std::cout << "[    ]\n[    ] [" << ev << "] TEST FAILED" << std::endl;
+        std::cout << "[    ] [" << ev << "] " << k_errors[ev] << " found mismatches ( " << k_errors_0[ev] << " / " << k_errors_1[ev] << " / " << k_errors_2[ev] << " )" << std::endl;
       }
     }
 
     if(correct){
       std::cout << "[    ]\n[INFO] TEST PASSED\n[    ]" << std::endl;
-      std::cout << "[INFO] All results of the kernel match the expected results" << std::endl;
+      std::cout << "[INFO] All results match the expected results" << std::endl;
     } else {
       std::cout << "[       ]\n[WARNING] TEST FAILED\n[       ]" << std::endl;
-      std::cout << "[WARNING] " << num_errors << " mismatches in the results have been found" << std::endl;
-      for(unsigned int ev = 0; ev < num_events ; ev++)
-        if(!k_correct[ev]){
-          std::cout << "[       ][" << ev << "] " << k_errors[ev] << " mismatches" << std::endl;
-          for (unsigned int row = 0; row < ev_num_nodes[ev]; row++){
-            num_connections = 0;
-            for (unsigned int i = 0; i < MAX_FULL_GRAPH_EDGES; i++)
-              if(ev_in_score[ev][row * MAX_FULL_GRAPH_EDGES + i] > cutoff)
-                num_connections++;
-            std::cout << "[       ][ ] " << row << " - expected: " << num_connections << " got: " << ev_out_components[ev][row];
-            if(ev_out_components[ev][row] != num_connections) std::cout << " E" << std::endl;
-            else std::cout << std::endl;
-          }
-        std::cout << "[       ]" << std::endl;
-        }
+      std::cout << "[WARNING] " << num_errors << " total mismatches ( " << num_errors_0 << " / " << num_errors_1 << " / " << num_errors_2 << " )\n[       ]" << std::endl;
     }
   }
 
@@ -665,11 +719,12 @@ int main (int argc, char ** argv){
   // Free allocated memory
   //
   //============================================
-  delete graph_cons;
   for(unsigned int ev = 0; ev < num_events ; ev++){
-    delete ev_in_score[ev];
+    delete ev_in_full_graph[ev];
+    delete ev_in_scores[ev];
     delete ev_out_components[ev];
   }
+
 
   return 0;
 }

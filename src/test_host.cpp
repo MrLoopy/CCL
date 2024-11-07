@@ -27,7 +27,7 @@
 //
 //============================================
 const u_int32_t num_threads = 1;
-const std::vector<std::string> csv_names = {"dat/reg/r_event005008301.csv", "dat/reg/r_event005008302.csv", "dat/reg/r_event005008303.csv", "dat/reg/r_event005008304.csv", "dat/reg/r_event005008306.csv", "dat/reg/r_event005008308.csv", "dat/reg/r_event005008310.csv", "dat/reg/r_event005008312.csv"}; // {"dat/event005001514.csv", "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
+const std::vector<std::string> csv_names = {"dat/dummy.csv"}; //{"dat/reg/r_event005008301.csv", "dat/reg/r_event005008302.csv", "dat/reg/r_event005008303.csv", "dat/reg/r_event005008304.csv", "dat/reg/r_event005008306.csv", "dat/reg/r_event005008308.csv", "dat/reg/r_event005008310.csv", "dat/reg/r_event005008312.csv"}; // {"dat/event005001514.csv", "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
 const u_int32_t num_events = (const u_int32_t)csv_names.size();
 const float cutoff = 0.8;
 
@@ -77,34 +77,34 @@ struct kernel_buffers{
   xrt::kernel kernel;
   xrt::bo in_full_graph;
   xrt::bo in_scores;
-  xrt::bo inout_graph;
-  xrt::bo inout_lookup;
-  xrt::bo inout_lookup_filter;
+  // xrt::bo inout_graph;
+  // xrt::bo inout_lookup;
+  // xrt::bo inout_lookup_filter;
   xrt::bo out_components;
   kernel_buffers(xrt::device &m_device, xrt::kernel &m_kernel){
     device = m_device;
     kernel = m_kernel;
     in_full_graph = xrt::bo(device, size_full_graph_byte, kernel.group_id(0));
     in_scores = xrt::bo(device, size_scores_byte, kernel.group_id(1));
-    inout_graph = xrt::bo(device, size_graph_byte, kernel.group_id(2));
-    inout_lookup = xrt::bo(device, size_lookup_byte, kernel.group_id(3));
-    inout_lookup_filter = xrt::bo(device, size_lookup_filter_byte, kernel.group_id(4));
-    out_components = xrt::bo(device, size_components_byte, kernel.group_id(5));
+    // inout_graph = xrt::bo(device, size_graph_byte, kernel.group_id(2));
+    // inout_lookup = xrt::bo(device, size_lookup_byte, kernel.group_id(3));
+    // inout_lookup_filter = xrt::bo(device, size_lookup_filter_byte, kernel.group_id(4));
+    out_components = xrt::bo(device, size_components_byte, kernel.group_id(2));
   }
 };
 struct kernel_maps{
   unsigned int* in_full_graph;
   float* in_scores;
-  unsigned int* inout_graph;
-  unsigned int* inout_lookup;
-  unsigned int* inout_lookup_filter;
+  // unsigned int* inout_graph;
+  // unsigned int* inout_lookup;
+  // unsigned int* inout_lookup_filter;
   unsigned int* out_components;
   kernel_maps(kernel_buffers &m_bo){
     in_full_graph = m_bo.in_full_graph.map<unsigned int*>();
     in_scores = m_bo.in_scores.map<float*>();
-    inout_graph = m_bo.inout_graph.map<unsigned int*>();
-    inout_lookup = m_bo.inout_lookup.map<unsigned int*>();
-    inout_lookup_filter = m_bo.inout_lookup_filter.map<unsigned int*>();
+    // inout_graph = m_bo.inout_graph.map<unsigned int*>();
+    // inout_lookup = m_bo.inout_lookup.map<unsigned int*>();
+    // inout_lookup_filter = m_bo.inout_lookup_filter.map<unsigned int*>();
     out_components = m_bo.out_components.map<unsigned int*>();
   }
 };
@@ -523,9 +523,9 @@ int main (int argc, char ** argv){
       maps.in_full_graph[i] = ev_in_full_graph[ev][i];
       maps.in_scores[i] = ev_in_scores[ev][i];
     }
-    std::fill(maps.inout_graph, maps.inout_graph + size_graph, 0.0);
-    std::fill(maps.inout_lookup, maps.inout_lookup + size_lookup, 0);
-    std::fill(maps.inout_lookup_filter, maps.inout_lookup_filter + size_lookup_filter, 0);
+    // std::fill(maps.inout_graph, maps.inout_graph + size_graph, 0.0);
+    // std::fill(maps.inout_lookup, maps.inout_lookup + size_lookup, 0);
+    // std::fill(maps.inout_lookup_filter, maps.inout_lookup_filter + size_lookup_filter, 0);
     std::fill(maps.out_components, maps.out_components + size_components, 0);
     timing.in_written.push_back(std::chrono::system_clock::now());
 
@@ -535,16 +535,17 @@ int main (int argc, char ** argv){
     std::cout << "[    ] [" << ev << "] Synchronize input buffer data to device global memory" << std::endl;
     bo.in_full_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     bo.in_scores.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.inout_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.inout_lookup.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.inout_lookup_filter.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    // bo.inout_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    // bo.inout_lookup.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    // bo.inout_lookup_filter.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     timing.in_synced.push_back(std::chrono::system_clock::now());
 
     //
     // Execute Kernel
     //
     std::cout << "[    ] [" << ev << "] Start Kernel" << std::endl;
-    auto run = bo.kernel(bo.in_full_graph, bo.in_scores, bo.inout_graph, bo.inout_lookup, bo.inout_lookup_filter, bo.out_components, ev_num_nodes[ev], cutoff);
+    auto run = bo.kernel(bo.in_full_graph, bo.in_scores, bo.out_components, ev_num_nodes[ev], cutoff);
+    // auto run = bo.kernel(bo.in_full_graph, bo.in_scores, bo.inout_graph, bo.inout_lookup, bo.inout_lookup_filter, bo.out_components, ev_num_nodes[ev], cutoff);
     timing.krnl_started.push_back(std::chrono::system_clock::now());
     std::cout << "[    ] [" << ev << "] Wait for Kernel to finish" << std::endl;
     run.wait();

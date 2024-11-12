@@ -171,6 +171,40 @@ ${OBJDIR}/ddr_kernels.xo: ${FPGA_PATH2SRC}/ddr_kernels.cpp
 	       	-k CCL \
 	       	-I ${FPGA_PATH2INC} ${FPGA_PATH2SRC}/ddr_kernels.cpp -o ${OBJDIR}/ddr_kernels.xo
 
+#
+# Compile PAR files
+#
+par: ${OBJDIR}/par_host.o ${OBJDIR}/par_kernels.o ${OBJDIR}/par_kernels.xo ${BINDIR}/par_kernels.xclbin all
+	@echo "[MAKE PAR][$$(date +%H:%M:%S)] compile binary"
+	$(CC) $(CFLAGS) ${OBJDIR}/par_host.o ${OBJDIR}/par_kernels.o -o ${BINDIR}/${EXE} $(LDFLAGS)
+
+${OBJDIR}/par_kernels.o: ${SRCDIR}/par_kernels.cpp
+	@echo "[MAKE PAR][$$(date +%H:%M:%S)] compile kernel"
+	$(CC) $(CFLAGS) -c ${SRCDIR}/par_kernels.cpp -o ${OBJDIR}/par_kernels.o
+
+${OBJDIR}/par_host.o: ${SRCDIR}/par_host.cpp
+	@echo "[MAKE PAR][$$(date +%H:%M:%S)] compile host"
+	$(CC) $(CFLAGS) -c ${SRCDIR}/par_host.cpp -o ${OBJDIR}/par_host.o
+
+# Compile with V++
+${BINDIR}/par_kernels.xclbin: ${OBJDIR}/par_kernels.xo
+	@echo "[MAKE PAR][$$(date +%H:%M:%S)] compile .xclbin"
+	$(VV) -g -l -t ${XCL_EMULATION_MODE_CHANGED} \
+	       	--platform ${FPGA_PLATFORM} \
+	       	--config ${FPGA_PATH2CONF}/par_u280.cfg \
+	       	${OBJDIR}/par_kernels.xo -o ${BINDIR}/par_kernels.xclbin
+	@rm -rf ${FPGA_PATH2EMU}/_x .Xil
+	@mv _x ${FPGA_PATH2EMU}/
+	@mv *.log $(LOGDIR)/
+
+${OBJDIR}/par_kernels.xo: ${FPGA_PATH2SRC}/par_kernels.cpp
+	@echo "[MAKE PAR][$$(date +%H:%M:%S)] compile .xo"
+	$(VV) -g -c -t ${XCL_EMULATION_MODE_CHANGED} \
+	       	--platform ${FPGA_PLATFORM} \
+	       	--config ${FPGA_PATH2CONF}/par_u280.cfg \
+	       	-k CCL \
+	       	-I ${FPGA_PATH2INC} ${FPGA_PATH2SRC}/par_kernels.cpp -o ${OBJDIR}/par_kernels.xo
+
 # TODO GET RID OF LOG FILES
 all: 
 #	@mv *.log $(LOGDIR)/.

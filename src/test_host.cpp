@@ -27,7 +27,7 @@
 //
 //============================================
 const u_int32_t num_threads = 1;
-const std::vector<std::string> csv_names = {"dat/dummy.csv"}; //{"dat/reg/r_event005008301.csv", "dat/reg/r_event005008302.csv", "dat/reg/r_event005008303.csv", "dat/reg/r_event005008304.csv", "dat/reg/r_event005008306.csv", "dat/reg/r_event005008308.csv", "dat/reg/r_event005008310.csv", "dat/reg/r_event005008312.csv"}; // {"dat/event005001514.csv", "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
+const std::vector<std::string> csv_names = {"dat/reg/r_event005008301.csv", "dat/reg/r_event005008302.csv", "dat/reg/r_event005008303.csv", "dat/reg/r_event005008304.csv", "dat/reg/r_event005008306.csv", "dat/reg/r_event005008308.csv", "dat/reg/r_event005008310.csv", "dat/reg/r_event005008312.csv"}; // {"dat/event005001514.csv", "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
 const u_int32_t num_events = (const u_int32_t)csv_names.size();
 const float cutoff = 0.8;
 
@@ -431,27 +431,31 @@ int main (int argc, char ** argv){
     ev_out_components.push_back(new unsigned int[size_components]);
     std::fill(ev_out_components[ev], ev_out_components[ev] + size_components, 0);
 
+    std::vector<unsigned int> exceeded_by;
+    std::vector<unsigned int> ex_row;
+
     //
     // Fill event buffers with data from CSV
     //
     std::cout << "; CSV-data -> event buffers";
     unsigned int score_missmatch = 0;
+    bool new_node = true;
     for(unsigned int i = 0; i < ev_num_edges[ev] ; i++){
-      // if size of table is exceeded write a warning
-      if(ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES] < MAX_FULL_GRAPH_EDGES - 1){
-        // check if node is already present in row, to filter out duplicate edges
-        bool new_node = true;
-        for(unsigned int j = 0 ; j < ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES] ; j++)
-          if(ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + 1 + j] == edge_to[i]){
-            new_node = false;
-            if(missmatch_found(ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + j], scores[i], 0.5)){
-              score_missmatch++;
-              if(ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + j] < 0.5)
-                ev_true_edges[ev]++;
-              ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + j] = 1.0;
-            }
+      // check if node is already present in row, to filter out duplicate edges
+      new_node = true;
+      for(unsigned int j = 0 ; j < ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES] ; j++)
+        if(ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + 1 + j] == edge_to[i]){
+          new_node = false;
+          if(missmatch_found(ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + j], scores[i], 0.5)){
+            score_missmatch++;
+            if(ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + j] < 0.5)
+              ev_true_edges[ev]++;
+            ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + j] = 1.0;
           }
-        if(new_node){
+        }
+      if(new_node){
+        // if size of table is exceeded write a warning
+        if(ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES] < MAX_FULL_GRAPH_EDGES - 1){
           // fill tables with connections and scores of the edges and keep the number of connections for each node up to date
           ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_to[i];
           ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES]] = scores[i];
@@ -460,25 +464,36 @@ int main (int argc, char ** argv){
           if(scores[i] > 0.5)
             ev_true_edges[ev]++;
         }
-      }
-      else
-          std::cout << "[WARNING] Full graph data structure is exceeded!\n[       ] Row " << edge_from[i] << " is already full and can not take in node " << edge_to[i] << " anymore" << std::endl;
-
-      // if size of table is exceeded write a warning
-      if(ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES] < MAX_FULL_GRAPH_EDGES - 1){
-        // check if node is already present in row, to filter out duplicate edges
-        bool new_node = true;
-        for(unsigned int j = 0 ; j < ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES] ; j++)
-          if(ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + 1 + j] == edge_from[i]){
-            new_node = false;
-            if(missmatch_found(ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + j], scores[i], 0.5)){
-              score_missmatch++;
-              if(ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + j] < 0.5)
-                ev_true_edges[ev]++;
-              ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + j] = 1.0;
+        else{
+          // std::cout << "[WARNING] Full graph data structure is exceeded!\n[       ] Row " << edge_from[i] << " is already full and can not take in node " << edge_to[i] << " anymore" << std::endl;
+          bool new_row = true;
+          for(unsigned int k = 0; k < ex_row.size(); k++)
+            if(ex_row[k] == edge_from[i]){
+              exceeded_by[k]++;
+              new_row = false;
             }
+          if(new_row){
+            ex_row.push_back(edge_from[i]);
+            exceeded_by.push_back(1);
           }
-        if(new_node){
+        }
+      }
+
+      // check if node is already present in row, to filter out duplicate edges
+      new_node = true;
+      for(unsigned int j = 0 ; j < ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES] ; j++)
+        if(ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + 1 + j] == edge_from[i]){
+          new_node = false;
+          if(missmatch_found(ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + j], scores[i], 0.5)){
+            score_missmatch++;
+            if(ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + j] < 0.5)
+              ev_true_edges[ev]++;
+            ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + j] = 1.0;
+          }
+        }
+      if(new_node){
+        // if size of table is exceeded write a warning
+        if(ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES] < MAX_FULL_GRAPH_EDGES - 1){
           // fill tables with connections and scores of the edges and keep the number of connections for each node up to date
           ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_from[i];
           ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES]] = scores[i];
@@ -487,11 +502,26 @@ int main (int argc, char ** argv){
           if(scores[i] > 0.5)
             ev_true_edges[ev]++;
         }
+        else{
+          // std::cout << "[WARNING] Full graph data structure is exceeded!\n[       ] Row " << edge_to[i] << " is already full and can not take in node " << edge_from[i] << " anymore" << std::endl;
+          bool new_row = true;
+          for(unsigned int k = 0; k < ex_row.size(); k++)
+            if(ex_row[k] == edge_to[i]){
+              exceeded_by[k]++;
+              new_row = false;
+            }
+          if(new_row){
+            ex_row.push_back(edge_to[i]);
+            exceeded_by.push_back(1);
+          }
+        }
       }
-      else
-          std::cout << "[WARNING] Full graph data structure is exceeded!\n[       ] Row " << edge_to[i] << " is already full and can not take in node " << edge_from[i] << " anymore" << std::endl;
     }
-    std::cout << "; real #edges: " << ev_real_edges[ev] / 2 << "; #true-edges: " << ev_true_edges[ev] / 2 << "; score missmatches: " << score_missmatch << "; done" << std::endl;
+    std::cout << "; real #edges: " << ev_real_edges[ev] / 2 << "; #true-edges: " << ev_true_edges[ev] / 2 << "; score missmatches: " << score_missmatch;
+    std::cout << "; " << ex_row.size() << " exceeded rows by ";
+    for(unsigned int i = 0; i < ex_row.size() ; i++)
+      std::cout << exceeded_by[i] << " ";
+    std::cout << "; done" << std::endl;
   }
 
   //============================================

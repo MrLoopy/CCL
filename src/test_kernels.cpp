@@ -185,12 +185,12 @@ extern "C" {
     #pragma HLS INTERFACE m_axi port = in_scores         bundle=gmem1 max_widen_bitwidth=512
     #pragma HLS INTERFACE m_axi port = out_components    bundle=gmem5 max_widen_bitwidth=512
 
-    static unsigned int full_graph[MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES]; // 8192 * 256 = 2M
-    #pragma HLS bind_storage variable=full_graph type=RAM_T2P impl=URAM
-    #pragma HLS STREAM variable=full_graph type=pipo
-    static float scores[MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES]; // 8192 * 256 = 2M
-    #pragma HLS bind_storage variable=scores type=RAM_T2P impl=URAM
-    #pragma HLS STREAM variable=scores type=pipo
+    // static unsigned int full_graph[MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES]; // 8192 * 256 = 2M
+    // #pragma HLS bind_storage variable=full_graph type=RAM_T2P impl=URAM
+    // #pragma HLS STREAM variable=full_graph type=pipo
+    // static float scores[MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES]; // 8192 * 256 = 2M
+    // #pragma HLS bind_storage variable=scores type=RAM_T2P impl=URAM
+    // #pragma HLS STREAM variable=scores type=pipo
     static unsigned int graph[MAX_TRUE_NODES * MAX_EDGES]; // 512 * 8 = 4k
     #pragma HLS bind_storage variable=graph type=RAM_T2P impl=BRAM
     #pragma HLS STREAM variable=graph type=pipo
@@ -209,9 +209,9 @@ extern "C" {
     #pragma HLS STREAM variable=graph_size type=pipo
 
     #pragma HLS dataflow
-    in_ram_wrapper(in_full_graph, full_graph, in_scores, scores);
+    // in_ram_wrapper(in_full_graph, full_graph, in_scores, scores);
 
-    filter_memory(cutoff, full_graph, scores, num_nodes, graph, lookup, lookup_filter, graph_size);
+    filter_memory(cutoff, in_full_graph, in_scores, num_nodes, graph, lookup, lookup_filter, graph_size);
 
     compute_core(graph, graph_size, outStream_components, lookup);
     write_components(components, outStream_components, num_nodes);

@@ -27,7 +27,7 @@
 //============================================
 const u_int32_t num_threads = 1;
 const u_int32_t filter_split_factor = FILTER_SPLIT;
-const std::vector<std::string> csv_names = {"dat/event005001514.csv"}; // {"dat/event005001514.csv"}; //, "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
+const std::vector<std::string> csv_names = {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; //, "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
 // {"reg/r_event005008301.csv", "reg/r_event005008302.csv", "reg/r_event005008303.csv", "reg/r_event005008304.csv", "reg/r_event005008306.csv", "reg/r_event005008308.csv", "reg/r_event005008310.csv", "reg/r_event005008312.csv"}
 const u_int32_t num_events = (const u_int32_t)csv_names.size();
 
@@ -584,6 +584,7 @@ int main (int argc, char ** argv){
     std::cout << "[    ] [" << ev << "] Write Event to Global Memory Buffer" << std::endl;
     u_int32_t residue = ev_num_nodes[ev] % filter_split_factor;
     u_int32_t base_nodes = ev_num_nodes[ev] / filter_split_factor;
+    maps.in_num_nodes[0] = 0;
     // filter_split_factor > 0
     for(unsigned int i = 0; i < base_nodes ; i++){
       for(unsigned int j = 0; j < MAX_FULL_GRAPH_EDGES ; j++){
@@ -711,7 +712,6 @@ int main (int argc, char ** argv){
     //
     // Execute Kernel
     //
-    std::cout << "[    ] [" << ev << "] in_num_nodes: " << maps.in_num_nodes[0] << std::endl;
     std::cout << "[    ] [" << ev << "] Start Kernel" << std::endl;
     auto run = bo.kernel( bo.in_num_nodes,
                           bo.in_full_graph_sub_0, bo.in_full_graph_sub_1, bo.in_full_graph_sub_2, bo.in_full_graph_sub_3,
@@ -785,6 +785,12 @@ int main (int argc, char ** argv){
       unsigned int label = 0;
       unsigned int idx = 1;
       unsigned int output_size = ev_out_components[ev][0];
+
+      if(output_size < 160){
+        std::cout << "[    ] [ ] " << ev_out_components[ev][0] << std::endl;
+        for(unsigned int i = 1; i < output_size ; i+=4)
+          std::cout << "[    ] [ ] " << ev_out_components[ev][i] << " " << ev_out_components[ev][i + 1] << " " << ev_out_components[ev][i + 2] << " " << ev_out_components[ev][i + 3] << std::endl;
+      }
 
       // count #components, #comp_nodes, comp_sizes
       unsigned int num_components = 0;
@@ -876,6 +882,7 @@ int main (int argc, char ** argv){
       } else {
         std::cout << "[    ]\n[    ] [" << ev << "] TEST FAILED" << std::endl;
         std::cout << "[    ] [" << ev << "] " << k_errors[ev] << " found mismatches ( " << k_errors_0[ev] << " / " << k_errors_1[ev] << " / " << k_errors_2[ev] << " )" << std::endl;
+        std::cout << "[    ] [" << ev << "] output-size: " << output_size << " #components: " << num_components << " #component-nodes: " << num_component_nodes << std::endl;
       }
     }
 

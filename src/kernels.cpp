@@ -82,7 +82,11 @@ static void print_filtered_sub(unsigned int* sg0, unsigned int nn0, unsigned int
 }
 */
 
-static void sub_filter(unsigned int* sub_full, float* sub_scores, unsigned int m_num_nodes, unsigned int* m_sub_graph) {
+static void sub_filter(unsigned int* sub_full, float* sub_scores, unsigned int m_num_nodes, unsigned int* m_sub_graph, uint8_t diff) {
+
+  #pragma HLS INLINE OFF
+  #pragma HLS FUNCTION_INSTANTIATE variable=diff
+
   unsigned int connections = 0;
   const float cutoff = 0.5;
   sub_filter_rows:
@@ -101,9 +105,49 @@ static void sub_filter(unsigned int* sub_full, float* sub_scores, unsigned int m
   }
 }
 
+static void filter( unsigned int* sub_full_0, float* sub_scores_0, unsigned int* sub_graph_0, unsigned int num_nodes_0,
+                    unsigned int* sub_full_1, float* sub_scores_1, unsigned int* sub_graph_1, unsigned int num_nodes_1,
+                    unsigned int* sub_full_2, float* sub_scores_2, unsigned int* sub_graph_2, unsigned int num_nodes_2,
+                    unsigned int* sub_full_3, float* sub_scores_3, unsigned int* sub_graph_3, unsigned int num_nodes_3) {
+  
+  #pragma HLS dataflow
+
+  sub_filter(sub_full_0, sub_scores_0, num_nodes_0, sub_graph_0, 0);
+  sub_filter(sub_full_1, sub_scores_1, num_nodes_1, sub_graph_1, 1);
+  sub_filter(sub_full_2, sub_scores_2, num_nodes_2, sub_graph_2, 2);
+  sub_filter(sub_full_3, sub_scores_3, num_nodes_3, sub_graph_3, 3);
+
+}
+
 static void compress( unsigned int* sub_0, unsigned int* sub_1, unsigned int* sub_2, unsigned int* sub_3, unsigned int* m_graph,
                       unsigned int num_nodes_0, unsigned int num_nodes_1, unsigned int num_nodes_2, unsigned int num_nodes_3,
-                      unsigned int* m_lookup, unsigned int* m_lookup_filter, unsigned int& m_graph_size, unsigned int m_num_nodes) {
+                      unsigned int* m_lookup, unsigned int* m_lookup_filter, unsigned int& m_graph_size, unsigned int m_num_nodes, hls::stream<unsigned int>& midStream) {
+
+  midStream << 48; // 92;
+
+  unsigned int height = 3;
+  unsigned int width = 3;
+  for(unsigned int i = 0; i < height; i++){
+    midStream << width;
+    for(unsigned int j = 0; j < width; j++)
+      midStream << sub_0[i * MAX_EDGES + j];
+  }
+  for(unsigned int i = 0; i < height; i++){
+    midStream << width;
+    for(unsigned int j = 0; j < width; j++)
+      midStream << sub_1[i * MAX_EDGES + j];
+  }
+  for(unsigned int i = 0; i < height; i++){
+    midStream << width;
+    for(unsigned int j = 0; j < width; j++)
+      midStream << sub_2[i * MAX_EDGES + j];
+  }
+  for(unsigned int i = 0; i < height; i++){
+    midStream << width;
+    for(unsigned int j = 0; j < width; j++)
+      midStream << sub_3[i * MAX_EDGES + j];
+  }
+
 
   unsigned int new_from, new_to;
   m_graph_size = 1; // has to start at 1, cause 0 indicates that no index has been given yet
@@ -236,8 +280,16 @@ static void compress( unsigned int* sub_0, unsigned int* sub_1, unsigned int* su
         m_graph[new_from * MAX_EDGES] = sub_3[row * MAX_EDGES];
     }
   }
-}
 
+  // height = 11;
+  // for(unsigned int i = 0; i < height; i++){
+  //   midStream << width;
+  //   for(unsigned int j = 0; j < width; j++)
+  //     midStream << m_graph[i * MAX_EDGES + j];
+  // }
+  // midStream << 0;
+
+}
 
 static void filter_memory(unsigned int* full_graph, float* m_scores, unsigned int m_num_nodes,
                           unsigned int* m_graph, unsigned int* m_lookup, unsigned int* m_lookup_filter, unsigned int& m_graph_size) {
@@ -291,7 +343,19 @@ static void filter_memory(unsigned int* full_graph, float* m_scores, unsigned in
   }
 }
 
-static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::stream<unsigned int>& outStream, unsigned int* m_lookup){
+static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::stream<unsigned int>& outStream, hls::stream<unsigned int>& midStream, unsigned int* m_lookup){
+
+  unsigned int size = midStream.read();
+  for (unsigned int i = 0; i < size; i++)
+    outStream << midStream.read();
+
+  unsigned int height = 11;
+  unsigned int width = 3;
+  for(unsigned int i = 0; i < height; i++){
+    outStream << width;
+    for(unsigned int j = 0; j < width; j++)
+      outStream << m_graph[i * MAX_EDGES + j];
+  }
 
   static unsigned int component[MAX_COMPONENT_SIZE];
   static unsigned int processed[MAX_TRUE_NODES];
@@ -305,7 +369,7 @@ static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::s
 
   compute_rows:
   for (unsigned int row = 0; row < m_num_nodes; row++){
-    #pragma HLS loop_tripcount min=31000 avg=MAX_TRUE_NODES max=MAX_TRUE_NODES // avg=35846
+    // #pragma HLS loop_tripcount min=31000 avg=MAX_TRUE_NODES max=MAX_TRUE_NODES // avg=35846
     if(m_graph[row * MAX_EDGES] == 0)
       processed[row] = true;
     // node with connections that has not been processed yet -> new component
@@ -396,7 +460,6 @@ static void write_components(unsigned int* out, hls::stream<unsigned int>& outSt
 }
 
 extern "C" {
-
   void CCL( unsigned int* in_num_nodes,
             unsigned int* in_full_graph_sub_0, unsigned int* in_full_graph_sub_1, unsigned int* in_full_graph_sub_2, unsigned int* in_full_graph_sub_3,
             float* in_scores_sub_0, float* in_scores_sub_1, float* in_scores_sub_2, float* in_scores_sub_3,
@@ -404,25 +467,26 @@ extern "C" {
             unsigned int* io_graph_main, unsigned int* io_lookup, unsigned int* io_lookup_filter, unsigned int* out_components) {
   // void CCL( unsigned int* in_full_graph, float* in_scores, unsigned int* io_graph, unsigned int* io_lookup, unsigned int* io_lookup_filter, unsigned int* out_components, unsigned int num_nodes) {
     
-    #pragma HLS INTERFACE m_axi port = in_num_nodes             bundle=gmem0 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = in_full_graph_sub_0      bundle=gmem0 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = in_full_graph_sub_1      bundle=gmem0 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = in_full_graph_sub_2      bundle=gmem0 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = in_full_graph_sub_3      bundle=gmem0 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = in_scores_sub_0          bundle=gmem1 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = in_scores_sub_1          bundle=gmem1 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = in_scores_sub_2          bundle=gmem1 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = in_scores_sub_3          bundle=gmem1 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_graph_sub_0           bundle=gmem2 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_graph_sub_1           bundle=gmem2 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_graph_sub_2           bundle=gmem2 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_graph_sub_3           bundle=gmem2 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_graph_main            bundle=gmem2 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_lookup                bundle=gmem3 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_lookup_filter         bundle=gmem4 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = out_components           bundle=gmem5 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_num_nodes             bundle=gmem1 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_full_graph_sub_0      bundle=gmem2 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_full_graph_sub_1      bundle=gmem3 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_full_graph_sub_2      bundle=gmem4 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_full_graph_sub_3      bundle=gmem5 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_scores_sub_0          bundle=gmem6 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_scores_sub_1          bundle=gmem7 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_scores_sub_2          bundle=gmem8 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_scores_sub_3          bundle=gmem9 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_graph_sub_0           bundle=gmem10 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_graph_sub_1           bundle=gmem11 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_graph_sub_2           bundle=gmem12 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_graph_sub_3           bundle=gmem13 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_graph_main            bundle=gmem14 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_lookup                bundle=gmem15 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_lookup_filter         bundle=gmem16 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = out_components           bundle=gmem17 max_widen_bitwidth=512
 
     static hls::stream<unsigned int> outStream_components("output_stream_components");
+    static hls::stream<unsigned int> midStream_temp("midStream");
     static unsigned int graph_size;
     #pragma HLS STREAM variable=graph_size type=pipo
 
@@ -430,14 +494,14 @@ extern "C" {
 
     // print_sub_full(in_full_graph_sub_0, in_scores_sub_0, in_num_nodes[1], in_full_graph_sub_1, in_scores_sub_1, in_num_nodes[2], in_full_graph_sub_2, in_scores_sub_2, in_num_nodes[3], in_full_graph_sub_3, in_scores_sub_3, in_num_nodes[4]);
 
-    sub_filter(in_full_graph_sub_0, in_scores_sub_0, in_num_nodes[1], io_graph_sub_0);
-    sub_filter(in_full_graph_sub_1, in_scores_sub_1, in_num_nodes[2], io_graph_sub_1);
-    sub_filter(in_full_graph_sub_2, in_scores_sub_2, in_num_nodes[3], io_graph_sub_2);
-    sub_filter(in_full_graph_sub_3, in_scores_sub_3, in_num_nodes[4], io_graph_sub_3);
+    filter( in_full_graph_sub_0, in_scores_sub_0, io_graph_sub_0, in_num_nodes[1],
+            in_full_graph_sub_1, in_scores_sub_1, io_graph_sub_1, in_num_nodes[2],
+            in_full_graph_sub_2, in_scores_sub_2, io_graph_sub_2, in_num_nodes[3],
+            in_full_graph_sub_3, in_scores_sub_3, io_graph_sub_3, in_num_nodes[4]);
 
-    compress(io_graph_sub_0, io_graph_sub_1, io_graph_sub_2, io_graph_sub_3, io_graph_main, in_num_nodes[1], in_num_nodes[2], in_num_nodes[3], in_num_nodes[4], io_lookup, io_lookup_filter, graph_size, in_num_nodes[1]);
+    compress(io_graph_sub_0, io_graph_sub_1, io_graph_sub_2, io_graph_sub_3, io_graph_main, in_num_nodes[1], in_num_nodes[2], in_num_nodes[3], in_num_nodes[4], io_lookup, io_lookup_filter, graph_size, in_num_nodes[1], midStream_temp);
 
-    compute_core(io_graph_main, graph_size, outStream_components, io_lookup);
+    compute_core(io_graph_main, graph_size, outStream_components, midStream_temp, io_lookup);
     write_components(out_components, outStream_components);
 
   }

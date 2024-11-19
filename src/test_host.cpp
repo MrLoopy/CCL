@@ -38,12 +38,12 @@ u_int32_t size_lookup = MAX_TRUE_NODES;
 u_int32_t size_lookup_filter = MAX_TOTAL_NODES;
 u_int32_t size_components = MAX_TRUE_NODES + MAX_COMPONENTS;
 
-size_t size_full_graph_byte = sizeof(unsigned int) * size_full_graph;
+size_t size_full_graph_byte = sizeof(uint16_t) * size_full_graph;
 size_t size_scores_byte = sizeof(float) * size_scores;
-size_t size_graph_byte = sizeof(unsigned int) * size_graph;
-size_t size_lookup_byte = sizeof(unsigned int) * size_lookup;
-size_t size_lookup_filter_byte = sizeof(unsigned int) * size_lookup_filter;
-size_t size_components_byte = sizeof(unsigned int) * size_components;
+size_t size_graph_byte = sizeof(uint16_t) * size_graph;
+size_t size_lookup_byte = sizeof(uint16_t) * size_lookup;
+size_t size_lookup_filter_byte = sizeof(uint16_t) * size_lookup_filter;
+size_t size_components_byte = sizeof(uint16_t) * size_components;
 
 template <typename S>
 std::ostream& operator<<(std::ostream& os, const std::vector<S>& vector){
@@ -93,19 +93,19 @@ struct kernel_buffers{
   }
 };
 struct kernel_maps{
-  unsigned int* in_full_graph;
+  uint16_t* in_full_graph;
   float* in_scores;
-  // unsigned int* inout_graph;
-  // unsigned int* inout_lookup;
-  // unsigned int* inout_lookup_filter;
-  unsigned int* out_components;
+  // uint16_t* inout_graph;
+  // uint16_t* inout_lookup;
+  // uint16_t* inout_lookup_filter;
+  uint16_t* out_components;
   kernel_maps(kernel_buffers &m_bo){
-    in_full_graph = m_bo.in_full_graph.map<unsigned int*>();
+    in_full_graph = m_bo.in_full_graph.map<uint16_t*>();
     in_scores = m_bo.in_scores.map<float*>();
-    // inout_graph = m_bo.inout_graph.map<unsigned int*>();
-    // inout_lookup = m_bo.inout_lookup.map<unsigned int*>();
-    // inout_lookup_filter = m_bo.inout_lookup_filter.map<unsigned int*>();
-    out_components = m_bo.out_components.map<unsigned int*>();
+    // inout_graph = m_bo.inout_graph.map<uint16_t*>();
+    // inout_lookup = m_bo.inout_lookup.map<uint16_t*>();
+    // inout_lookup_filter = m_bo.inout_lookup_filter.map<uint16_t*>();
+    out_components = m_bo.out_components.map<uint16_t*>();
   }
 };
 
@@ -327,14 +327,14 @@ int main (int argc, char ** argv){
   // Allocate Host Memory for each event
   //
   //============================================
-  std::vector<unsigned int*> ev_in_full_graph;
+  std::vector<uint16_t*> ev_in_full_graph;
   std::vector<float*> ev_in_scores;
-  std::vector<unsigned int*> ev_out_components;
-  std::vector<unsigned int> ev_num_edges;
-  std::vector<unsigned int> ev_real_edges;
-  std::vector<unsigned int> ev_true_edges;
-  std::vector<unsigned int> ev_num_nodes;
-  std::vector<std::vector<unsigned int>> ev_ref_labels;
+  std::vector<uint16_t*> ev_out_components;
+  std::vector<uint16_t> ev_num_edges;
+  std::vector<uint16_t> ev_real_edges;
+  std::vector<uint16_t> ev_true_edges;
+  std::vector<uint16_t> ev_num_nodes;
+  std::vector<std::vector<uint16_t>> ev_ref_labels;
 
   //============================================
   //
@@ -342,14 +342,14 @@ int main (int argc, char ** argv){
   //
   //============================================
   std::cout << "[INFO] Prepare Event Data with Data from CSV files" << std::endl;
-  for(unsigned int ev = 0; ev < num_events ; ev++){
+  for(uint16_t ev = 0; ev < num_events ; ev++){
     //
     // Read CSV-file
     //
     std::string csv_file_name = csv_names[ev];
-    std::vector<unsigned int> edge_from;
-    std::vector<unsigned int> edge_to;
-    std::vector<unsigned int> ref_labels;
+    std::vector<uint16_t> edge_from;
+    std::vector<uint16_t> edge_to;
+    std::vector<uint16_t> ref_labels;
     std::vector<float> scores;
     // create an input file stream from the csv-file
     std::ifstream csv_file(csv_file_name);
@@ -359,10 +359,10 @@ int main (int argc, char ** argv){
     if(csv_file.good()){
       std::cout << "[    ] [" << ev << "] CSV-file opened ";
       std::string line, field_0, field_1, field_2, field_3, word;
-      unsigned int num_0 = 0;
-      unsigned int num_1 = 0;
-      unsigned int num_2 = 0;
-      unsigned int num_3 = 0;
+      uint16_t num_0 = 0;
+      uint16_t num_1 = 0;
+      uint16_t num_2 = 0;
+      uint16_t num_3 = 0;
       // read first line
       std::getline(csv_file, line);
       std::stringstream linestream_first(line);
@@ -410,7 +410,7 @@ int main (int argc, char ** argv){
         scores.push_back(std::stof(word));
         if(std::getline(linestream, word, ',')){
           if(std::stoi(word) < 0)
-            ref_labels.push_back(4294967295); // if -1 -> set to max_value
+            ref_labels.push_back(65535); // 4294967295); // if -1 -> set to max_value
           else
             ref_labels.push_back(std::stoi(word));
         }
@@ -424,26 +424,26 @@ int main (int argc, char ** argv){
     ev_real_edges.push_back(0);
     ev_true_edges.push_back(0);
     ev_ref_labels.push_back(ref_labels);
-    ev_in_full_graph.push_back(new unsigned int[size_full_graph]);
+    ev_in_full_graph.push_back(new uint16_t[size_full_graph]);
     std::fill(ev_in_full_graph[ev], ev_in_full_graph[ev] + size_full_graph, 0);
     ev_in_scores.push_back(new float[size_scores]);
     std::fill(ev_in_scores[ev], ev_in_scores[ev] + size_scores, 0.0);
-    ev_out_components.push_back(new unsigned int[size_components]);
+    ev_out_components.push_back(new uint16_t[size_components]);
     std::fill(ev_out_components[ev], ev_out_components[ev] + size_components, 0);
 
-    std::vector<unsigned int> exceeded_by;
-    std::vector<unsigned int> ex_row;
+    std::vector<uint16_t> exceeded_by;
+    std::vector<uint16_t> ex_row;
 
     //
     // Fill event buffers with data from CSV
     //
     std::cout << "; CSV-data -> event buffers";
-    unsigned int score_missmatch = 0;
+    uint16_t score_missmatch = 0;
     bool new_node = true;
-    for(unsigned int i = 0; i < ev_num_edges[ev] ; i++){
+    for(uint16_t i = 0; i < ev_num_edges[ev] ; i++){
       // check if node is already present in row, to filter out duplicate edges
       new_node = true;
-      for(unsigned int j = 0 ; j < ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES] ; j++)
+      for(uint16_t j = 0 ; j < ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES] ; j++)
         if(ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + 1 + j] == edge_to[i]){
           new_node = false;
           if(missmatch_found(ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + j], scores[i], 0.5)){
@@ -467,7 +467,7 @@ int main (int argc, char ** argv){
         else{
           // std::cout << "[WARNING] Full graph data structure is exceeded!\n[       ] Row " << edge_from[i] << " is already full and can not take in node " << edge_to[i] << " anymore" << std::endl;
           bool new_row = true;
-          for(unsigned int k = 0; k < ex_row.size(); k++)
+          for(uint16_t k = 0; k < ex_row.size(); k++)
             if(ex_row[k] == edge_from[i]){
               exceeded_by[k]++;
               new_row = false;
@@ -481,7 +481,7 @@ int main (int argc, char ** argv){
 
       // check if node is already present in row, to filter out duplicate edges
       new_node = true;
-      for(unsigned int j = 0 ; j < ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES] ; j++)
+      for(uint16_t j = 0 ; j < ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES] ; j++)
         if(ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + 1 + j] == edge_from[i]){
           new_node = false;
           if(missmatch_found(ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + j], scores[i], 0.5)){
@@ -505,7 +505,7 @@ int main (int argc, char ** argv){
         else{
           // std::cout << "[WARNING] Full graph data structure is exceeded!\n[       ] Row " << edge_to[i] << " is already full and can not take in node " << edge_from[i] << " anymore" << std::endl;
           bool new_row = true;
-          for(unsigned int k = 0; k < ex_row.size(); k++)
+          for(uint16_t k = 0; k < ex_row.size(); k++)
             if(ex_row[k] == edge_to[i]){
               exceeded_by[k]++;
               new_row = false;
@@ -519,7 +519,7 @@ int main (int argc, char ** argv){
     }
     std::cout << "; real #edges: " << ev_real_edges[ev] / 2 << "; #true-edges: " << ev_true_edges[ev] / 2 << "; score missmatches: " << score_missmatch;
     std::cout << "; " << ex_row.size() << " exceeded rows by ";
-    for(unsigned int i = 0; i < ex_row.size() ; i++)
+    for(uint16_t i = 0; i < ex_row.size() ; i++)
       std::cout << exceeded_by[i] << " ";
     std::cout << "; done" << std::endl;
   }
@@ -544,7 +544,7 @@ int main (int argc, char ** argv){
   timing.init_start = std::chrono::system_clock::now();
 
   // Event loop
-  for(unsigned int ev = 0; ev < num_events ; ev++){
+  for(uint16_t ev = 0; ev < num_events ; ev++){
     //
     // Write event buffer to global memory buffer
     //
@@ -592,7 +592,7 @@ int main (int argc, char ** argv){
     // Read event buffer from global memory buffer
     //
     std::cout << "[    ] [" << ev << "] Write results from global memory back to event buffer" << std::endl;
-    for(unsigned int i = 0; i < size_components ; i++)
+    for(uint16_t i = 0; i < size_components ; i++)
       ev_out_components[ev][i] = maps.out_components[i];
     timing.out_written.push_back(std::chrono::system_clock::now());
   }
@@ -615,16 +615,16 @@ int main (int argc, char ** argv){
   {
     bool correct = true;
     std::vector<bool> k_correct;
-    unsigned int num_errors = 0;
-    unsigned int num_errors_0 = 0;
-    unsigned int num_errors_1 = 0;
-    unsigned int num_errors_2 = 0;
-    std::vector<unsigned int> k_errors;
-    std::vector<unsigned int> k_errors_0;
-    std::vector<unsigned int> k_errors_1;
-    std::vector<unsigned int> k_errors_2;
+    uint16_t num_errors = 0;
+    uint16_t num_errors_0 = 0;
+    uint16_t num_errors_1 = 0;
+    uint16_t num_errors_2 = 0;
+    std::vector<uint16_t> k_errors;
+    std::vector<uint16_t> k_errors_0;
+    std::vector<uint16_t> k_errors_1;
+    std::vector<uint16_t> k_errors_2;
 
-    for(unsigned int ev = 0; ev < num_events ; ev++){
+    for(uint16_t ev = 0; ev < num_events ; ev++){
       k_correct.push_back(true);
       k_errors.push_back(0);
       k_errors_0.push_back(0);
@@ -634,20 +634,20 @@ int main (int argc, char ** argv){
       bool end_reached = false;
       bool first_free_node = true;
       bool processed[ev_num_nodes[ev]];
-      for(unsigned int i = 0; i < ev_num_nodes[ev] ; i++)
+      for(uint16_t i = 0; i < ev_num_nodes[ev] ; i++)
         processed[i] = false;
-      unsigned int component_size = 0;
-      unsigned int node = 0;
-      unsigned int first_node = 0;
-      unsigned int label = 0;
-      unsigned int idx = 1;
-      unsigned int output_size = ev_out_components[ev][0];
+      uint16_t component_size = 0;
+      uint16_t node = 0;
+      uint16_t first_node = 0;
+      uint16_t label = 0;
+      uint16_t idx = 1;
+      uint16_t output_size = ev_out_components[ev][0];
 
       // count #components, #comp_nodes, comp_sizes
-      unsigned int num_components = 0;
-      unsigned int num_component_nodes = 0;
-      unsigned int size_of_components[MAX_COMPONENT_SIZE];
-      for(unsigned int i = 0; i < MAX_COMPONENT_SIZE ; i++)
+      uint16_t num_components = 0;
+      uint16_t num_component_nodes = 0;
+      uint16_t size_of_components[MAX_COMPONENT_SIZE];
+      for(uint16_t i = 0; i < MAX_COMPONENT_SIZE ; i++)
         size_of_components[i] = 0;
 
 
@@ -670,7 +670,7 @@ int main (int argc, char ** argv){
           processed[first_node] = true;
           // iterate through the rest of the component and compare each label to the one of the first node
           // this makes sure, that each found component is also a component in the reference
-          for(unsigned int i = 1; i < component_size ; i++){
+          for(uint16_t i = 1; i < component_size ; i++){
             node = ev_out_components[ev][idx];
             idx++;
             num_component_nodes++;
@@ -688,7 +688,7 @@ int main (int argc, char ** argv){
             processed[node] = true;
           }
           // iterate through all reference-labels and make sure that no other nodes were supposed to be part of that component
-          for(unsigned int i = 0; i < ev_num_nodes[ev] ; i++){
+          for(uint16_t i = 0; i < ev_num_nodes[ev] ; i++){
             if(!processed[i] && ev_ref_labels[ev][i] == label){
               num_errors++;
               num_errors_1++;
@@ -704,7 +704,7 @@ int main (int argc, char ** argv){
         }
       }
       // make sure no component has been forgotten
-      for(unsigned int i = 0; i < ev_num_nodes[ev] ; i++){
+      for(uint16_t i = 0; i < ev_num_nodes[ev] ; i++){
         if(!processed[i]){
           if(first_free_node){
             first_free_node = false;
@@ -727,7 +727,7 @@ int main (int argc, char ** argv){
         std::cout << "[    ]\n[    ] [" << ev << "] TEST PASSED" << std::endl;
         std::cout << "[    ] [" << ev << "] output-size: " << output_size << " #components: " << num_components << " #component-nodes: " << num_component_nodes << std::endl;
         std::cout << "[    ] [" << ev << "] #component / comp-size (starting at size 0): [" << size_of_components[0];
-        for(unsigned int i = 1; i < MAX_COMPONENT_SIZE ; i++)
+        for(uint16_t i = 1; i < MAX_COMPONENT_SIZE ; i++)
           std::cout << "," << size_of_components[i];
         std::cout << "]" << std::endl;
       } else {
@@ -750,7 +750,7 @@ int main (int argc, char ** argv){
   // Free allocated memory
   //
   //============================================
-  for(unsigned int ev = 0; ev < num_events ; ev++){
+  for(uint16_t ev = 0; ev < num_events ; ev++){
     delete ev_in_full_graph[ev];
     delete ev_in_scores[ev];
     delete ev_out_components[ev];

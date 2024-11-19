@@ -12,6 +12,6 @@
 #define CSV_FILE "dat/event005001514.csv"
 
 extern "C" {
-  void CCL( unsigned int* in_full_graph, float* in_scores, unsigned int* out_components, unsigned int num_nodes, float cutoff);
+  void CCL( uint16_t* in_full_graph, float* in_scores, uint16_t* out_components, uint16_t num_nodes, float cutoff);
 }
 #endif // TEST_KERNELS_H

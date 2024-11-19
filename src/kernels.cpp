@@ -82,7 +82,9 @@ static void print_filtered_sub(unsigned int* sg0, unsigned int nn0, unsigned int
 }
 */
 
-static void sub_filter(unsigned int* sub_full, float* sub_scores, unsigned int m_num_nodes, unsigned int* m_sub_graph, uint8_t diff) {
+static void sub_filter(unsigned int* sub_full, float* sub_scores, unsigned int m_num_nodes, unsigned int* m_sub_graph, hls::stream<unsigned int>& ctrl, uint8_t diff) {
+
+  ctrl << 0;
 
   #pragma HLS INLINE OFF
   #pragma HLS FUNCTION_INSTANTIATE variable=diff
@@ -103,51 +105,89 @@ static void sub_filter(unsigned int* sub_full, float* sub_scores, unsigned int m
       m_sub_graph[row * MAX_EDGES] = connections;
     }
   }
+  ctrl << 1;
 }
 
-static void filter( unsigned int* sub_full_0, float* sub_scores_0, unsigned int* sub_graph_0, unsigned int num_nodes_0,
-                    unsigned int* sub_full_1, float* sub_scores_1, unsigned int* sub_graph_1, unsigned int num_nodes_1,
-                    unsigned int* sub_full_2, float* sub_scores_2, unsigned int* sub_graph_2, unsigned int num_nodes_2,
-                    unsigned int* sub_full_3, float* sub_scores_3, unsigned int* sub_graph_3, unsigned int num_nodes_3) {
-  
-  #pragma HLS dataflow
-
-  sub_filter(sub_full_0, sub_scores_0, num_nodes_0, sub_graph_0, 0);
-  sub_filter(sub_full_1, sub_scores_1, num_nodes_1, sub_graph_1, 1);
-  sub_filter(sub_full_2, sub_scores_2, num_nodes_2, sub_graph_2, 2);
-  sub_filter(sub_full_3, sub_scores_3, num_nodes_3, sub_graph_3, 3);
-
-}
+// static void filter( unsigned int* sub_full_0, float* sub_scores_0, unsigned int* sub_graph_0, unsigned int num_nodes_0,
+//                     unsigned int* sub_full_1, float* sub_scores_1, unsigned int* sub_graph_1, unsigned int num_nodes_1,
+//                     unsigned int* sub_full_2, float* sub_scores_2, unsigned int* sub_graph_2, unsigned int num_nodes_2,
+//                     unsigned int* sub_full_3, float* sub_scores_3, unsigned int* sub_graph_3, unsigned int num_nodes_3) {
+//   #pragma HLS dataflow
+//   sub_filter(sub_full_0, sub_scores_0, num_nodes_0, sub_graph_0, 0);
+//   sub_filter(sub_full_1, sub_scores_1, num_nodes_1, sub_graph_1, 1);
+//   sub_filter(sub_full_2, sub_scores_2, num_nodes_2, sub_graph_2, 2);
+//   sub_filter(sub_full_3, sub_scores_3, num_nodes_3, sub_graph_3, 3);
+// }
 
 static void compress( unsigned int* sub_0, unsigned int* sub_1, unsigned int* sub_2, unsigned int* sub_3, unsigned int* m_graph,
                       unsigned int num_nodes_0, unsigned int num_nodes_1, unsigned int num_nodes_2, unsigned int num_nodes_3,
-                      unsigned int* m_lookup, unsigned int* m_lookup_filter, unsigned int& m_graph_size, unsigned int m_num_nodes, hls::stream<unsigned int>& midStream) {
+                      unsigned int* m_lookup, unsigned int* m_lookup_filter, unsigned int& m_graph_size, unsigned int m_num_nodes,
+                      hls::stream<unsigned int>& ctrl_0, hls::stream<unsigned int>& ctrl_1, hls::stream<unsigned int>& ctrl_2, hls::stream<unsigned int>& ctrl_3, hls::stream<unsigned int>& midStream) {
 
-  midStream << 48; // 92;
+  midStream << 48 * 2; // 92;
 
   unsigned int height = 3;
   unsigned int width = 3;
-  for(unsigned int i = 0; i < height; i++){
-    midStream << width;
-    for(unsigned int j = 0; j < width; j++)
-      midStream << sub_0[i * MAX_EDGES + j];
-  }
-  for(unsigned int i = 0; i < height; i++){
-    midStream << width;
-    for(unsigned int j = 0; j < width; j++)
-      midStream << sub_1[i * MAX_EDGES + j];
-  }
-  for(unsigned int i = 0; i < height; i++){
-    midStream << width;
-    for(unsigned int j = 0; j < width; j++)
-      midStream << sub_2[i * MAX_EDGES + j];
-  }
-  for(unsigned int i = 0; i < height; i++){
-    midStream << width;
-    for(unsigned int j = 0; j < width; j++)
-      midStream << sub_3[i * MAX_EDGES + j];
+  {
+    for(unsigned int i = 0; i < height; i++){
+      midStream << width;
+      for(unsigned int j = 0; j < width; j++)
+        midStream << sub_0[i * MAX_EDGES + j];
+    }
+    for(unsigned int i = 0; i < height; i++){
+      midStream << width;
+      for(unsigned int j = 0; j < width; j++)
+        midStream << sub_1[i * MAX_EDGES + j];
+    }
+    for(unsigned int i = 0; i < height; i++){
+      midStream << width;
+      for(unsigned int j = 0; j < width; j++)
+        midStream << sub_2[i * MAX_EDGES + j];
+    }
+    for(unsigned int i = 0; i < height; i++){
+      midStream << width;
+      for(unsigned int j = 0; j < width; j++)
+        midStream << sub_3[i * MAX_EDGES + j];
+    }
   }
 
+  bool filter_running = true;
+  unsigned int status[4] = {0, 0, 0, 0};
+  while(filter_running){
+    if(ctrl_0.size() > 0)
+      status[0] = ctrl_0.read();
+    if(ctrl_1.size() > 0)
+      status[1] = ctrl_1.read();
+    if(ctrl_2.size() > 0)
+      status[2] = ctrl_2.read();
+    if(ctrl_3.size() > 0)
+      status[3] = ctrl_3.read();
+    if(status[0] == 1 && status[1] == 1 && status[2] == 1 && status[3] == 1)
+      filter_running = false;
+  }
+
+  {
+    for(unsigned int i = 0; i < height; i++){
+      midStream << width;
+      for(unsigned int j = 0; j < width; j++)
+        midStream << sub_0[i * MAX_EDGES + j];
+    }
+    for(unsigned int i = 0; i < height; i++){
+      midStream << width;
+      for(unsigned int j = 0; j < width; j++)
+        midStream << sub_1[i * MAX_EDGES + j];
+    }
+    for(unsigned int i = 0; i < height; i++){
+      midStream << width;
+      for(unsigned int j = 0; j < width; j++)
+        midStream << sub_2[i * MAX_EDGES + j];
+    }
+    for(unsigned int i = 0; i < height; i++){
+      midStream << width;
+      for(unsigned int j = 0; j < width; j++)
+        midStream << sub_3[i * MAX_EDGES + j];
+    }
+  }
 
   unsigned int new_from, new_to;
   m_graph_size = 1; // has to start at 1, cause 0 indicates that no index has been given yet
@@ -487,6 +527,10 @@ extern "C" {
 
     static hls::stream<unsigned int> outStream_components("output_stream_components");
     static hls::stream<unsigned int> midStream_temp("midStream");
+    static hls::stream<unsigned int> ctrl_stream_0("ctrl_stream_0");
+    static hls::stream<unsigned int> ctrl_stream_1("ctrl_stream_1");
+    static hls::stream<unsigned int> ctrl_stream_2("ctrl_stream_2");
+    static hls::stream<unsigned int> ctrl_stream_3("ctrl_stream_3");
     static unsigned int graph_size;
     #pragma HLS STREAM variable=graph_size type=pipo
 
@@ -494,12 +538,20 @@ extern "C" {
 
     // print_sub_full(in_full_graph_sub_0, in_scores_sub_0, in_num_nodes[1], in_full_graph_sub_1, in_scores_sub_1, in_num_nodes[2], in_full_graph_sub_2, in_scores_sub_2, in_num_nodes[3], in_full_graph_sub_3, in_scores_sub_3, in_num_nodes[4]);
 
-    filter( in_full_graph_sub_0, in_scores_sub_0, io_graph_sub_0, in_num_nodes[1],
-            in_full_graph_sub_1, in_scores_sub_1, io_graph_sub_1, in_num_nodes[2],
-            in_full_graph_sub_2, in_scores_sub_2, io_graph_sub_2, in_num_nodes[3],
-            in_full_graph_sub_3, in_scores_sub_3, io_graph_sub_3, in_num_nodes[4]);
+    // filter( in_full_graph_sub_0, in_scores_sub_0, io_graph_sub_0, in_num_nodes[1],
+    //         in_full_graph_sub_1, in_scores_sub_1, io_graph_sub_1, in_num_nodes[2],
+    //         in_full_graph_sub_2, in_scores_sub_2, io_graph_sub_2, in_num_nodes[3],
+    //         in_full_graph_sub_3, in_scores_sub_3, io_graph_sub_3, in_num_nodes[4]);
 
-    compress(io_graph_sub_0, io_graph_sub_1, io_graph_sub_2, io_graph_sub_3, io_graph_main, in_num_nodes[1], in_num_nodes[2], in_num_nodes[3], in_num_nodes[4], io_lookup, io_lookup_filter, graph_size, in_num_nodes[1], midStream_temp);
+    sub_filter(in_full_graph_sub_0, in_scores_sub_0, in_num_nodes[1], io_graph_sub_0, ctrl_stream_0, 0);
+    sub_filter(in_full_graph_sub_1, in_scores_sub_1, in_num_nodes[2], io_graph_sub_1, ctrl_stream_1, 1);
+    sub_filter(in_full_graph_sub_2, in_scores_sub_2, in_num_nodes[3], io_graph_sub_2, ctrl_stream_2, 2);
+    sub_filter(in_full_graph_sub_3, in_scores_sub_3, in_num_nodes[4], io_graph_sub_3, ctrl_stream_3, 3);
+
+    compress( io_graph_sub_0, io_graph_sub_1, io_graph_sub_2, io_graph_sub_3, io_graph_main,
+              in_num_nodes[1], in_num_nodes[2], in_num_nodes[3], in_num_nodes[4],
+              io_lookup, io_lookup_filter, graph_size, in_num_nodes[1],
+              ctrl_stream_0, ctrl_stream_1, ctrl_stream_2, ctrl_stream_3, midStream_temp);
 
     compute_core(io_graph_main, graph_size, outStream_components, midStream_temp, io_lookup);
     write_components(out_components, outStream_components);

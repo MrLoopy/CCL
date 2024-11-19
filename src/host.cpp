@@ -783,7 +783,7 @@ int main (int argc, char ** argv){
       unsigned int node = 0;
       unsigned int first_node = 0;
       unsigned int label = 0;
-      unsigned int idx = 1;
+      unsigned int idx = 141; // 96 + 44 + 1 //1;
       unsigned int output_size = ev_out_components[ev][0];
 
       if(output_size < 160){

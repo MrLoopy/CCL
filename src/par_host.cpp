@@ -75,8 +75,10 @@ struct thread_timing{
 struct kernel_buffers{
   xrt::device device;
   xrt::kernel kernel;
-  xrt::bo in_full_graph;
-  xrt::bo in_scores;
+  xrt::bo in_full_graph_0;
+  xrt::bo in_full_graph_1;
+  xrt::bo in_scores_0;
+  xrt::bo in_scores_1;
   xrt::bo inout_graph;
   xrt::bo inout_lookup;
   xrt::bo inout_lookup_filter;
@@ -84,8 +86,12 @@ struct kernel_buffers{
   kernel_buffers(xrt::device &m_device, xrt::kernel &m_kernel){
     device = m_device;
     kernel = m_kernel;
-    in_full_graph = xrt::bo(device, size_full_graph_byte, kernel.group_id(0));
-    in_scores = xrt::bo(device, size_scores_byte, kernel.group_id(1));
+    // in_full_graph = xrt::bo(device, size_full_graph_byte, kernel.group_id(0));
+    // in_scores = xrt::bo(device, size_scores_byte, kernel.group_id(1));
+    in_full_graph_0 = xrt::bo(device, size_full_graph_byte, kernel.group_id(0));
+    in_full_graph_1 = xrt::bo(device, size_full_graph_byte, kernel.group_id(0));
+    in_scores_0 = xrt::bo(device, size_scores_byte, kernel.group_id(1));
+    in_scores_1 = xrt::bo(device, size_scores_byte, kernel.group_id(1));
     inout_graph = xrt::bo(device, size_graph_byte, kernel.group_id(2));
     inout_lookup = xrt::bo(device, size_lookup_byte, kernel.group_id(3));
     inout_lookup_filter = xrt::bo(device, size_lookup_filter_byte, kernel.group_id(4));
@@ -93,15 +99,21 @@ struct kernel_buffers{
   }
 };
 struct kernel_maps{
-  unsigned int* in_full_graph;
-  float* in_scores;
+  unsigned int* in_full_graph_0;
+  unsigned int* in_full_graph_1;
+  float* in_scores_0;
+  float* in_scores_1;
   unsigned int* inout_graph;
   unsigned int* inout_lookup;
   unsigned int* inout_lookup_filter;
   unsigned int* out_components;
   kernel_maps(kernel_buffers &m_bo){
-    in_full_graph = m_bo.in_full_graph.map<unsigned int*>();
-    in_scores = m_bo.in_scores.map<float*>();
+    // in_full_graph = m_bo.in_full_graph.map<unsigned int*>();
+    // in_scores = m_bo.in_scores.map<float*>();
+    in_full_graph_0 = m_bo.in_full_graph_0.map<unsigned int*>();
+    in_full_graph_1 = m_bo.in_full_graph_1.map<unsigned int*>();
+    in_scores_0 = m_bo.in_scores_0.map<float*>();
+    in_scores_1 = m_bo.in_scores_1.map<float*>();
     inout_graph = m_bo.inout_graph.map<unsigned int*>();
     inout_lookup = m_bo.inout_lookup.map<unsigned int*>();
     inout_lookup_filter = m_bo.inout_lookup_filter.map<unsigned int*>();
@@ -520,8 +532,10 @@ int main (int argc, char ** argv){
     //
     std::cout << "[    ] [" << ev << "] Write Event to Global Memory Buffer" << std::endl;
     for(unsigned int i = 0; i < size_scores ; i++){
-      maps.in_full_graph[i] = ev_in_full_graph[ev][i];
-      maps.in_scores[i] = ev_in_scores[ev][i];
+      maps.in_full_graph_0[i] = ev_in_full_graph[ev][i];
+      maps.in_full_graph_1[i] = ev_in_full_graph[ev][i];
+      maps.in_scores_0[i] = ev_in_scores[ev][i];
+      maps.in_scores_1[i] = ev_in_scores[ev][i];
     }
     std::fill(maps.inout_graph, maps.inout_graph + size_graph, 0.0);
     std::fill(maps.inout_lookup, maps.inout_lookup + size_lookup, 0);
@@ -533,8 +547,10 @@ int main (int argc, char ** argv){
     // Synchronize input buffer data to device global memory
     //
     std::cout << "[    ] [" << ev << "] Synchronize input buffer data to device global memory" << std::endl;
-    bo.in_full_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.in_scores.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.in_full_graph_0.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.in_full_graph_1.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.in_scores_0.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.in_scores_1.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     bo.inout_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     bo.inout_lookup.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     bo.inout_lookup_filter.sync(XCL_BO_SYNC_BO_TO_DEVICE);
@@ -545,7 +561,7 @@ int main (int argc, char ** argv){
     // Execute Kernel
     //
     std::cout << "[    ] [" << ev << "] Start Kernel" << std::endl;
-    auto run = bo.kernel(bo.in_full_graph, bo.in_scores, bo.inout_graph, bo.inout_lookup, bo.inout_lookup_filter, bo.out_components, ev_num_nodes[ev], cutoff);
+    auto run = bo.kernel(bo.in_full_graph_0, bo.in_full_graph_1, bo.in_scores_0, bo.in_scores_1, bo.inout_graph, bo.inout_lookup, bo.inout_lookup_filter, bo.out_components, ev_num_nodes[ev], cutoff);
     timing.krnl_started.push_back(std::chrono::system_clock::now());
     std::cout << "[    ] [" << ev << "] Wait for Kernel to finish" << std::endl;
     run.wait();

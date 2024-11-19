@@ -375,10 +375,12 @@ static void write_components(unsigned int* out, hls::stream<unsigned int>& outSt
 
 extern "C" {
 
-  void CCL( unsigned int* in_full_graph, float* in_scores, unsigned int* io_graph, unsigned int* io_lookup, unsigned int* io_lookup_filter, unsigned int* out_components, unsigned int num_nodes, float cutoff) {
+  void CCL( unsigned int* in_full_graph_0, unsigned int* in_full_graph_1, float* in_scores_0, float* in_scores_1, unsigned int* io_graph, unsigned int* io_lookup, unsigned int* io_lookup_filter, unsigned int* out_components, unsigned int num_nodes, float cutoff) {
     
-    #pragma HLS INTERFACE m_axi port = in_full_graph     bundle=gmem0 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = in_scores         bundle=gmem1 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_full_graph_0   bundle=gmem0 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_full_graph_1   bundle=gmem0 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_scores_0       bundle=gmem1 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_scores_1       bundle=gmem1 max_widen_bitwidth=512
     #pragma HLS INTERFACE m_axi port = io_graph          bundle=gmem2 max_widen_bitwidth=512
     #pragma HLS INTERFACE m_axi port = io_lookup         bundle=gmem3 max_widen_bitwidth=512
     #pragma HLS INTERFACE m_axi port = io_lookup_filter  bundle=gmem4 max_widen_bitwidth=512
@@ -396,8 +398,8 @@ extern "C" {
 
     // compute_direct(cutoff, in_full_graph, in_scores, io_lookup_filter, outStream_components, num_nodes);
 
-    sub_direct(cutoff, in_full_graph, in_scores, stream_out_0, 0, num_nodes / 2);
-    sub_direct(cutoff, in_full_graph, in_scores, stream_out_1, num_nodes / 2, num_nodes);
+    sub_direct(cutoff, in_full_graph_0, in_scores_0, stream_out_0, 0, num_nodes / 2);
+    sub_direct(cutoff, in_full_graph_1, in_scores_1, stream_out_1, num_nodes / 2, num_nodes);
 
     merge_streams(outStream_components, stream_out_0, stream_out_1);
 

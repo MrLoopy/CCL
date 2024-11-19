@@ -132,6 +132,217 @@ static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::s
   outStream << 0;
 }
 
+static void compute_direct(float m_cutoff, unsigned int* full_graph, float* scores, unsigned int* processed, hls::stream<unsigned int>& outStream, unsigned int num_nodes){
+  // use lookup_filter as processed, has same length = MAX_TOTAL_NODES
+
+  unsigned int component[MAX_COMPONENT_SIZE];
+  unsigned int current_component_size = 0;
+  unsigned int processed_nodes = 0;
+  unsigned int next_node = 0;
+  bool found_component = true;
+  bool new_row = true;
+
+  direct_rows: for(unsigned int row = 0; row < num_nodes; row++){
+    if(full_graph[row * MAX_FULL_GRAPH_EDGES] > 0 && processed[row] == 0){
+      if(found_component){
+        found_component = false;
+        new_row = true;
+        current_component_size = 0;
+        processed_nodes = 0;
+        direct_reset: for(unsigned int i = 0; i < MAX_COMPONENT_SIZE; i++){
+          // #pragma HLS unroll
+          component[i] = 4294967295;
+        }
+      }
+      direct_nodes: for (unsigned int i = 0; i < full_graph[row * MAX_FULL_GRAPH_EDGES]; i++)
+        if(scores[row * MAX_FULL_GRAPH_EDGES + i] > m_cutoff){
+          found_component = true;
+          bool new_node = true;
+          direct_check_row: for(unsigned int j = 0 ; j < current_component_size; j++){
+            // #pragma HLS unroll
+            if(component[j] == row)
+              new_row = false;
+            if(component[j] == full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i])
+              new_node = false;
+          }
+          if(new_row){
+            component[current_component_size] = row;
+            current_component_size++;
+          }
+          if(new_node){
+            component[current_component_size] = full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i];
+            current_component_size++;
+          }
+        }
+      if(found_component){
+        // row already processed
+        processed[row] = 1;
+        processed_nodes++;
+
+        direct_while: while(current_component_size != processed_nodes){
+          next_node = component[processed_nodes];
+          direct_connections: for(unsigned int i = 0 ; i < full_graph[next_node * MAX_FULL_GRAPH_EDGES]; i++){
+            if(scores[next_node * MAX_FULL_GRAPH_EDGES + i] > m_cutoff 
+            && processed[full_graph[next_node * MAX_FULL_GRAPH_EDGES + 1 + i]] == 0 
+            && current_component_size < MAX_COMPONENT_SIZE){
+              bool new_node = true;
+              direct_check_component: for(unsigned int j = 0 ; j < current_component_size; j++){
+                // #pragma HLS unroll
+                  if(component[j] == full_graph[next_node * MAX_FULL_GRAPH_EDGES + 1 + i])
+                    new_node = false;
+              }
+              if(new_node){
+                component[current_component_size] = full_graph[next_node * MAX_FULL_GRAPH_EDGES + 1 + i];
+                current_component_size++;
+              }
+            }
+          }
+          processed[next_node] = 1;
+          processed_nodes++;
+        }
+        // write output
+        outStream << current_component_size;
+        direct_write_output: for (unsigned int i = 0; i < current_component_size; i++)
+          outStream << component[i];
+      }
+    }
+  }
+  outStream << 0;
+}
+
+static void sub_direct(float m_cutoff, unsigned int* full_graph, float* scores, hls::stream<unsigned int>& outStream, unsigned int start, unsigned int end){
+  // use lookup_filter as processed, has same length = MAX_TOTAL_NODES
+
+  unsigned int component[MAX_COMPONENT_SIZE];
+  unsigned int current_component_size = 0;
+  unsigned int processed_nodes = 0;
+  unsigned int next_node = 0;
+  bool found_component = true;
+  bool new_row = true;
+  bool processed[MAX_TOTAL_NODES];
+  direct_reset_processed: for(unsigned int i = 0; i < MAX_TOTAL_NODES; i++)
+    processed[i] = false;
+
+  direct_rows: for(unsigned int row = start; row < end; row++){
+    if(full_graph[row * MAX_FULL_GRAPH_EDGES] > 0 && processed[row] == 0){
+      if(found_component){
+        found_component = false;
+        new_row = true;
+        current_component_size = 0;
+        processed_nodes = 0;
+        direct_reset: for(unsigned int i = 0; i < MAX_COMPONENT_SIZE; i++){
+          // #pragma HLS unroll
+          component[i] = 4294967295;
+        }
+      }
+      direct_nodes: for (unsigned int i = 0; i < full_graph[row * MAX_FULL_GRAPH_EDGES]; i++)
+        if(scores[row * MAX_FULL_GRAPH_EDGES + i] > m_cutoff){
+          found_component = true;
+          bool new_node = true;
+          direct_check_row: for(unsigned int j = 0 ; j < current_component_size; j++){
+            // #pragma HLS unroll
+            if(component[j] == row)
+              new_row = false;
+            if(component[j] == full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i])
+              new_node = false;
+          }
+          if(new_row){
+            component[current_component_size] = row;
+            current_component_size++;
+          }
+          if(new_node){
+            component[current_component_size] = full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i];
+            current_component_size++;
+          }
+        }
+      if(found_component){
+        // row already processed
+        processed[row] = 1;
+        processed_nodes++;
+
+        direct_while: while(current_component_size != processed_nodes){
+          next_node = component[processed_nodes];
+          direct_connections: for(unsigned int i = 0 ; i < full_graph[next_node * MAX_FULL_GRAPH_EDGES]; i++){
+            if(scores[next_node * MAX_FULL_GRAPH_EDGES + i] > m_cutoff 
+            && processed[full_graph[next_node * MAX_FULL_GRAPH_EDGES + 1 + i]] == 0 
+            && current_component_size < MAX_COMPONENT_SIZE){
+              bool new_node = true;
+              direct_check_component: for(unsigned int j = 0 ; j < current_component_size; j++){
+                // #pragma HLS unroll
+                  if(component[j] == full_graph[next_node * MAX_FULL_GRAPH_EDGES + 1 + i])
+                    new_node = false;
+              }
+              if(new_node){
+                component[current_component_size] = full_graph[next_node * MAX_FULL_GRAPH_EDGES + 1 + i];
+                current_component_size++;
+              }
+            }
+          }
+          processed[next_node] = 1;
+          processed_nodes++;
+        }
+        // write output
+        outStream << current_component_size;
+        direct_write_output: for (unsigned int i = 0; i < current_component_size; i++)
+          outStream << component[i];
+      }
+    }
+  }
+  outStream << 0;
+}
+
+static void merge_streams(hls::stream<unsigned int>& outStream, hls::stream<unsigned int>& stream_0, hls::stream<unsigned int>& stream_1) {
+
+  bool str_0 = true;
+  bool str_1 = true;
+  bool strms = true;
+  unsigned int component_size = 0;
+
+  merge_while:
+  while(strms){
+    if(stream_0.size() > 0){
+      // every first number of each component is the size of the component;
+      component_size = stream_0.read();
+      // if the size == 0, the end of the stream is reached, the total size can be written and the writing ended
+      if(component_size == 0){
+        str_0 = false;
+        if(!str_0 && !str_1){
+          outStream << 0;
+          strms = false;
+          break;
+        }
+      }
+      else{
+        // if the stream is still running, the size of the component is written, followed by all its node-indices
+        outStream << component_size;
+        merge_write_nodes_0:
+        for (unsigned int i = 0; i < component_size; i++)
+          outStream << stream_0.read();
+      }
+    }
+    if(stream_1.size() > 0){
+      // every first number of each component is the size of the component;
+      component_size = stream_1.read();
+      // if the size == 0, the end of the stream is reached, the total size can be written and the writing ended
+      if(component_size == 0){
+        str_1 = false;
+        if(!str_0 && !str_1){
+          outStream << 0;
+          strms = false;
+          break;
+        }
+      }
+      else{
+        // if the stream is still running, the size of the component is written, followed by all its node-indices
+        outStream << component_size;
+        merge_write_nodes_1:
+        for (unsigned int i = 0; i < component_size; i++)
+          outStream << stream_1.read();
+      }
+    }
+  }
+}
+
 static void write_components(unsigned int* out, hls::stream<unsigned int>& outStream, unsigned int size) {
 
   bool stream_running = true;
@@ -174,12 +385,22 @@ extern "C" {
     #pragma HLS INTERFACE m_axi port = out_components    bundle=gmem5 max_widen_bitwidth=512
 
     static hls::stream<unsigned int> outStream_components("output_stream_components");
+    static hls::stream<unsigned int> stream_out_0("stream_0");
+    static hls::stream<unsigned int> stream_out_1("stream_1");
     static unsigned int graph_size;
     #pragma HLS STREAM variable=graph_size type=pipo
 
     #pragma HLS dataflow
-    filter_memory(cutoff, in_full_graph, in_scores, num_nodes, io_graph, io_lookup, io_lookup_filter, graph_size);
-    compute_core(io_graph, graph_size, outStream_components, io_lookup);
+    // filter_memory(cutoff, in_full_graph, in_scores, num_nodes, io_graph, io_lookup, io_lookup_filter, graph_size);
+    // compute_core(io_graph, graph_size, outStream_components, io_lookup);
+
+    // compute_direct(cutoff, in_full_graph, in_scores, io_lookup_filter, outStream_components, num_nodes);
+
+    sub_direct(cutoff, in_full_graph, in_scores, stream_out_0, 0, num_nodes / 2);
+    sub_direct(cutoff, in_full_graph, in_scores, stream_out_1, num_nodes / 2, num_nodes);
+
+    merge_streams(outStream_components, stream_out_0, stream_out_1);
+
     write_components(out_components, outStream_components, num_nodes);
 
   }

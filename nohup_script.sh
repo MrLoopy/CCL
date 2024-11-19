@@ -6,7 +6,7 @@ path_sw_from="out/emu_sw.p_xilinx_u280_gen3x16.mode_debug"
 path_sw_to="condor/results/sw_"
 
 path_form=${path_hw_from}
-path_to="condor/results/sweep/"
+path_to="condor/results/sweep/hw_"
 # path_to="dat/archive/2024.11.01 pipe/"
 
 # echo -e "\n##########################################################################################################################"
@@ -32,13 +32,14 @@ compile_and_run () {
     echo -e "[$(date +%H:%M:%S)] run the code\n\n"
     ./test_run.sh
     echo -e "\n[$(date +%H:%M:%S)] copy results back to condor/results/sweep/hw_$1_$2\n"
-    cp -R "${path_form}" "${path_to}hw_$1_$2"
+    cp -R "${path_form}" "${path_to}$1_$2"
 }
 
-compile_and_run "256" "URAM"
-compile_and_run "128" "URAM"
-compile_and_run "64" "URAM"
 compile_and_run "32" "URAM"
+compile_and_run "64" "URAM"
+compile_and_run "32" "CTRL"
+compile_and_run "64" "CTRL"
+compile_and_run "128" "CTRL"
 compile_and_run "256" "HBM"
 
 echo -e "\n\n\n##########################################################################################################################"

@@ -9,6 +9,8 @@
 #define MAX_TRUE_NODES 65536 //512
 #define MAX_COMPONENTS 8192 //64
 
+#define DIRECT_SPLIT 2
+
 #define CSV_FILE "dat/event005001514.csv"
 
 extern "C" {

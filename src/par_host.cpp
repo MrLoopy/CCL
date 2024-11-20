@@ -27,7 +27,7 @@
 //
 //============================================
 const u_int32_t num_threads = 1;
-const std::vector<std::string> csv_names = {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; //, "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/reg/r_event005008301.csv", "dat/reg/r_event005008302.csv", "dat/reg/r_event005008303.csv", "dat/reg/r_event005008304.csv", "dat/reg/r_event005008306.csv", "dat/reg/r_event005008308.csv", "dat/reg/r_event005008310.csv", "dat/reg/r_event005008312.csv"}; // {"dat/event005001514.csv", "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
+const std::vector<std::string> csv_names = {"dat/event005001514.csv", "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/reg/r_event005008301.csv", "dat/reg/r_event005008302.csv", "dat/reg/r_event005008303.csv", "dat/reg/r_event005008304.csv", "dat/reg/r_event005008306.csv", "dat/reg/r_event005008308.csv", "dat/reg/r_event005008310.csv", "dat/reg/r_event005008312.csv"}; // {"dat/event005001514.csv", "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
 const u_int32_t num_events = (const u_int32_t)csv_names.size();
 const float cutoff = 0.5;
 
@@ -89,13 +89,13 @@ struct kernel_buffers{
     // in_full_graph = xrt::bo(device, size_full_graph_byte, kernel.group_id(0));
     // in_scores = xrt::bo(device, size_scores_byte, kernel.group_id(1));
     in_full_graph_0 = xrt::bo(device, size_full_graph_byte, kernel.group_id(0));
-    in_full_graph_1 = xrt::bo(device, size_full_graph_byte, kernel.group_id(0));
-    in_scores_0 = xrt::bo(device, size_scores_byte, kernel.group_id(1));
-    in_scores_1 = xrt::bo(device, size_scores_byte, kernel.group_id(1));
-    inout_graph = xrt::bo(device, size_graph_byte, kernel.group_id(2));
-    inout_lookup = xrt::bo(device, size_lookup_byte, kernel.group_id(3));
-    inout_lookup_filter = xrt::bo(device, size_lookup_filter_byte, kernel.group_id(4));
-    out_components = xrt::bo(device, size_components_byte, kernel.group_id(5));
+    in_full_graph_1 = xrt::bo(device, size_full_graph_byte, kernel.group_id(1));
+    in_scores_0 = xrt::bo(device, size_scores_byte, kernel.group_id(2));
+    in_scores_1 = xrt::bo(device, size_scores_byte, kernel.group_id(3));
+    inout_graph = xrt::bo(device, size_graph_byte, kernel.group_id(4));
+    inout_lookup = xrt::bo(device, size_lookup_byte, kernel.group_id(5));
+    inout_lookup_filter = xrt::bo(device, size_lookup_filter_byte, kernel.group_id(6));
+    out_components = xrt::bo(device, size_components_byte, kernel.group_id(7));
   }
 };
 struct kernel_maps{

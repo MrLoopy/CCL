@@ -378,13 +378,13 @@ extern "C" {
   void CCL( unsigned int* in_full_graph_0, unsigned int* in_full_graph_1, float* in_scores_0, float* in_scores_1, unsigned int* io_graph, unsigned int* io_lookup, unsigned int* io_lookup_filter, unsigned int* out_components, unsigned int num_nodes, float cutoff) {
     
     #pragma HLS INTERFACE m_axi port = in_full_graph_0   bundle=gmem0 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = in_full_graph_1   bundle=gmem0 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = in_scores_0       bundle=gmem1 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = in_scores_1       bundle=gmem1 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_graph          bundle=gmem2 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_lookup         bundle=gmem3 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_lookup_filter  bundle=gmem4 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = out_components    bundle=gmem5 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_full_graph_1   bundle=gmem1 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_scores_0       bundle=gmem2 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_scores_1       bundle=gmem3 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_graph          bundle=gmem4 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_lookup         bundle=gmem5 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_lookup_filter  bundle=gmem6 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = out_components    bundle=gmem7 max_widen_bitwidth=512
 
     static hls::stream<unsigned int> outStream_components("output_stream_components");
     static hls::stream<unsigned int> stream_out_0("stream_0");

@@ -205,6 +205,40 @@ ${OBJDIR}/par_kernels.xo: ${FPGA_PATH2SRC}/par_kernels.cpp
 	       	-k CCL \
 	       	-I ${FPGA_PATH2INC} ${FPGA_PATH2SRC}/par_kernels.cpp -o ${OBJDIR}/par_kernels.xo
 
+#
+# Compile LARGE files
+#
+large: ${OBJDIR}/large_host.o ${OBJDIR}/large_kernels.o ${OBJDIR}/large_kernels.xo ${BINDIR}/large_kernels.xclbin all
+	@echo "[MAKE LARGE][$$(date +%H:%M:%S)] compile binary"
+	$(CC) $(CFLAGS) ${OBJDIR}/large_host.o ${OBJDIR}/large_kernels.o -o ${BINDIR}/${EXE} $(LDFLAGS)
+
+${OBJDIR}/large_kernels.o: ${SRCDIR}/large_kernels.cpp
+	@echo "[MAKE LARGE][$$(date +%H:%M:%S)] compile kernel"
+	$(CC) $(CFLAGS) -c ${SRCDIR}/large_kernels.cpp -o ${OBJDIR}/large_kernels.o
+
+${OBJDIR}/large_host.o: ${SRCDIR}/large_host.cpp
+	@echo "[MAKE LARGE][$$(date +%H:%M:%S)] compile host"
+	$(CC) $(CFLAGS) -c ${SRCDIR}/large_host.cpp -o ${OBJDIR}/large_host.o
+
+# Compile with V++
+${BINDIR}/large_kernels.xclbin: ${OBJDIR}/large_kernels.xo
+	@echo "[MAKE LARGE][$$(date +%H:%M:%S)] compile .xclbin"
+	$(VV) -g -l -t ${XCL_EMULATION_MODE_CHANGED} \
+	       	--platform ${FPGA_PLATFORM} \
+	       	--config ${FPGA_PATH2CONF}/large_u280.cfg \
+	       	${OBJDIR}/large_kernels.xo -o ${BINDIR}/large_kernels.xclbin
+	@rm -rf ${FPGA_PATH2EMU}/_x .Xil
+	@mv _x ${FPGA_PATH2EMU}/
+	@mv *.log $(LOGDIR)/
+
+${OBJDIR}/large_kernels.xo: ${FPGA_PATH2SRC}/large_kernels.cpp
+	@echo "[MAKE LARGE][$$(date +%H:%M:%S)] compile .xo"
+	$(VV) -g -c -t ${XCL_EMULATION_MODE_CHANGED} \
+	       	--platform ${FPGA_PLATFORM} \
+	       	--config ${FPGA_PATH2CONF}/large_u280.cfg \
+	       	-k CCL \
+	       	-I ${FPGA_PATH2INC} ${FPGA_PATH2SRC}/large_kernels.cpp -o ${OBJDIR}/large_kernels.xo
+
 # TODO GET RID OF LOG FILES
 all: 
 #	@mv *.log $(LOGDIR)/.

@@ -33,16 +33,14 @@ const float cutoff = 0.5;
 
 u_int32_t size_full_graph = MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;
 u_int32_t size_scores = MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;
-u_int32_t size_graph = MAX_TRUE_NODES * MAX_EDGES;
-u_int32_t size_lookup = MAX_TRUE_NODES;
-u_int32_t size_lookup_filter = MAX_TOTAL_NODES;
+u_int32_t size_graph = MAX_TOTAL_NODES * MAX_EDGES;
+u_int32_t size_node_list = MAX_TRUE_NODES;
 u_int32_t size_components = MAX_TRUE_NODES + MAX_COMPONENTS;
 
 size_t size_full_graph_byte = sizeof(unsigned int) * size_full_graph;
 size_t size_scores_byte = sizeof(float) * size_scores;
 size_t size_graph_byte = sizeof(unsigned int) * size_graph;
-size_t size_lookup_byte = sizeof(unsigned int) * size_lookup;
-size_t size_lookup_filter_byte = sizeof(unsigned int) * size_lookup_filter;
+size_t size_node_list_byte = sizeof(unsigned int) * size_node_list;
 size_t size_components_byte = sizeof(unsigned int) * size_components;
 
 template <typename S>
@@ -78,8 +76,7 @@ struct kernel_buffers{
   xrt::bo in_full_graph;
   xrt::bo in_scores;
   xrt::bo inout_graph;
-  xrt::bo inout_lookup;
-  xrt::bo inout_lookup_filter;
+  xrt::bo inout_node_list;
   xrt::bo out_components;
   kernel_buffers(xrt::device &m_device, xrt::kernel &m_kernel){
     device = m_device;
@@ -87,24 +84,21 @@ struct kernel_buffers{
     in_full_graph = xrt::bo(device, size_full_graph_byte, kernel.group_id(0));
     in_scores = xrt::bo(device, size_scores_byte, kernel.group_id(1));
     inout_graph = xrt::bo(device, size_graph_byte, kernel.group_id(2));
-    inout_lookup = xrt::bo(device, size_lookup_byte, kernel.group_id(3));
-    inout_lookup_filter = xrt::bo(device, size_lookup_filter_byte, kernel.group_id(4));
-    out_components = xrt::bo(device, size_components_byte, kernel.group_id(5));
+    inout_node_list = xrt::bo(device, size_node_list_byte, kernel.group_id(3));
+    out_components = xrt::bo(device, size_components_byte, kernel.group_id(4));
   }
 };
 struct kernel_maps{
   unsigned int* in_full_graph;
   float* in_scores;
   unsigned int* inout_graph;
-  unsigned int* inout_lookup;
-  unsigned int* inout_lookup_filter;
+  unsigned int* inout_node_list;
   unsigned int* out_components;
   kernel_maps(kernel_buffers &m_bo){
     in_full_graph = m_bo.in_full_graph.map<unsigned int*>();
     in_scores = m_bo.in_scores.map<float*>();
     inout_graph = m_bo.inout_graph.map<unsigned int*>();
-    inout_lookup = m_bo.inout_lookup.map<unsigned int*>();
-    inout_lookup_filter = m_bo.inout_lookup_filter.map<unsigned int*>();
+    inout_node_list = m_bo.inout_node_list.map<unsigned int*>();
     out_components = m_bo.out_components.map<unsigned int*>();
   }
 };
@@ -131,14 +125,10 @@ void print_global_prameters(void){
   if(size_graph_byte > 1024 * 1024) std::cout << size_graph_byte / (1024 * 1024) << " MB" << std::endl;
   else if(size_graph_byte > 1024) std::cout << size_graph_byte / 1024 << " KB" << std::endl;
   else std::cout << size_graph_byte / 1024 << " Bytes" << std::endl;
-  std::cout << "[    ] Size of lookup:        ";
-  if(size_lookup_byte > 1024 * 1024) std::cout << size_lookup_byte / (1024 * 1024) << " MB" << std::endl;
-  else if(size_lookup_byte > 1024) std::cout << size_lookup_byte / 1024 << " KB" << std::endl;
-  else std::cout << size_lookup_byte / 1024 << " Bytes" << std::endl;
-  std::cout << "[    ] Size of lookup_filter: ";
-  if(size_lookup_filter_byte > 1024 * 1024) std::cout << size_lookup_filter_byte / (1024 * 1024) << " MB" << std::endl;
-  else if(size_lookup_filter_byte > 1024) std::cout << size_lookup_filter_byte / 1024 << " KB" << std::endl;
-  else std::cout << size_lookup_filter_byte / 1024 << " Bytes" << std::endl;
+  std::cout << "[    ] Size of node_list:     ";
+  if(size_node_list_byte > 1024 * 1024) std::cout << size_node_list_byte / (1024 * 1024) << " MB" << std::endl;
+  else if(size_node_list_byte > 1024) std::cout << size_node_list_byte / 1024 << " KB" << std::endl;
+  else std::cout << size_node_list_byte / 1024 << " Bytes" << std::endl;
   std::cout << "[    ] Size of components:    ";
   if(size_components_byte > 1024 * 1024) std::cout << size_components_byte / (1024 * 1024) << " MB" << std::endl;
   else if(size_components_byte > 1024) std::cout << size_components_byte / 1024 << " KB" << std::endl;
@@ -524,8 +514,7 @@ int main (int argc, char ** argv){
       maps.in_scores[i] = ev_in_scores[ev][i];
     }
     std::fill(maps.inout_graph, maps.inout_graph + size_graph, 0.0);
-    std::fill(maps.inout_lookup, maps.inout_lookup + size_lookup, 0);
-    std::fill(maps.inout_lookup_filter, maps.inout_lookup_filter + size_lookup_filter, 0);
+    std::fill(maps.inout_node_list, maps.inout_node_list + size_node_list, 0);
     std::fill(maps.out_components, maps.out_components + size_components, 0);
     timing.in_written.push_back(std::chrono::system_clock::now());
 
@@ -536,8 +525,7 @@ int main (int argc, char ** argv){
     bo.in_full_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     bo.in_scores.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     bo.inout_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.inout_lookup.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.inout_lookup_filter.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.inout_node_list.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     bo.out_components.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     timing.in_synced.push_back(std::chrono::system_clock::now());
 
@@ -545,7 +533,7 @@ int main (int argc, char ** argv){
     // Execute Kernel
     //
     std::cout << "[    ] [" << ev << "] Start Kernel" << std::endl;
-    auto run = bo.kernel(bo.in_full_graph, bo.in_scores, bo.inout_graph, bo.inout_lookup, bo.inout_lookup_filter, bo.out_components, ev_num_nodes[ev], cutoff);
+    auto run = bo.kernel(bo.in_full_graph, bo.in_scores, bo.inout_graph, bo.inout_node_list, bo.out_components, ev_num_nodes[ev], cutoff);
     timing.krnl_started.push_back(std::chrono::system_clock::now());
     std::cout << "[    ] [" << ev << "] Wait for Kernel to finish" << std::endl;
     run.wait();

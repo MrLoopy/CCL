@@ -10,6 +10,6 @@
 #define MAX_COMPONENTS 8192 //64
 
 extern "C" {
-  void CCL( unsigned int* in_full_graph, float* in_scores, unsigned int* io_graph, unsigned int* io_lookup, unsigned int* io_lookup_filter, unsigned int* out_components, unsigned int num_nodes, float cutoff);
+  void CCL( unsigned int* in_full_graph, float* in_scores, unsigned int* io_graph, unsigned int* io_node_list, unsigned int* out_components, unsigned int num_nodes, float cutoff);
 }
 #endif // LARGE_KERNELS_H

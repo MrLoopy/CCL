@@ -4,79 +4,68 @@
 #include <hls_stream.h>
 
 // Custom includes
-// #include <iostream>
+#include <iostream>
 #include "large_kernels.hpp"
 
 static void filter_memory(float m_cutoff, unsigned int* full_graph, float* m_scores, unsigned int m_num_nodes,
-                          unsigned int* m_graph, unsigned int* m_lookup, unsigned int* m_lookup_filter, unsigned int& m_graph_size) {
+                          unsigned int* m_graph, unsigned int* m_node_list, unsigned int& m_graph_size) {
 
+  std::cout << "[KRNL] Filter 0" << std::endl;
   unsigned int connections = 0;
-  unsigned int new_from, new_to;
-  m_graph_size = 1; // has to start at 1, cause 0 indicates that no index has been given yet
+  bool new_row = true;
+  m_graph_size = 0;
   
   // for each node in the full graph / for each row in the graph-table
   filter_rows:
   for (unsigned int row = 0; row < m_num_nodes; row++){
     #pragma HLS loop_tripcount min=1000 avg=4000 max=MAX_TOTAL_NODES
-    connections = 0;
-    new_from = 0;
     // for each connection of that node
     if(full_graph[row * MAX_FULL_GRAPH_EDGES] > 0){ // avoid for-loop 0 times
       filter_nodes:
+      connections = 0;
+      new_row = true;
       for (unsigned int i = 0; i < full_graph[row * MAX_FULL_GRAPH_EDGES]; i++){
         #pragma HLS loop_tripcount min=1 avg=5 max=MAX_FULL_GRAPH_EDGES
         if(m_scores[row * MAX_FULL_GRAPH_EDGES + i] > m_cutoff){
-          // put row in lookup and get out new index
-          if(new_from == 0){
-            if(m_lookup_filter[row] == 0){
-              m_lookup_filter[row] = m_graph_size;
-              m_lookup[m_graph_size] = row;
-              new_from = m_graph_size;
-              m_graph_size++;
-            }
-            else
-              new_from = m_lookup_filter[row];
-          }
-          // put i in lookup and get out new index
-          if(m_lookup_filter[full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i]] == 0){
-            m_lookup_filter[full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i]] = m_graph_size;
-            m_lookup[m_graph_size] = full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i];
-            new_to = m_graph_size;
+          m_graph[row * MAX_EDGES + 1 + connections] = full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i];
+          connections++;
+          if(new_row){
+            new_row = false;
+            m_node_list[m_graph_size] = row;
             m_graph_size++;
           }
-          else
-            new_to = m_lookup_filter[full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i]];
-
-          // Add new indices to the filtered graph
-          m_graph[new_from * MAX_EDGES + 1 + connections] = new_to;
-          connections++;
         }
       }
-      if(new_from != 0)
-        m_graph[new_from * MAX_EDGES] = connections;
+      if(!new_row)
+        m_graph[row * MAX_EDGES] = connections;
     }
   }
+  std::cout << "[KRNL] Filter 1" << std::endl;
 }
 
-static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::stream<unsigned int>& outStream, unsigned int* m_lookup){
+static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::stream<unsigned int>& outStream, unsigned int* m_node_list){
 
   static unsigned int component[MAX_COMPONENT_SIZE];
-  static unsigned int processed[MAX_TRUE_NODES];
+  static bool processed[MAX_TOTAL_NODES];
   compute_reset_processed:
-  for (unsigned int i = 0; i < MAX_TRUE_NODES; i++){
+  for (unsigned int i = 0; i < MAX_TOTAL_NODES; i++){
     processed[i] = false;
   }
   unsigned int current_component_size = 0;
   unsigned int processed_nodes = 0;
   unsigned int next_node = 0;
+  unsigned int row = 0;
 
   compute_rows:
-  for (unsigned int row = 0; row < m_num_nodes; row++){
+  for (unsigned int iter = 0; iter < m_num_nodes; iter++){
     #pragma HLS loop_tripcount min=150 avg=200 max=MAX_TRUE_NODES
-    if(m_graph[row * MAX_EDGES] == 0)
-      processed[row] = true;
-    // node with connections that has not been processed yet -> new component
-    else if (!processed[row]){
+    row = m_node_list[iter];
+
+    // if(m_graph[row * MAX_EDGES] == 0)
+    //   processed[row] = true;
+    // // node with connections that has not been processed yet -> new component
+    // else if (!processed[row]){
+    if(!processed[row]){
       // new component needs to reset parameters
       compute_reset_component:
       for (unsigned int i = 0; i < MAX_COMPONENT_SIZE; i++)
@@ -92,9 +81,6 @@ static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::s
       while (current_component_size != processed_nodes){
         // get next node of the component that has not yet been processed
         next_node = component[processed_nodes];
-
-        // Check if this node has already been processed by other core that works on the same track
-          // Conflict handler -> transfer current component from one core to the other
 
         // add all connections of current node to component if not already processed <- to many fills for highly connected components?
         if(m_graph[next_node * MAX_EDGES] > 0) // avoid for-loop 0 times
@@ -125,7 +111,7 @@ static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::s
       compute_write_output:
       for (unsigned int i = 0; i < current_component_size; i++){
         #pragma HLS loop_tripcount min=1 avg=8 max=MAX_COMPONENT_SIZE
-        outStream << m_lookup[component[i]];
+        outStream << component[i];
       }
     }
   }
@@ -134,6 +120,7 @@ static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::s
 
 static void write_components(unsigned int* out, hls::stream<unsigned int>& outStream, unsigned int size) {
 
+  std::cout << "[KRNL] Write 0" << std::endl;
   bool stream_running = true;
   unsigned int stream_size = 1; // position 0 in the Output will be the size of the total output. Therefore size needs to start at 1
   unsigned int component_size = 0;
@@ -160,26 +147,26 @@ static void write_components(unsigned int* out, hls::stream<unsigned int>& outSt
         }
       }
     }
+  std::cout << "[KRNL] Write 1" << std::endl;
 }
 
 extern "C" {
 
-  void CCL( unsigned int* in_full_graph, float* in_scores, unsigned int* io_graph, unsigned int* io_lookup, unsigned int* io_lookup_filter, unsigned int* out_components, unsigned int num_nodes, float cutoff) {
+  void CCL( unsigned int* in_full_graph, float* in_scores, unsigned int* io_graph, unsigned int* io_node_list, unsigned int* out_components, unsigned int num_nodes, float cutoff) {
     
     #pragma HLS INTERFACE m_axi port = in_full_graph     bundle=gmem0 max_widen_bitwidth=512
     #pragma HLS INTERFACE m_axi port = in_scores         bundle=gmem1 max_widen_bitwidth=512
     #pragma HLS INTERFACE m_axi port = io_graph          bundle=gmem2 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_lookup         bundle=gmem3 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_lookup_filter  bundle=gmem4 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = out_components    bundle=gmem5 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = io_node_list      bundle=gmem3 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = out_components    bundle=gmem4 max_widen_bitwidth=512
 
     static hls::stream<unsigned int> outStream_components("output_stream_components");
     static unsigned int graph_size;
     #pragma HLS STREAM variable=graph_size type=pipo
 
     #pragma HLS dataflow
-    filter_memory(cutoff, in_full_graph, in_scores, num_nodes, io_graph, io_lookup, io_lookup_filter, graph_size);
-    compute_core(io_graph, graph_size, outStream_components, io_lookup);
+    filter_memory(cutoff, in_full_graph, in_scores, num_nodes, io_graph, io_node_list, graph_size);
+    compute_core(io_graph, graph_size, outStream_components, io_node_list);
     write_components(out_components, outStream_components, num_nodes);
 
   }

@@ -34,13 +34,38 @@ compile_and_run () {
     echo -e "\n[$(date +%H:%M:%S)] copy results back to condor/results/sweep/hw_$1_$2\n"
     cp -R "${path_form}" "${path_to}$1_$2"
 }
+compile_and_run_uint16 () {
+    echo -e "\n\n\n##########################################################################################################################"
+    echo -e "##########################################################################################################################"
+    echo -e "##########################################################################################################################\n\n\n"
+    echo "[$(date +%H:%M:%S)] compile region for HW ; UINT16 ; MAX_FULL_GRAPH_EDGES = $1 ; version = $2"
+    cp "condor/kernel/FULL_GRAPH_EDGES/test_kernels_uint16_$1.hpp" inc/test_kernels.hpp
+    # cp "condor/kernel/FULL_GRAPH_EDGES/test_kernels_$2.cpp" src/test_kernels.cpp
+    echo -e "[$(date +%H:%M:%S)] make clean - to make sure that the code is compiled with the new parameters"
+    make clean
+    echo -e "[$(date +%H:%M:%S)] make - compile the code\n"
+    make test
+    echo -e "\n\n##########################################################################################################################"
+    echo -e "[$(date +%H:%M:%S)] run the code\n\n"
+    ./test_run.sh
+    echo -e "\n[$(date +%H:%M:%S)] copy results back to condor/results/sweep/hw_$1_$2\n"
+    cp -R "${path_form}" "${path_to}uint_$1_$2"
+}
 
-compile_and_run "32" "URAM"
-compile_and_run "64" "URAM"
-compile_and_run "32" "CTRL"
-compile_and_run "64" "CTRL"
-compile_and_run "128" "CTRL"
-compile_and_run "256" "HBM"
+compile_and_run_uint16 "128" "URAM"
+compile_and_run_uint16 "64" "URAM"
+compile_and_run_uint16 "32" "URAM"
+
+# compile_and_run "32" "URAM"
+# compile_and_run "64" "URAM"
+# compile_and_run "32" "CTRL"
+# compile_and_run "64" "CTRL"
+# compile_and_run "128" "CTRL"
+# compile_and_run "256" "HBM"
+
+echo -e "\n##########################################################################################################################\n"
+echo -e "[$(date +%H:%M:%S)] make clean - to make sure that the code is fully compiled"
+make clean
 
 echo -e "\n\n\n##########################################################################################################################"
 echo -e "##########################################################################################################################"
@@ -49,6 +74,24 @@ echo "[$(date +%H:%M:%S)] compile parallel filter for HW with make"
 echo -e "\n[$(date +%H:%M:%S)] make clean skipped\n"
 echo -e "[$(date +%H:%M:%S)] make - compile the code\n"
 make
+echo -e "\n[$(date +%H:%M:%S)] no copy back needed\n"
+
+echo -e "\n\n\n##########################################################################################################################"
+echo -e "##########################################################################################################################"
+echo -e "##########################################################################################################################\n\n\n"
+echo "[$(date +%H:%M:%S)] compile region uint16 for HW with make test"
+echo -e "\n[$(date +%H:%M:%S)] make clean skipped\n"
+echo -e "[$(date +%H:%M:%S)] make - compile the code\n"
+make test
+echo -e "\n[$(date +%H:%M:%S)] no copy back needed\n"
+
+echo -e "\n\n\n##########################################################################################################################"
+echo -e "##########################################################################################################################"
+echo -e "##########################################################################################################################\n\n\n"
+echo "[$(date +%H:%M:%S)] compile parallel direct for HW with make par"
+echo -e "\n[$(date +%H:%M:%S)] make clean skipped\n"
+echo -e "[$(date +%H:%M:%S)] make - compile the code\n"
+make par
 echo -e "\n[$(date +%H:%M:%S)] no copy back needed\n"
 
 # echo -e "\n\n\n##########################################################################################################################"

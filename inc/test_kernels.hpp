@@ -4,7 +4,7 @@
 
 #define MAX_TOTAL_NODES 8192 // 262144 // 8192
 #define MAX_EDGES 8 // 16 // 8
-#define MAX_FULL_GRAPH_EDGES 256 // 256 // 256
+#define MAX_FULL_GRAPH_EDGES 64 // 256 // 256
 #define MAX_COMPONENT_SIZE 16 // 128 // 16
 #define MAX_TRUE_NODES 512 // 65536 // 512
 #define MAX_COMPONENTS 64 // 8192 // 64

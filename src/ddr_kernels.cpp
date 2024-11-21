@@ -1,22 +1,121 @@
 // HLS-related includes
+#include "ap_int.h"
 #include "hls_math.h"
 #include "hls_vector.h"
 #include <hls_stream.h>
 
 // Custom includes
-// #include <iostream>
+#include <iostream>
 #include "ddr_kernels.hpp"
 
-static void filter_memory(float m_cutoff, unsigned int* full_graph, float* m_scores, unsigned int m_num_nodes,
-                          unsigned int* m_graph, unsigned int* m_lookup, unsigned int* m_lookup_filter, unsigned int& m_graph_size) {
+static void filter_memory(float m_cutoff, unsigned int* full_graph, ap_uint<512> full_graph_cons, float* m_scores, unsigned int m_num_nodes,
+                          unsigned int* m_graph, ap_uint<512> graph_cons, unsigned int* m_lookup, unsigned int* m_lookup_filter, unsigned int& m_graph_size) {
 
   unsigned int connections = 0;
   unsigned int new_from, new_to;
   m_graph_size = 1; // has to start at 1, cause 0 indicates that no index has been given yet
+  unsigned int row = 0;
   
+  graph_cons[0] = full_graph_cons[0];
+
+  ap_uint<512> cons = 0;
+  ap_uint<8>* ptr_cons = (ap_uint<8>*) &cons;
+  unsigned int con_iterations = m_num_nodes / 64; // number of 512-bit-values that need to be read
+  unsigned int con_residue = m_num_nodes % 64; // number of 8-bit-values that are missing after the last complete 512-bit-value
+  std::cout << "[KRNL] con_iterations: " << con_iterations << " con_residue: " << con_residue << std::endl;
+
+  cons = 0;
+  std::cout << "[    ]  " << cons << std::endl;
+  cons = full_graph_cons[0];
+  std::cout << "[    ] ";
+  for(unsigned int j = 0; j < 16 ; j++)
+    std::cout << ptr_cons[j] << " ";
+  std::cout << std::endl;
+
+  if(con_iterations > 0)
+    for (unsigned int c = 0; c < con_iterations ; c++){
+      cons = full_graph_cons[c];
+      for (unsigned int k = 0; k < 64 ; k++) // iterate through 64 8-bit values inside the 512-bit variable
+        if(ptr_cons[k] > 0){
+          connections = 0;
+          new_from = 0;
+          row = c * 64 + k;
+          std::cout << "[    ] row: " << row << std::endl;
+          for (unsigned int i = 0; i < ptr_cons[k]; i++)
+            if(m_scores[row * MAX_FULL_GRAPH_EDGES + i] > m_cutoff){
+              // put row in lookup and get out new index
+              if(new_from == 0){
+                if(m_lookup_filter[row] == 0){
+                  m_lookup_filter[row] = m_graph_size;
+                  m_lookup[m_graph_size] = row;
+                  new_from = m_graph_size;
+                  m_graph_size++;
+                }
+                else
+                  new_from = m_lookup_filter[row];
+              }
+              // put i in lookup and get out new index
+              if(m_lookup_filter[full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i]] == 0){
+                m_lookup_filter[full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i]] = m_graph_size;
+                m_lookup[m_graph_size] = full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i];
+                new_to = m_graph_size;
+                m_graph_size++;
+              }
+              else
+                new_to = m_lookup_filter[full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i]];
+
+              // Add new indices to the filtered graph
+              m_graph[new_from * MAX_EDGES + 1 + connections] = new_to;
+              connections++;
+            }
+          if(new_from != 0)
+            m_graph[new_from * MAX_EDGES] = connections;
+        }
+    }
+  if(con_residue > 0){
+    cons = full_graph_cons[con_iterations];
+    for (unsigned int k = 0; k < con_residue ; k++) // iterate through 64 8-bit values inside the 512-bit variable
+      if(ptr_cons[k] > 0){
+        connections = 0;
+        new_from = 0;
+        row = con_iterations * 64 + k;
+        std::cout << "[    ] row: " << row << " len(row): " << ptr_cons[k] << " len(full_graph(row)): " << full_graph[row * MAX_FULL_GRAPH_EDGES] << std::endl;
+        for (unsigned int i = 0; i < ptr_cons[k]; i++)
+          if(m_scores[row * MAX_FULL_GRAPH_EDGES + i] > m_cutoff){
+            // put row in lookup and get out new index
+            if(new_from == 0){
+              if(m_lookup_filter[row] == 0){
+                m_lookup_filter[row] = m_graph_size;
+                m_lookup[m_graph_size] = row;
+                new_from = m_graph_size;
+                m_graph_size++;
+              }
+              else
+                new_from = m_lookup_filter[row];
+            }
+            // put i in lookup and get out new index
+            if(m_lookup_filter[full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i]] == 0){
+              m_lookup_filter[full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i]] = m_graph_size;
+              m_lookup[m_graph_size] = full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i];
+              new_to = m_graph_size;
+              m_graph_size++;
+            }
+            else
+              new_to = m_lookup_filter[full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i]];
+
+            // Add new indices to the filtered graph
+            m_graph[new_from * MAX_EDGES + 1 + connections] = new_to;
+            connections++;
+          }
+        if(new_from != 0)
+          m_graph[new_from * MAX_EDGES] = connections;
+      }
+  }
+
+/* 
   // for each node in the full graph / for each row in the graph-table
   filter_rows:
-  for (unsigned int row = 0; row < m_num_nodes; row++){
+  for (row = 0; row < m_num_nodes; row++){
     #pragma HLS loop_tripcount min=1000 avg=4000 max=MAX_TOTAL_NODES
     connections = 0;
     new_from = 0;
@@ -56,6 +155,7 @@ static void filter_memory(float m_cutoff, unsigned int* full_graph, float* m_sco
         m_graph[new_from * MAX_EDGES] = connections;
     }
   }
+ */
 }
 
 static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::stream<unsigned int>& outStream, unsigned int* m_lookup){
@@ -164,21 +264,23 @@ static void write_components(unsigned int* out, hls::stream<unsigned int>& outSt
 
 extern "C" {
 
-  void CCL( unsigned int* in_full_graph, float* in_scores, unsigned int* io_graph, unsigned int* io_lookup, unsigned int* io_lookup_filter, unsigned int* out_components, unsigned int num_nodes, float cutoff) {
+  void CCL( unsigned int* in_full_graph, ap_int<512>* in_full_graph_cons, float* in_scores, unsigned int* io_graph, ap_int<512>* io_graph_cons, unsigned int* io_lookup, unsigned int* io_lookup_filter, unsigned int* out_components, unsigned int num_nodes, float cutoff) {
     
-    #pragma HLS INTERFACE m_axi port = in_full_graph     bundle=gmem0 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = in_scores         bundle=gmem1 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_graph          bundle=gmem2 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_lookup         bundle=gmem3 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_lookup_filter  bundle=gmem4 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = out_components    bundle=gmem5 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_full_graph      bundle=gmem0
+    #pragma HLS INTERFACE m_axi port = in_full_graph_cons bundle=gmem1
+    #pragma HLS INTERFACE m_axi port = in_scores          bundle=gmem2
+    #pragma HLS INTERFACE m_axi port = io_graph           bundle=gmem3
+    #pragma HLS INTERFACE m_axi port = io_graph_cons      bundle=gmem4
+    #pragma HLS INTERFACE m_axi port = io_lookup          bundle=gmem5
+    #pragma HLS INTERFACE m_axi port = io_lookup_filter   bundle=gmem6
+    #pragma HLS INTERFACE m_axi port = out_components     bundle=gmem7
 
     static hls::stream<unsigned int> outStream_components("output_stream_components");
     static unsigned int graph_size;
     #pragma HLS STREAM variable=graph_size type=pipo
 
     #pragma HLS dataflow
-    filter_memory(cutoff, in_full_graph, in_scores, num_nodes, io_graph, io_lookup, io_lookup_filter, graph_size);
+    filter_memory(cutoff, in_full_graph, in_full_graph_cons, in_scores, num_nodes, io_graph, io_graph_cons, io_lookup, io_lookup_filter, graph_size);
     compute_core(io_graph, graph_size, outStream_components, io_lookup);
     write_components(out_components, outStream_components, num_nodes);
 

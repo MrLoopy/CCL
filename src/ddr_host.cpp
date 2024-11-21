@@ -14,6 +14,7 @@
 #include <experimental/xrt_xclbin.h>
 #include "xrt/xrt_device.h"
 #include "xrt/xrt_kernel.h"
+#include "ap_int.h"
 
 // External includes
 #include "args.hpp"
@@ -27,20 +28,24 @@
 //
 //============================================
 const u_int32_t num_threads = 1;
-const std::vector<std::string> csv_names = {"dat/event005001514.csv", "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/reg/r_event005008301.csv", "dat/reg/r_event005008302.csv", "dat/reg/r_event005008303.csv", "dat/reg/r_event005008304.csv", "dat/reg/r_event005008306.csv", "dat/reg/r_event005008308.csv", "dat/reg/r_event005008310.csv", "dat/reg/r_event005008312.csv"}; // {"dat/event005001514.csv", "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
+const std::vector<std::string> csv_names = {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/reg/r_event005008301.csv", "dat/reg/r_event005008302.csv", "dat/reg/r_event005008303.csv", "dat/reg/r_event005008304.csv", "dat/reg/r_event005008306.csv", "dat/reg/r_event005008308.csv", "dat/reg/r_event005008310.csv", "dat/reg/r_event005008312.csv"}; // {"dat/event005001514.csv", "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
 const u_int32_t num_events = (const u_int32_t)csv_names.size();
 const float cutoff = 0.5;
 
 u_int32_t size_full_graph = MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;
+u_int32_t size_full_graph_cons = MAX_TOTAL_NODES / 64;
 u_int32_t size_scores = MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;
 u_int32_t size_graph = MAX_TRUE_NODES * MAX_EDGES;
+u_int32_t size_graph_cons = MAX_TRUE_NODES / 64;
 u_int32_t size_lookup = MAX_TRUE_NODES;
 u_int32_t size_lookup_filter = MAX_TOTAL_NODES;
 u_int32_t size_components = MAX_TRUE_NODES + MAX_COMPONENTS;
 
 size_t size_full_graph_byte = sizeof(unsigned int) * size_full_graph;
+size_t size_full_graph_cons_byte = sizeof(ap_uint<512>) * size_full_graph_cons;
 size_t size_scores_byte = sizeof(float) * size_scores;
 size_t size_graph_byte = sizeof(unsigned int) * size_graph;
+size_t size_graph_cons_byte = sizeof(ap_uint<512>) * size_graph_cons;
 size_t size_lookup_byte = sizeof(unsigned int) * size_lookup;
 size_t size_lookup_filter_byte = sizeof(unsigned int) * size_lookup_filter;
 size_t size_components_byte = sizeof(unsigned int) * size_components;
@@ -76,8 +81,10 @@ struct kernel_buffers{
   xrt::device device;
   xrt::kernel kernel;
   xrt::bo in_full_graph;
+  xrt::bo in_full_graph_cons;
   xrt::bo in_scores;
   xrt::bo inout_graph;
+  xrt::bo inout_graph_cons;
   xrt::bo inout_lookup;
   xrt::bo inout_lookup_filter;
   xrt::bo out_components;
@@ -85,8 +92,10 @@ struct kernel_buffers{
     device = m_device;
     kernel = m_kernel;
     in_full_graph = xrt::bo(device, size_full_graph_byte, kernel.group_id(0));
-    in_scores = xrt::bo(device, size_scores_byte, kernel.group_id(1));
-    inout_graph = xrt::bo(device, size_graph_byte, kernel.group_id(2));
+    in_full_graph_cons = xrt::bo(device, size_full_graph_cons_byte, kernel.group_id(1));
+    in_scores = xrt::bo(device, size_scores_byte, kernel.group_id(2));
+    inout_graph = xrt::bo(device, size_graph_byte, kernel.group_id(3));
+    inout_graph_cons = xrt::bo(device, size_graph_cons_byte, kernel.group_id(4));
     inout_lookup = xrt::bo(device, size_lookup_byte, kernel.group_id(3));
     inout_lookup_filter = xrt::bo(device, size_lookup_filter_byte, kernel.group_id(4));
     out_components = xrt::bo(device, size_components_byte, kernel.group_id(5));
@@ -94,15 +103,19 @@ struct kernel_buffers{
 };
 struct kernel_maps{
   unsigned int* in_full_graph;
+  ap_uint<512>* in_full_graph_cons;
   float* in_scores;
   unsigned int* inout_graph;
+  ap_uint<512>* inout_graph_cons;
   unsigned int* inout_lookup;
   unsigned int* inout_lookup_filter;
   unsigned int* out_components;
   kernel_maps(kernel_buffers &m_bo){
     in_full_graph = m_bo.in_full_graph.map<unsigned int*>();
+    in_full_graph_cons = m_bo.in_full_graph_cons.map<ap_uint<512>*>();
     in_scores = m_bo.in_scores.map<float*>();
     inout_graph = m_bo.inout_graph.map<unsigned int*>();
+    inout_graph_cons = m_bo.inout_graph_cons.map<ap_uint<512>*>();
     inout_lookup = m_bo.inout_lookup.map<unsigned int*>();
     inout_lookup_filter = m_bo.inout_lookup_filter.map<unsigned int*>();
     out_components = m_bo.out_components.map<unsigned int*>();
@@ -519,11 +532,38 @@ int main (int argc, char ** argv){
     // Write event buffer to global memory buffer
     //
     std::cout << "[    ] [" << ev << "] Write Event to Global Memory Buffer" << std::endl;
+
+    ap_uint<512> temp = 0;
+    ap_uint<8>* ptr = (ap_uint<8>*)&temp;
+    for(unsigned int i = 0; i < size_full_graph_cons ; i++){
+      for(unsigned int j = 0; j < 64 ; j++)
+        ptr[j] = ev_in_full_graph[ev][(i * 64 + j) * MAX_FULL_GRAPH_EDGES];
+      maps.in_full_graph_cons[i] = temp;
+    }
+
+    temp = 0;
+    std::cout << "[    ] [" << ev << "] " << temp << std::endl;
+    temp = maps.in_full_graph_cons[0];
+    std::cout << "[    ] [" << ev << "] ";
+    for(unsigned int j = 0; j < 16 ; j++)
+      std::cout << ptr[j] << " ";
+    std::cout << std::endl;
+
     for(unsigned int i = 0; i < size_scores ; i++){
       maps.in_full_graph[i] = ev_in_full_graph[ev][i];
       maps.in_scores[i] = ev_in_scores[ev][i];
     }
-    std::fill(maps.inout_graph, maps.inout_graph + size_graph, 0.0);
+    // maps.in_full_graph[size_scores - 1] = 0;
+    // maps.in_scores[0] = ev_in_scores[ev][0];
+    // for(unsigned int i = 1; i < size_scores ; i++){
+    //   if(i % size_full_graph_cons == 0)
+    //     maps.in_full_graph[i - 1] = 0;
+    //   else
+    //     maps.in_full_graph[i - 1] = ev_in_full_graph[ev][i];
+    //   maps.in_scores[i] = ev_in_scores[ev][i];
+    // }
+    std::fill(maps.inout_graph, maps.inout_graph + size_graph, 0);
+    std::fill(maps.inout_graph_cons, maps.inout_graph_cons + size_graph_cons, 0);
     std::fill(maps.inout_lookup, maps.inout_lookup + size_lookup, 0);
     std::fill(maps.inout_lookup_filter, maps.inout_lookup_filter + size_lookup_filter, 0);
     std::fill(maps.out_components, maps.out_components + size_components, 0);
@@ -534,8 +574,10 @@ int main (int argc, char ** argv){
     //
     std::cout << "[    ] [" << ev << "] Synchronize input buffer data to device global memory" << std::endl;
     bo.in_full_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.in_full_graph_cons.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     bo.in_scores.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     bo.inout_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.inout_graph_cons.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     bo.inout_lookup.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     bo.inout_lookup_filter.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     bo.out_components.sync(XCL_BO_SYNC_BO_TO_DEVICE);
@@ -545,7 +587,7 @@ int main (int argc, char ** argv){
     // Execute Kernel
     //
     std::cout << "[    ] [" << ev << "] Start Kernel" << std::endl;
-    auto run = bo.kernel(bo.in_full_graph, bo.in_scores, bo.inout_graph, bo.inout_lookup, bo.inout_lookup_filter, bo.out_components, ev_num_nodes[ev], cutoff);
+    auto run = bo.kernel(bo.in_full_graph, bo.in_full_graph_cons, bo.in_scores, bo.inout_graph, bo.inout_graph_cons, bo.inout_lookup, bo.inout_lookup_filter, bo.out_components, ev_num_nodes[ev], cutoff);
     timing.krnl_started.push_back(std::chrono::system_clock::now());
     std::cout << "[    ] [" << ev << "] Wait for Kernel to finish" << std::endl;
     run.wait();

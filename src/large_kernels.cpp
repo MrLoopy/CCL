@@ -4,13 +4,12 @@
 #include <hls_stream.h>
 
 // Custom includes
-#include <iostream>
+// #include <iostream>
 #include "large_kernels.hpp"
 
 static void filter_memory(float m_cutoff, unsigned int* full_graph, float* m_scores, unsigned int m_num_nodes,
                           unsigned int* m_graph, unsigned int* m_node_list, unsigned int& m_graph_size) {
 
-  std::cout << "[KRNL] Filter 0" << std::endl;
   unsigned int connections = 0;
   bool new_row = true;
   m_graph_size = 0;
@@ -40,7 +39,6 @@ static void filter_memory(float m_cutoff, unsigned int* full_graph, float* m_sco
         m_graph[row * MAX_EDGES] = connections;
     }
   }
-  std::cout << "[KRNL] Filter 1" << std::endl;
 }
 
 static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::stream<unsigned int>& outStream, unsigned int* m_node_list){
@@ -120,7 +118,6 @@ static void compute_core(unsigned int* m_graph, unsigned int m_num_nodes, hls::s
 
 static void write_components(unsigned int* out, hls::stream<unsigned int>& outStream, unsigned int size) {
 
-  std::cout << "[KRNL] Write 0" << std::endl;
   bool stream_running = true;
   unsigned int stream_size = 1; // position 0 in the Output will be the size of the total output. Therefore size needs to start at 1
   unsigned int component_size = 0;
@@ -147,7 +144,6 @@ static void write_components(unsigned int* out, hls::stream<unsigned int>& outSt
         }
       }
     }
-  std::cout << "[KRNL] Write 1" << std::endl;
 }
 
 extern "C" {

@@ -46,14 +46,14 @@ compile_and_run_uint16 () {
     echo -e "[$(date +%H:%M:%S)] make - compile the code\n"
     make test
     echo -e "\n\n##########################################################################################################################"
-    echo -e "[$(date +%H:%M:%S)] run the code\n\n"
-    ./test_run.sh
-    echo -e "\n[$(date +%H:%M:%S)] copy results back to condor/results/sweep/hw_$1_$2\n"
-    cp -R "${path_form}" "${path_to}uint_$1_$2"
+    # echo -e "[$(date +%H:%M:%S)] run the code\n\n"
+    # ./test_run.sh
+    # echo -e "\n[$(date +%H:%M:%S)] copy results back to condor/results/sweep/hw_$1_$2\n"
+    # cp -R "${path_form}" "${path_to}uint_$1_$2"
 }
 
 # compile_and_run_uint16 "128" "URAM"
-# compile_and_run_uint16 "64" "URAM"
+compile_and_run_uint16 "64" "URAM"
 # compile_and_run_uint16 "32" "URAM"
 
 # compile_and_run "32" "URAM"

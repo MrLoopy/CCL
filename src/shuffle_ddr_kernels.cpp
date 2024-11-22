@@ -5,31 +5,15 @@
 #include <hls_stream.h>
 
 // Custom includes
-#include <iostream>
+// #include <iostream>
 #include "ddr_kernels.hpp"
 
 static void filter_memory(float m_cutoff, hls::vector<uint32_t, 16>* full_graph, ap_uint<512>* full_graph_cons, hls::vector<float, 16>* m_scores, unsigned int m_num_nodes,
-                          unsigned int* m_graph, ap_uint<512>* graph_cons, unsigned int& m_graph_size) {
-
-  std::cout << "[KRNL] full_graph" << std::endl;
-  for (unsigned int i = 0; i < 3 ; i++){
-    std::cout << "[    ] " << i << " ";
-    for (unsigned int j = 0; j < 16 ; j++)
-      std::cout << full_graph[i * MAX_FULL_GRAPH_BLOCKS][j] << " ";
-    std::cout << std::endl;
-  }
-  std::cout << "[KRNL] m_scores" << std::endl;
-  for (unsigned int i = 0; i < 3 ; i++){
-    std::cout << "[    ] " << i << " ";
-    for (unsigned int j = 0; j < 16 ; j++)
-      std::cout << m_scores[i * MAX_FULL_GRAPH_BLOCKS][j] << " ";
-    std::cout << std::endl;
-  }
-
+                          unsigned int* m_graph, ap_uint<512>* graph_cons, unsigned int* m_node_list, unsigned int& m_graph_size) {
 
   ap_uint<8> connections = 0;
   bool new_row = true;
-  m_graph_size = 1; // has to start at 1, cause 0 indicates that no index has been given yet
+  m_graph_size = 0;
   unsigned int row = 0;
   
   ap_uint<512> multi_full_con = 0;
@@ -37,9 +21,16 @@ static void filter_memory(float m_cutoff, hls::vector<uint32_t, 16>* full_graph,
   ap_uint<8> single_full_con = 0;
 
   hls::vector<float, 16> multi_scores;
-  #pragma HLS array_partition variable=multi_scores dim=1 complete
   hls::vector<uint32_t, 16> multi_edges;
+  bool mask[16];
+  ap_uint<8> prefix_sum[16];
+  #pragma HLS array_partition variable=multi_scores dim=1 complete
   #pragma HLS array_partition variable=multi_edges dim=1 complete
+  #pragma HLS array_partition variable=mask dim=1 complete
+  #pragma HLS array_partition variable=prefix_sum dim=1 complete
+
+  // unsigned int pos_multi = 0;
+  // unsigned int pos_single = 0;
 
   unsigned int con_iterations = m_num_nodes / 64; // number of 512-bit-values that need to be read
   unsigned int con_residue = m_num_nodes % 64; // number of 8-bit-values that are missing after the last complete 512-bit-value
@@ -47,7 +38,7 @@ static void filter_memory(float m_cutoff, hls::vector<uint32_t, 16>* full_graph,
   unsigned int scr_iterations = 0;
   unsigned int scr_residue = 0;
   unsigned int max_scr = 16;
-
+  
   for (unsigned int c = 0; c < con_iterations + 1 ; c++){
     max_con = 64;
     if(c == con_iterations)
@@ -55,31 +46,94 @@ static void filter_memory(float m_cutoff, hls::vector<uint32_t, 16>* full_graph,
     multi_full_con = full_graph_cons[c];
     multi_graph_con = 0;
     for (unsigned int k = 0; k < max_con ; k++){ // iterate through 64 8-bit values inside the 512-bit variable
-
       single_full_con = multi_full_con.range((k + 1) * 8 - 1, k * 8);
       if(single_full_con > 0){
         connections = 0;
         new_row = true;
         row = c * 64 + k;
-
         scr_iterations = single_full_con / 16;
         scr_residue = single_full_con % 16;
         for (unsigned int s = 0; s < scr_iterations + 1 ; s++){
           max_scr = 16;
           if(s == scr_iterations)
             max_scr = scr_residue;
-          multi_scores = m_scores[row * MAX_FULL_GRAPH_BLOCKS + s];
-          multi_edges = full_graph[row * MAX_FULL_GRAPH_BLOCKS + s];
+          multi_scores = m_scores[s];
+          multi_edges = full_graph[s];
           for (unsigned int i = 0; i < max_scr ; i++){
-            if(multi_scores[i] > m_cutoff){
-              m_graph[row * MAX_EDGES + connections] = multi_edges[i];
-              connections++;
-              if(new_row){
-                new_row = false;
-                m_graph_size++;
-              }
+            #pragma HLS unroll
+            if(multi_scores[i] > m_cutoff)
+              mask[i] = true;
+            else
+              mask[i] = false;
+          }
+          for(unsigned int i = 0; i < max_scr ; i++){
+            #pragma HLS unroll
+            prefix_sum[i] = 0;
+          }
+          for(unsigned int i = 0; i < max_scr ; i++){
+            #pragma HLS unroll
+            for(unsigned int j = 0; j < i + 1 ; j++){
+              #pragma HLS unroll
+              prefix_sum[i] += mask[j];
             }
           }
+          // prefix_sum[0]  = mask[0];
+          // prefix_sum[1]  = mask[0] + mask[1];
+          // prefix_sum[2]  = mask[0] + mask[1] + mask[2];
+          // prefix_sum[3]  = mask[0] + mask[1] + mask[2] + mask[3];
+          // prefix_sum[4]  = mask[0] + mask[1] + mask[2] + mask[3] + mask[4];
+          // prefix_sum[5]  = mask[0] + mask[1] + mask[2] + mask[3] + mask[4] + mask[5];
+          // prefix_sum[6]  = mask[0] + mask[1] + mask[2] + mask[3] + mask[4] + mask[5] + mask[6];
+          // prefix_sum[7]  = mask[0] + mask[1] + mask[2] + mask[3] + mask[4] + mask[5] + mask[6] + mask[7];
+          // prefix_sum[8]  = mask[0] + mask[1] + mask[2] + mask[3] + mask[4] + mask[5] + mask[6] + mask[7] + mask[8];
+          // prefix_sum[9]  = mask[0] + mask[1] + mask[2] + mask[3] + mask[4] + mask[5] + mask[6] + mask[7] + mask[8] + mask[9];
+          // prefix_sum[10] = mask[0] + mask[1] + mask[2] + mask[3] + mask[4] + mask[5] + mask[6] + mask[7] + mask[8] + mask[9] + mask[10];
+          // prefix_sum[11] = mask[0] + mask[1] + mask[2] + mask[3] + mask[4] + mask[5] + mask[6] + mask[7] + mask[8] + mask[9] + mask[10] + mask[11];
+          // prefix_sum[12] = mask[0] + mask[1] + mask[2] + mask[3] + mask[4] + mask[5] + mask[6] + mask[7] + mask[8] + mask[9] + mask[10] + mask[11] + mask[12];
+          // prefix_sum[13] = mask[0] + mask[1] + mask[2] + mask[3] + mask[4] + mask[5] + mask[6] + mask[7] + mask[8] + mask[9] + mask[10] + mask[11] + mask[12] + mask[13];
+          // prefix_sum[14] = mask[0] + mask[1] + mask[2] + mask[3] + mask[4] + mask[5] + mask[6] + mask[7] + mask[8] + mask[9] + mask[10] + mask[11] + mask[12] + mask[13] + mask[14];
+          // prefix_sum[15] = mask[0] + mask[1] + mask[2] + mask[3] + mask[4] + mask[5] + mask[6] + mask[7] + mask[8] + mask[9] + mask[10] + mask[11] + mask[12] + mask[13] + mask[14] + mask[15];
+          for (unsigned int i = 0; i < max_scr ; i++){
+            #pragma HLS unroll
+            if(mask[i])
+              m_graph[row * MAX_EDGES + connections + prefix_sum[i] - 1] = multi_edges[i];
+          }
+          if(max_scr > 0){
+            connections += prefix_sum[max_scr - 1];
+
+            if(new_row && prefix_sum[max_scr - 1] > 0){
+              new_row = false;
+              m_node_list[m_graph_size] = row;
+              m_graph_size++;
+            }
+          }
+/* 
+1 0 1 1 0 1 0 1
+  1 0 1 1 0 1 0 1
+    1 0 1 1 0 1 0 1
+      1 0 1 1 0 1 0 1
+        1 0 1 1 0 1 0 1
+          1 0 1 1 0 1 0 1
+            1 0 1 1 0 1 0 1
+              1 0 1 1 0 1 0 1
+1 1 2 3 3 4 4 5
+ */
+          // ###########################################################################################################
+          // shuffle logic
+          // bool running = true;
+          // uint8_t first_false = 17;
+          // uint8_t first_true = 17;
+          // while(running){
+          //   for (uint8_t i = 0; i < max_scr ; i++){
+          //     if(first_false > max_scr)
+          //       if(!mask[i])
+          //         first_false = i;
+          //     else if(first_true > max_scr)
+          //       if(mask[i])
+          //         first_true = i;
+          //   }
+          // }
+          // ###########################################################################################################
         }
         if(!new_row)
           multi_graph_con.range((k + 1) * 8 - 1, k * 8) = connections;
@@ -89,10 +143,10 @@ static void filter_memory(float m_cutoff, hls::vector<uint32_t, 16>* full_graph,
   }
 }
 
-static void compute_core(unsigned int* m_graph, ap_uint<512>* graph_cons, unsigned int m_num_nodes, hls::stream<unsigned int>& outStream){
+static void compute_core(unsigned int* m_graph, ap_uint<512>* graph_cons, unsigned int m_num_nodes, hls::stream<unsigned int>& outStream, unsigned int* m_node_list){
 
   static unsigned int component[MAX_COMPONENT_SIZE];
-  static bool processed[MAX_TOTAL_NODES];
+  static unsigned int processed[MAX_TRUE_NODES];
   compute_reset_processed:
   for (unsigned int i = 0; i < MAX_TRUE_NODES; i++){
     processed[i] = false;
@@ -213,7 +267,7 @@ extern "C" {
 
   void CCL(
             hls::vector<uint32_t, 16>* in_full_graph, ap_uint<512>* in_full_graph_cons,  hls::vector<float, 16>* in_scores,
-            unsigned int* io_graph, ap_uint<512>* io_graph_cons,
+            unsigned int* io_graph, ap_uint<512>* io_graph_cons, unsigned int* io_node_list,
             unsigned int* out_components, unsigned int num_nodes, float cutoff) {
     
     // hls::vector<float, 16>* in_scores
@@ -223,15 +277,16 @@ extern "C" {
     #pragma HLS INTERFACE m_axi port = in_scores          bundle=gmem2
     #pragma HLS INTERFACE m_axi port = io_graph           bundle=gmem3
     #pragma HLS INTERFACE m_axi port = io_graph_cons      bundle=gmem4
-    #pragma HLS INTERFACE m_axi port = out_components     bundle=gmem5
+    #pragma HLS INTERFACE m_axi port = io_node_list       bundle=gmem5
+    #pragma HLS INTERFACE m_axi port = out_components     bundle=gmem6
 
     static hls::stream<unsigned int> outStream_components("output_stream_components");
     static unsigned int graph_size;
     #pragma HLS STREAM variable=graph_size type=pipo
 
     #pragma HLS dataflow
-    filter_memory(cutoff, in_full_graph, in_full_graph_cons, in_scores, num_nodes, io_graph, io_graph_cons, graph_size);
-    compute_core(io_graph, io_graph_cons, graph_size, outStream_components);
+    filter_memory(cutoff, in_full_graph, in_full_graph_cons, in_scores, num_nodes, io_graph, io_graph_cons, io_node_list, graph_size);
+    compute_core(io_graph, io_graph_cons, graph_size, outStream_components, io_node_list);
     write_components(out_components, outStream_components, num_nodes);
 
   }

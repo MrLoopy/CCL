@@ -30,7 +30,7 @@
 //============================================
 // {"dat/dummy.csv"}; //
 const u_int32_t num_threads = 1;
-const std::vector<std::string> csv_names = {"dat/event005001514.csv", "dat/event005001514.csv"}; //, "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/reg/r_event005008301.csv", "dat/reg/r_event005008302.csv", "dat/reg/r_event005008303.csv", "dat/reg/r_event005008304.csv", "dat/reg/r_event005008306.csv", "dat/reg/r_event005008308.csv", "dat/reg/r_event005008310.csv", "dat/reg/r_event005008312.csv"}; // {"dat/event005001514.csv", "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
+const std::vector<std::string> csv_names = {"dat/event005001514.csv", "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/reg/r_event005008301.csv", "dat/reg/r_event005008302.csv", "dat/reg/r_event005008303.csv", "dat/reg/r_event005008304.csv", "dat/reg/r_event005008306.csv", "dat/reg/r_event005008308.csv", "dat/reg/r_event005008310.csv", "dat/reg/r_event005008312.csv"}; // {"dat/event005001514.csv", "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
 const u_int32_t num_events = (const u_int32_t)csv_names.size();
 const float cutoff = 0.5;
 
@@ -657,52 +657,44 @@ int main (int argc, char ** argv){
       unsigned int node = 0;
       unsigned int first_node = 0;
       unsigned int label = 0;
-      // unsigned int idx_0 = 80 + 1;
-      // unsigned int idx_1 = 80 + 1 + 12;
-      unsigned int idx = 1; //80 + 1 + 12  + 48; // 80 + 48 + 1 // 1;
+      unsigned int idx = 1;
       unsigned int output_size = ev_out_components[ev][0];
+
 /* 
-      // std::cout << "[    ] [ ] " << idx_0 << " " << idx_1 << " " << idx << " - " << ev_out_components[ev][0] << std::endl;
-      // std::cout << "[    ] [ ]" << std::endl;
+      unsigned int idx_0 = 80 + 1;
+      unsigned int idx_1 = 80 + 1 + 12;
 
-      // std::cout << "[    ] [ ] cons + full_graph + scores" << std::endl;
-      // for(unsigned int i = 1; i < idx_0 ; i+=10){
-      //   std::cout << "[    ] [ ] " << ev_out_components[ev][i + 1] << " - ";
-      //   std::cout << ev_out_components[ev][i + 2] << " " << ev_out_components[ev][i + 3] << " " << ev_out_components[ev][i + 4] << " " << ev_out_components[ev][i + 5] << " - ";
-      //   std::cout << ev_out_components[ev][i + 6] << " " << ev_out_components[ev][i + 7] << " " << ev_out_components[ev][i + 8] << " " << ev_out_components[ev][i + 9];
-      //   std::cout << std::endl;
-      // }
-      // std::cout << "[    ] [ ]" << std::endl;
-
-      // std::cout << "[    ] [ ] reached parameters" << std::endl;
-      // std::cout << "[    ] [ ] m_num_nodes:    " << ev_out_components[ev][idx_0 + 1] << std::endl;
-      // std::cout << "[    ] [ ] con_iterations: " << ev_out_components[ev][idx_0 + 2] << std::endl;
-      // std::cout << "[    ] [ ] con_residue:    " << ev_out_components[ev][idx_0 + 3] << std::endl;
-      // std::cout << "[    ] [ ] reached_c:      " << ev_out_components[ev][idx_0 + 4] << std::endl;
-      // std::cout << "[    ] [ ] reached_k:      " << ev_out_components[ev][idx_0 + 5] << std::endl;
-      // std::cout << "[    ] [ ] reached_s:      " << ev_out_components[ev][idx_0 + 6] << std::endl;
-      // std::cout << "[    ] [ ] reached_i:      " << ev_out_components[ev][idx_0 + 7] << std::endl;
-      // std::cout << "[    ] [ ] reached_hs:     " << ev_out_components[ev][idx_0 + 8] << std::endl;
-      // std::cout << "[    ] [ ] reached_nr:     " << ev_out_components[ev][idx_0 + 9] << std::endl;
-      // std::cout << "[    ] [ ] reached_wcs:    " << ev_out_components[ev][idx_0 + 10] << std::endl;
-      // std::cout << "[    ] [ ] reached_wcm:    " << ev_out_components[ev][idx_0 + 11] << std::endl;
-
-      // std::cout << "[    ] [ ]" << std::endl;
-
-      // std::cout << "[    ] [ ] cons + graph" << std::endl;
-      // for(unsigned int i = idx_1; i < idx ; i+=6){
-      //   std::cout << "[    ] [ ] " << ev_out_components[ev][i + 1] << " - ";
-      //   std::cout << ev_out_components[ev][i + 2] << " " << ev_out_components[ev][i + 3] << " " << ev_out_components[ev][i + 4] << " " << ev_out_components[ev][i + 5];
-      //   std::cout << std::endl;
-      // }
-      // std::cout << "[    ] [ ]" << std::endl;
-      
-      ap_uint<512> cons = ev_out_cons[ev][0];
+      std::cout << "[    ] [ ] " << idx_0 << " " << idx_1 << " " << idx << " - " << ev_out_components[ev][0] << std::endl;
       std::cout << "[    ] [ ]" << std::endl;
-      std::cout << "[    ] [" << ev << "] io_graph" << std::endl;
-      for(unsigned int i = 0; i < 10 ; i++){
-        std::cout << "[    ] [ ] " << i << " " << cons.range((i + 1) * 8 - 1, i * 8) << " - ";
-        std::cout << ev_out_graph[ev][i * MAX_EDGES + 0] << " " << ev_out_graph[ev][i * MAX_EDGES + 1] << " " << ev_out_graph[ev][i * MAX_EDGES + 2] << " " << ev_out_graph[ev][i * MAX_EDGES + 3] << " " << ev_out_graph[ev][i * MAX_EDGES + 4] << " ";
+
+      std::cout << "[    ] [ ] cons + full_graph + scores" << std::endl;
+      for(unsigned int i = 1; i < idx_0 ; i+=10){
+        std::cout << "[    ] [ ] " << ev_out_components[ev][i + 1] << " - ";
+        std::cout << ev_out_components[ev][i + 2] << " " << ev_out_components[ev][i + 3] << " " << ev_out_components[ev][i + 4] << " " << ev_out_components[ev][i + 5] << " - ";
+        std::cout << ev_out_components[ev][i + 6] << " " << ev_out_components[ev][i + 7] << " " << ev_out_components[ev][i + 8] << " " << ev_out_components[ev][i + 9];
+        std::cout << std::endl;
+      }
+      std::cout << "[    ] [ ]" << std::endl;
+
+      std::cout << "[    ] [ ] reached parameters" << std::endl;
+      std::cout << "[    ] [ ] m_num_nodes:    " << ev_out_components[ev][idx_0 + 1] << std::endl;
+      std::cout << "[    ] [ ] con_iterations: " << ev_out_components[ev][idx_0 + 2] << std::endl;
+      std::cout << "[    ] [ ] con_residue:    " << ev_out_components[ev][idx_0 + 3] << std::endl;
+      std::cout << "[    ] [ ] reached_c:      " << ev_out_components[ev][idx_0 + 4] << std::endl;
+      std::cout << "[    ] [ ] reached_k:      " << ev_out_components[ev][idx_0 + 5] << std::endl;
+      std::cout << "[    ] [ ] reached_s:      " << ev_out_components[ev][idx_0 + 6] << std::endl;
+      std::cout << "[    ] [ ] reached_i:      " << ev_out_components[ev][idx_0 + 7] << std::endl;
+      std::cout << "[    ] [ ] reached_hs:     " << ev_out_components[ev][idx_0 + 8] << std::endl;
+      std::cout << "[    ] [ ] reached_nr:     " << ev_out_components[ev][idx_0 + 9] << std::endl;
+      std::cout << "[    ] [ ] reached_wcs:    " << ev_out_components[ev][idx_0 + 10] << std::endl;
+      std::cout << "[    ] [ ] reached_wcm:    " << ev_out_components[ev][idx_0 + 11] << std::endl;
+
+      std::cout << "[    ] [ ]" << std::endl;
+
+      std::cout << "[    ] [ ] cons + graph" << std::endl;
+      for(unsigned int i = idx_1; i < idx ; i+=6){
+        std::cout << "[    ] [ ] " << ev_out_components[ev][i + 1] << " - ";
+        std::cout << ev_out_components[ev][i + 2] << " " << ev_out_components[ev][i + 3] << " " << ev_out_components[ev][i + 4] << " " << ev_out_components[ev][i + 5];
         std::cout << std::endl;
       }
       std::cout << "[    ] [ ]" << std::endl;
@@ -738,11 +730,13 @@ int main (int argc, char ** argv){
       }
       std::cout << "[    ] [" << ev << "] missmatches between expected high_scores, entries in graph and graph_cons: " << err_cons << std::endl;
       std::cout << "[    ] [ ]" << std::endl;
-      
-      std::cout << "[    ] [" << ev << "] output" << std::endl;
-      for(unsigned int i = idx; i < idx + 3 ; i++)
+
+      std::cout << "[    ]" << std::endl;
+      std::cout << "[    ] [ ] output" << std::endl;
+      for(unsigned int i = 0; i < 5 ; i++)
         std::cout << "[    ] [ ] " << ev_out_components[ev][i] << std::endl;
-*/
+      std::cout << "[    ]" << std::endl;
+ */
       // count #components, #comp_nodes, comp_sizes
       unsigned int num_components = 0;
       unsigned int num_component_nodes = 0;
@@ -844,6 +838,54 @@ int main (int argc, char ** argv){
     }
   }
 
+/*    if(num_events == 2){
+      bool graph_correct = true;
+      bool comp_correct = true;
+      bool cons_correct = true;
+      unsigned int graph_num_errors = 0;
+      unsigned int comp_num_errors = 0;
+      unsigned int cons_num_errors = 0;
+      unsigned int idx = 1; // 80 + 1 + 12  + 48; // 80 + 48 + 1 // 1;
+      for(unsigned int i = 0; i < size_graph ; i++){
+        if(ev_out_graph[0][i] != ev_out_graph[1][i]){
+          graph_correct = false;
+          graph_num_errors++;
+        }
+      }
+      for(unsigned int i = 0; i < size_components ; i++){
+        if(ev_out_components[0][i] != ev_out_components[1][i]){
+          comp_correct = false;
+          comp_num_errors++;
+        }
+      }
+      for(unsigned int i = 0; i < size_graph_cons ; i++){
+        if(ev_out_cons[0][i] != ev_out_cons[1][i]){
+          cons_correct = false;
+          cons_num_errors++;
+        }
+      }
+      std::cout << "[    ]" << std::endl;
+      if(!graph_correct || !comp_correct || !cons_correct){
+        std::cout << "[    ] MISSMATCH FAILED" << std::endl;
+        std::cout << "[    ] " << graph_num_errors << " missmatches in io_graph found between event 0 and 1" << std::endl;
+        std::cout << "[    ] " << comp_num_errors << " missmatches in out_components found between event 0 and 1" << std::endl;
+        std::cout << "[    ] " << cons_num_errors << " missmatches in io_graph_cons found between event 0 and 1" << std::endl;
+        std::cout << "[    ]" << std::endl;
+        for(unsigned int i = 0; i < idx + 20 ; i++){
+          std::cout << "[    ] " << i << " - " << ev_out_components[0][i] << " " << ev_out_components[1][i];
+          if(ev_out_components[0][i] != ev_out_components[1][i]) std::cout << " x";
+          std::cout << std::endl;
+        }
+      }
+      else{
+        std::cout << "[    ] MISSMATCH PASSED" << std::endl;
+        std::cout << "[    ] " << graph_num_errors << " missmatches in io_graph found between event 0 and 1" << std::endl;
+        std::cout << "[    ] " << comp_num_errors << " missmatches in out_components found between event 0 and 1" << std::endl;
+        std::cout << "[    ] " << cons_num_errors << " missmatches in io_graph_cons found between event 0 and 1" << std::endl;
+      }
+      std::cout << "[    ]" << std::endl;
+    } */
+
   //============================================
   //
   // Free allocated memory
@@ -857,7 +899,6 @@ int main (int argc, char ** argv){
     delete ev_out_graph[ev];
     delete ev_out_cons[ev];
   }
-
 
   return 0;
 }

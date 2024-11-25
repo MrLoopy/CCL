@@ -4,7 +4,7 @@
 #include <hls_stream.h>
 
 // Custom includes
-#include <iostream>
+// #include <iostream>
 #include "test_kernels.hpp"
 
 static void in_ram_wrapper(uint16_t* in_graph, uint16_t* ram_graph, float* in_scores, float* ram_scores){
@@ -21,8 +21,6 @@ static void out_ram_wrapper(uint16_t* out_components, uint16_t* ram_components){
 static void filter_memory(float m_cutoff, uint16_t* full_graph, float* m_scores, uint16_t m_num_nodes,
                           uint16_t* m_graph, uint16_t* m_lookup, uint16_t* m_lookup_filter, uint16_t& m_graph_size) {
 
-  std::cout << "[KRNL] 0" << std::endl;
-  
   uint16_t connections = 0;
   uint16_t new_from, new_to;
   m_graph_size = 1; // has to start at 1, cause 0 indicates that no index has been given yet
@@ -73,7 +71,6 @@ static void filter_memory(float m_cutoff, uint16_t* full_graph, float* m_scores,
         m_graph[new_from * MAX_EDGES] = connections;
     }
   }
-  std::cout << "[KRNL] 1" << std::endl;
 }
 
 static void compute_core(uint16_t* m_graph, uint16_t m_num_nodes, hls::stream<uint16_t>& outStream, uint16_t* m_lookup){

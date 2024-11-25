@@ -21,20 +21,29 @@ static void filter_memory(float m_cutoff, hls::vector<uint32_t, 16>* full_graph,
   ap_uint<8> single_full_con = 0;
 
   hls::vector<float, 16> multi_scores;
-  #pragma HLS array_partition variable=multi_scores dim=1 complete
   multi_scores = hls::vector<float, 16>(0.0);
   hls::vector<uint32_t, 16> multi_edges;
-  #pragma HLS array_partition variable=multi_edges dim=1 complete
-  multi_edges = hls::vector<uint32_t, 16>(0.0);
+  multi_edges = hls::vector<uint32_t, 16>(0);
+  uint32_t multi_nodes[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  bool mask[16];
+  ap_uint<8> prefix_sum[16];
+  #pragma HLS array_partition variable=multi_scores complete
+  #pragma HLS array_partition variable=multi_edges complete
+  #pragma HLS array_partition variable=multi_nodes complete
+  #pragma HLS array_partition variable=mask complete
+  #pragma HLS array_partition variable=prefix_sum complete
 
   unsigned int con_iterations = m_num_nodes / 64; // number of 512-bit-values that need to be read
   unsigned int con_residue = m_num_nodes % 64; // number of 8-bit-values that are missing after the last complete 512-bit-value
   unsigned int scr_iterations = 0;
-  unsigned int scr_residue = 0;
+  // unsigned int scr_residue = 0;
 
+  filter_rows_outer:
   for (unsigned int c = 0; c < con_iterations + 1 ; c++){
+    #pragma HLS loop_tripcount min=290000/64 avg=335000/64 max=MAX_TOTAL_NODES/64
     multi_full_con = full_graph_cons[c];
     multi_graph_con = 0;
+    filter_rows_inner:
     for (unsigned int k = 0; k < 64 ; k++){ // iterate through 64 8-bit values inside the 512-bit variable
       if(c == con_iterations && k == con_residue){
         break;
@@ -47,34 +56,56 @@ static void filter_memory(float m_cutoff, hls::vector<uint32_t, 16>* full_graph,
         row = c * 64 + k;
 
         scr_iterations = single_full_con / 16;
-        scr_residue = single_full_con % 16;
+        // scr_residue = single_full_con % 16;
+        filter_columns_outer:
         for (unsigned int s = 0; s < scr_iterations + 1 ; s++){
+          #pragma HLS loop_tripcount min=1 avg=1 max=MAX_FULL_GRAPH_EDGES/16
           multi_scores = m_scores[row * MAX_FULL_GRAPH_BLOCKS + s];
           multi_edges = full_graph[row * MAX_FULL_GRAPH_BLOCKS + s];
+          filter_mask:
           for (unsigned int i = 0; i < 16 ; i++){
-            if(s == scr_iterations && i == scr_residue){
-              break;
+            #pragma HLS unroll
+            // bit mask
+            if(multi_scores[i] > m_cutoff)
+              mask[i] = true;
+            else
+              mask[i] = false;
+          }
+          filter_prefix_sum:
+          for (unsigned int i = 0; i < 16 ; i++){
+            #pragma HLS unroll
+            // calc prefix_sum
+            prefix_sum[i] = 0;
+            filter_prefix_sum_inner:
+            for(unsigned int j = 0; j < i + 1 ; j++){
+              #pragma HLS unroll
+              prefix_sum[i] += mask[j];
             }
-            if(multi_scores[i] > m_cutoff){
-              m_graph[row * MAX_EDGES + connections] = multi_edges[i];
-              connections++;
-              if(new_row){
-                new_row = false;
-                m_graph_size++;
-              }
-            }
+            // store indices
+            if(mask[i])
+              multi_nodes[connections + prefix_sum[i] - 1] = multi_edges[i];
+          }
+          // increase connections by calculated value
+          connections += prefix_sum[15];
+          // set bool to write #connections later
+          if(prefix_sum[15] > 0 && new_row){
+            new_row = false;
+            m_graph_size++;
           }
         }
         if(!new_row){
           multi_graph_con.range((k + 1) * 8 - 1, k * 8) = connections;
+          filter_write:
+          for (unsigned int i = 0; i < connections ; i++){
+            #pragma HLS loop_tripcount min=1 avg=2 max=16
+            m_graph[row * MAX_EDGES + i] = multi_nodes[i];
+          }
         }
       }
     }
     graph_cons[c] = multi_graph_con;
   }
-
   ctrl << true;
-
 }
 
 static void compute_core(unsigned int* m_graph, ap_uint<512>* graph_cons, unsigned int m_num_nodes, hls::stream<unsigned int>& outStream, hls::stream<bool>& ctrl){
@@ -88,6 +119,7 @@ static void compute_core(unsigned int* m_graph, ap_uint<512>* graph_cons, unsign
   unsigned int current_component_size = 0;
   unsigned int processed_nodes = 0;
   unsigned int next_node = 0;
+  unsigned int potential_node = 0;
   ap_uint<8> next_node_cons = 0;
 
   unsigned int row = 0;
@@ -100,8 +132,11 @@ static void compute_core(unsigned int* m_graph, ap_uint<512>* graph_cons, unsign
 
   bool temp = ctrl.read();
 
+  compute_rows_outer:
   for (unsigned int c = 0; c < con_iterations + 1 ; c++){
+    #pragma HLS loop_tripcount min=31000/64 avg=36000/64 max=MAX_TRUE_NODES/64
     multi_graph_con = graph_cons[c];
+    compute_rows_inner:
     for (unsigned int k = 0; k < 64 ; k++){
       if(c == con_iterations && k == con_residue){
         break;
@@ -113,11 +148,6 @@ static void compute_core(unsigned int* m_graph, ap_uint<512>* graph_cons, unsign
       }
       // node with connections that has not been processed yet -> new component
       else if (!processed[row]){
-        // new component needs to reset parameters
-        compute_reset_component:
-        for (unsigned int i = 0; i < MAX_COMPONENT_SIZE; i++){
-          component[i] = 0;
-        }
         current_component_size = 0;
         processed_nodes = 0;
 
@@ -138,17 +168,18 @@ static void compute_core(unsigned int* m_graph, ap_uint<512>* graph_cons, unsign
             compute_connections:
             for(unsigned int i = 0 ; i < next_node_cons; i++){
               #pragma HLS loop_tripcount min=1 avg=2 max=MAX_EDGES
-              if(!processed[m_graph[next_node * MAX_EDGES + i]] && current_component_size < MAX_COMPONENT_SIZE){
+              potential_node = m_graph[next_node * MAX_EDGES + i];
+              if(!processed[potential_node] && current_component_size < MAX_COMPONENT_SIZE){
                 bool new_node = true;
                 compute_check_component:
                 for(unsigned int j = 0 ; j < current_component_size; j++){
                   #pragma HLS loop_tripcount min=1 avg=4 max=MAX_COMPONENT_SIZE
-                    if(component[j] == m_graph[next_node * MAX_EDGES + i]){
+                    if(component[j] == potential_node){
                       new_node = false;
                     }
                 }
                 if(new_node){
-                  component[current_component_size] = m_graph[next_node * MAX_EDGES + i];
+                  component[current_component_size] = potential_node;
                   current_component_size++;
                 }
               }

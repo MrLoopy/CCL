@@ -570,11 +570,17 @@ int main (int argc, char ** argv){
     //
     std::cout << "[    ] [" << ev << "] Synchronize input buffer data to device global memory" << std::endl;
     bo.in_full_graph_0.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.in_full_graph_1.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     bo.in_full_graph_cons_0.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.in_full_graph_cons_1.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     bo.in_scores_0.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.in_full_graph_1.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.in_full_graph_cons_1.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     bo.in_scores_1.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.in_full_graph_2.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.in_full_graph_cons_2.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.in_scores_2.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.in_full_graph_3.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.in_full_graph_cons_3.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.in_scores_3.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     bo.out_components.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     timing.in_synced.push_back(std::chrono::system_clock::now());
 

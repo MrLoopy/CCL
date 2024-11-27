@@ -612,12 +612,18 @@ extern "C" {
     #pragma HLS dataflow
 
     #pragma HLS INTERFACE m_axi port = in_full_graph_0      bundle=gmem0
-    #pragma HLS INTERFACE m_axi port = in_full_graph_1      bundle=gmem1
-    #pragma HLS INTERFACE m_axi port = in_full_graph_cons_0 bundle=gmem2
-    #pragma HLS INTERFACE m_axi port = in_full_graph_cons_1 bundle=gmem3
-    #pragma HLS INTERFACE m_axi port = in_scores_0          bundle=gmem4
+    #pragma HLS INTERFACE m_axi port = in_full_graph_cons_0 bundle=gmem1
+    #pragma HLS INTERFACE m_axi port = in_scores_0          bundle=gmem2
+    #pragma HLS INTERFACE m_axi port = in_full_graph_1      bundle=gmem3
+    #pragma HLS INTERFACE m_axi port = in_full_graph_cons_1 bundle=gmem4
     #pragma HLS INTERFACE m_axi port = in_scores_1          bundle=gmem5
-    #pragma HLS INTERFACE m_axi port = out_components       bundle=gmem6
+    #pragma HLS INTERFACE m_axi port = in_full_graph_2      bundle=gmem6
+    #pragma HLS INTERFACE m_axi port = in_full_graph_cons_2 bundle=gmem7
+    #pragma HLS INTERFACE m_axi port = in_scores_2          bundle=gmem8
+    #pragma HLS INTERFACE m_axi port = in_full_graph_3      bundle=gmem9
+    #pragma HLS INTERFACE m_axi port = in_full_graph_cons_3 bundle=gmem10
+    #pragma HLS INTERFACE m_axi port = in_scores_3          bundle=gmem11
+    #pragma HLS INTERFACE m_axi port = out_components       bundle=gmem12
     
     static hls::stream<unsigned int> outStream_components("output_stream_components");
     static hls::stream<unsigned int> stream_out_0("stream_0");

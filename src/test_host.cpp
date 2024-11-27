@@ -39,7 +39,7 @@ u_int32_t size_lookup_filter = MAX_TOTAL_NODES;
 u_int32_t size_components = MAX_TRUE_NODES + MAX_COMPONENTS;
 
 size_t size_full_graph_byte = sizeof(uint16_t) * size_full_graph;
-size_t size_scores_byte = sizeof(float) * size_scores;
+size_t size_scores_byte = sizeof(bool) * size_scores;
 size_t size_graph_byte = sizeof(uint16_t) * size_graph;
 size_t size_lookup_byte = sizeof(uint16_t) * size_lookup;
 size_t size_lookup_filter_byte = sizeof(uint16_t) * size_lookup_filter;
@@ -94,14 +94,14 @@ struct kernel_buffers{
 };
 struct kernel_maps{
   uint16_t* in_full_graph;
-  float* in_scores;
+  bool* in_scores;
   // uint16_t* inout_graph;
   // uint16_t* inout_lookup;
   // uint16_t* inout_lookup_filter;
   uint16_t* out_components;
   kernel_maps(kernel_buffers &m_bo){
     in_full_graph = m_bo.in_full_graph.map<uint16_t*>();
-    in_scores = m_bo.in_scores.map<float*>();
+    in_scores = m_bo.in_scores.map<bool*>();
     // inout_graph = m_bo.inout_graph.map<uint16_t*>();
     // inout_lookup = m_bo.inout_lookup.map<uint16_t*>();
     // inout_lookup_filter = m_bo.inout_lookup_filter.map<uint16_t*>();
@@ -519,8 +519,8 @@ int main (int argc, char ** argv){
     }
     std::cout << "; real #edges: " << ev_real_edges[ev] / 2 << "; #true-edges: " << ev_true_edges[ev] / 2 << "; score missmatches: " << score_missmatch;
     std::cout << "; " << ex_row.size() << " exceeded rows by ";
-    for(uint16_t i = 0; i < ex_row.size() ; i++)
-      std::cout << exceeded_by[i] << " ";
+    // for(uint16_t i = 0; i < ex_row.size() ; i++)
+    //   std::cout << exceeded_by[i] << " ";
     std::cout << "; done" << std::endl;
   }
 
@@ -551,7 +551,10 @@ int main (int argc, char ** argv){
     std::cout << "[    ] [" << ev << "] Write Event to Global Memory Buffer" << std::endl;
     for(unsigned int i = 0; i < size_scores ; i++){
       maps.in_full_graph[i] = ev_in_full_graph[ev][i];
-      maps.in_scores[i] = ev_in_scores[ev][i];
+      if(ev_in_scores[ev][i] > cutoff)
+        maps.in_scores[i] = true;
+      else
+        maps.in_scores[i] = false;
     }
     // std::fill(maps.inout_graph, maps.inout_graph + size_graph, 0.0);
     // std::fill(maps.inout_lookup, maps.inout_lookup + size_lookup, 0);
@@ -574,7 +577,7 @@ int main (int argc, char ** argv){
     // Execute Kernel
     //
     std::cout << "[    ] [" << ev << "] Start Kernel" << std::endl;
-    auto run = bo.kernel(bo.in_full_graph, bo.in_scores, bo.out_components, ev_num_nodes[ev], cutoff);
+    auto run = bo.kernel(bo.in_full_graph, bo.in_scores, bo.out_components, ev_num_nodes[ev]);
     // auto run = bo.kernel(bo.in_full_graph, bo.in_scores, bo.inout_graph, bo.inout_lookup, bo.inout_lookup_filter, bo.out_components, ev_num_nodes[ev], cutoff);
     timing.krnl_started.push_back(std::chrono::system_clock::now());
     std::cout << "[    ] [" << ev << "] Wait for Kernel to finish" << std::endl;

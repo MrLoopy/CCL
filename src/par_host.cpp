@@ -30,7 +30,7 @@
 //============================================
 // {"dat/dummy.csv"}; //
 const u_int32_t num_threads = 1;
-const std::vector<std::string> csv_names = {"dat/event005001514.csv", "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/reg/r_event005008301.csv", "dat/reg/r_event005008302.csv", "dat/reg/r_event005008303.csv", "dat/reg/r_event005008304.csv", "dat/reg/r_event005008306.csv", "dat/reg/r_event005008308.csv", "dat/reg/r_event005008310.csv", "dat/reg/r_event005008312.csv"}; // {"dat/event005001514.csv", "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
+const std::vector<std::string> csv_names = {"dat/event005001514.csv"}; //, "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/reg/r_event005008301.csv", "dat/reg/r_event005008302.csv", "dat/reg/r_event005008303.csv", "dat/reg/r_event005008304.csv", "dat/reg/r_event005008306.csv", "dat/reg/r_event005008308.csv", "dat/reg/r_event005008310.csv", "dat/reg/r_event005008312.csv"}; // {"dat/event005001514.csv", "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
 const u_int32_t num_events = (const u_int32_t)csv_names.size();
 const float cutoff = 0.5;
 
@@ -78,39 +78,63 @@ struct kernel_buffers{
   xrt::device device;
   xrt::kernel kernel;
   xrt::bo in_full_graph_0;
-  xrt::bo in_full_graph_1;
   xrt::bo in_full_graph_cons_0;
-  xrt::bo in_full_graph_cons_1;
   xrt::bo in_scores_0;
+  xrt::bo in_full_graph_1;
+  xrt::bo in_full_graph_cons_1;
   xrt::bo in_scores_1;
+  xrt::bo in_full_graph_2;
+  xrt::bo in_full_graph_cons_2;
+  xrt::bo in_scores_2;
+  xrt::bo in_full_graph_3;
+  xrt::bo in_full_graph_cons_3;
+  xrt::bo in_scores_3;
   xrt::bo out_components;
   kernel_buffers(xrt::device &m_device, xrt::kernel &m_kernel){
     device = m_device;
     kernel = m_kernel;
     in_full_graph_0 = xrt::bo(device, size_full_graph_byte, kernel.group_id(0));
-    in_full_graph_1 = xrt::bo(device, size_full_graph_byte, kernel.group_id(1));
-    in_full_graph_cons_0 = xrt::bo(device, size_full_graph_cons_byte, kernel.group_id(2));
-    in_full_graph_cons_1 = xrt::bo(device, size_full_graph_cons_byte, kernel.group_id(3));
-    in_scores_0 = xrt::bo(device, size_scores_byte, kernel.group_id(4));
+    in_full_graph_cons_0 = xrt::bo(device, size_full_graph_cons_byte, kernel.group_id(1));
+    in_scores_0 = xrt::bo(device, size_scores_byte, kernel.group_id(2));
+    in_full_graph_1 = xrt::bo(device, size_full_graph_byte, kernel.group_id(3));
+    in_full_graph_cons_1 = xrt::bo(device, size_full_graph_cons_byte, kernel.group_id(4));
     in_scores_1 = xrt::bo(device, size_scores_byte, kernel.group_id(5));
-    out_components = xrt::bo(device, size_components_byte, kernel.group_id(6));
+    in_full_graph_2 = xrt::bo(device, size_full_graph_byte, kernel.group_id(6));
+    in_full_graph_cons_2 = xrt::bo(device, size_full_graph_cons_byte, kernel.group_id(7));
+    in_scores_2 = xrt::bo(device, size_scores_byte, kernel.group_id(8));
+    in_full_graph_3 = xrt::bo(device, size_full_graph_byte, kernel.group_id(9));
+    in_full_graph_cons_3 = xrt::bo(device, size_full_graph_cons_byte, kernel.group_id(10));
+    in_scores_3 = xrt::bo(device, size_scores_byte, kernel.group_id(11));
+    out_components = xrt::bo(device, size_components_byte, kernel.group_id(12));
   }
 };
 struct kernel_maps{
   hls::vector<uint32_t, 16>* in_full_graph_0;
-  hls::vector<uint32_t, 16>* in_full_graph_1;
   ap_uint<512>* in_full_graph_cons_0;
-  ap_uint<512>* in_full_graph_cons_1;
   hls::vector<float, 16>* in_scores_0;
+  hls::vector<uint32_t, 16>* in_full_graph_1;
+  ap_uint<512>* in_full_graph_cons_1;
   hls::vector<float, 16>* in_scores_1;
+  hls::vector<uint32_t, 16>* in_full_graph_2;
+  ap_uint<512>* in_full_graph_cons_2;
+  hls::vector<float, 16>* in_scores_2;
+  hls::vector<uint32_t, 16>* in_full_graph_3;
+  ap_uint<512>* in_full_graph_cons_3;
+  hls::vector<float, 16>* in_scores_3;
   unsigned int* out_components;
   kernel_maps(kernel_buffers &m_bo){
     in_full_graph_0 = m_bo.in_full_graph_0.map<hls::vector<uint32_t, 16>*>();
-    in_full_graph_1 = m_bo.in_full_graph_1.map<hls::vector<uint32_t, 16>*>();
     in_full_graph_cons_0 = m_bo.in_full_graph_cons_0.map<ap_uint<512>*>();
-    in_full_graph_cons_1 = m_bo.in_full_graph_cons_1.map<ap_uint<512>*>();
     in_scores_0 = m_bo.in_scores_0.map<hls::vector<float, 16>*>();
+    in_full_graph_1 = m_bo.in_full_graph_1.map<hls::vector<uint32_t, 16>*>();
+    in_full_graph_cons_1 = m_bo.in_full_graph_cons_1.map<ap_uint<512>*>();
     in_scores_1 = m_bo.in_scores_1.map<hls::vector<float, 16>*>();
+    in_full_graph_2 = m_bo.in_full_graph_2.map<hls::vector<uint32_t, 16>*>();
+    in_full_graph_cons_2 = m_bo.in_full_graph_cons_2.map<ap_uint<512>*>();
+    in_scores_2 = m_bo.in_scores_2.map<hls::vector<float, 16>*>();
+    in_full_graph_3 = m_bo.in_full_graph_3.map<hls::vector<uint32_t, 16>*>();
+    in_full_graph_cons_3 = m_bo.in_full_graph_cons_3.map<ap_uint<512>*>();
+    in_scores_3 = m_bo.in_scores_3.map<hls::vector<float, 16>*>();
     out_components = m_bo.out_components.map<unsigned int*>();
   }
 };
@@ -521,14 +545,20 @@ int main (int argc, char ** argv){
       for(unsigned int j = 0; j < 64 ; j++){
         maps.in_full_graph_cons_0[i].range((j + 1) * 8 - 1, j * 8) = ev_in_full_graph_cons[ev][i * 64 + j];
         maps.in_full_graph_cons_1[i].range((j + 1) * 8 - 1, j * 8) = ev_in_full_graph_cons[ev][i * 64 + j];
+        maps.in_full_graph_cons_2[i].range((j + 1) * 8 - 1, j * 8) = ev_in_full_graph_cons[ev][i * 64 + j];
+        maps.in_full_graph_cons_3[i].range((j + 1) * 8 - 1, j * 8) = ev_in_full_graph_cons[ev][i * 64 + j];
       }
 
     for (unsigned int i = 0; i < size_scores; i++){
       for (unsigned int j = 0; j < 16 ; j++){
         maps.in_full_graph_0[i][j] = ev_in_full_graph[ev][i * 16 + j];
         maps.in_full_graph_1[i][j] = ev_in_full_graph[ev][i * 16 + j];
+        maps.in_full_graph_2[i][j] = ev_in_full_graph[ev][i * 16 + j];
+        maps.in_full_graph_3[i][j] = ev_in_full_graph[ev][i * 16 + j];
         maps.in_scores_0[i][j] = ev_in_scores[ev][i * 16 + j];
         maps.in_scores_1[i][j] = ev_in_scores[ev][i * 16 + j];
+        maps.in_scores_2[i][j] = ev_in_scores[ev][i * 16 + j];
+        maps.in_scores_3[i][j] = ev_in_scores[ev][i * 16 + j];
       }
     }
 
@@ -552,7 +582,12 @@ int main (int argc, char ** argv){
     // Execute Kernel
     //
     std::cout << "[    ] [" << ev << "] Start Kernel" << std::endl;
-    auto run = bo.kernel(bo.in_full_graph_0, bo.in_full_graph_1, bo.in_full_graph_cons_0, bo.in_full_graph_cons_1, bo.in_scores_0, bo.in_scores_1, bo.out_components, ev_num_nodes[ev], cutoff);
+    auto run = bo.kernel(
+                          bo.in_full_graph_0, bo.in_full_graph_cons_0, bo.in_scores_0,
+                          bo.in_full_graph_1, bo.in_full_graph_cons_1, bo.in_scores_1,
+                          bo.in_full_graph_2, bo.in_full_graph_cons_2, bo.in_scores_2,
+                          bo.in_full_graph_3, bo.in_full_graph_cons_3, bo.in_scores_3,
+                          bo.out_components, ev_num_nodes[ev], cutoff);
     timing.krnl_started.push_back(std::chrono::system_clock::now());
     std::cout << "[    ] [" << ev << "] Wait for Kernel to finish" << std::endl;
     run.wait();

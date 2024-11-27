@@ -5,7 +5,7 @@
 #include <hls_stream.h>
 
 // Custom includes
-#include <iostream>
+// #include <iostream>
 #include "par_kernels.hpp"
 
 /*
@@ -331,9 +331,8 @@ static void compute_direct(float m_cutoff, unsigned int* full_graph, float* scor
   outStream << 0;
 } */
 
-static void sub_direct( float m_cutoff, hls::vector<uint32_t, 16>* full_graph/* hls::stream<uint32_t>& req_graph, hls::stream<hls::vector<uint32_t, 16>>& graph */, ap_uint<512>* full_graph_cons, hls::vector<float, 16>* m_scores,
+static void sub_direct( float m_cutoff, hls::vector<uint32_t, 16>* full_graph, ap_uint<512>* full_graph_cons, hls::vector<float, 16>* m_scores,
                         hls::stream<unsigned int>& outStream, unsigned int start, unsigned int end){
-  std::cout << "[KRNL] sub_direct 0" << std::endl;
 
   unsigned int component[MAX_COMPONENT_SIZE];
   unsigned int current_component_size = 0;
@@ -382,8 +381,6 @@ static void sub_direct( float m_cutoff, hls::vector<uint32_t, 16>* full_graph/* 
         scr_residue = single_full_con % 16;
         for (unsigned int s = 0; s < scr_iterations + 1 ; s++){
           multi_scores = m_scores[row * MAX_FULL_GRAPH_BLOCKS + s];
-          // req_graph << row * MAX_FULL_GRAPH_BLOCKS + s;
-          // multi_edges = graph.read();
           multi_edges = full_graph[row * MAX_FULL_GRAPH_BLOCKS + s];
           for (unsigned int i = 0; i < 16 ; i++){
             if(s == scr_iterations && i == scr_residue){
@@ -417,8 +414,6 @@ static void sub_direct( float m_cutoff, hls::vector<uint32_t, 16>* full_graph/* 
               scr_residue = next_node_cons % 16;
               for (unsigned int s = 0; s < scr_iterations + 1 ; s++){
                 multi_scores = m_scores[next_node * MAX_FULL_GRAPH_BLOCKS + s];
-                // req_graph << next_node * MAX_FULL_GRAPH_BLOCKS + s;
-                // multi_edges = graph.read();
                 multi_edges = full_graph[next_node * MAX_FULL_GRAPH_BLOCKS + s];
                 for (unsigned int i = 0; i < 16 ; i++){
                   if(s == scr_iterations && i == scr_residue){
@@ -455,14 +450,14 @@ static void sub_direct( float m_cutoff, hls::vector<uint32_t, 16>* full_graph/* 
     }
   }
   outStream << 0;
-  std::cout << "[KRNL] sub_direct 1" << std::endl;
 }
 
-static void merge_streams(hls::stream<unsigned int>& outStream, hls::stream<unsigned int>& stream_0, hls::stream<unsigned int>& stream_1/* , hls::stream<bool>& ctrl_graph */) {
-  std::cout << "[KRNL] merge 0" << std::endl;
+static void merge_streams(hls::stream<unsigned int>& outStream, hls::stream<unsigned int>& stream_0, hls::stream<unsigned int>& stream_1, hls::stream<unsigned int>& stream_2, hls::stream<unsigned int>& stream_3) {
 
   bool str_0 = true;
   bool str_1 = true;
+  bool str_2 = true;
+  bool str_3 = true;
   bool strms = true;
   unsigned int component_size = 0;
 
@@ -474,7 +469,7 @@ static void merge_streams(hls::stream<unsigned int>& outStream, hls::stream<unsi
       // if the size == 0, the end of the stream is reached, the total size can be written and the writing ended
       if(component_size == 0){
         str_0 = false;
-        if(!str_0 && !str_1){
+        if(!str_0 && !str_1 && !str_2 && !str_3){
           outStream << 0;
           strms = false;
           break;
@@ -494,7 +489,7 @@ static void merge_streams(hls::stream<unsigned int>& outStream, hls::stream<unsi
       // if the size == 0, the end of the stream is reached, the total size can be written and the writing ended
       if(component_size == 0){
         str_1 = false;
-        if(!str_0 && !str_1){
+        if(!str_0 && !str_1 && !str_2 && !str_3){
           outStream << 0;
           strms = false;
           break;
@@ -508,9 +503,47 @@ static void merge_streams(hls::stream<unsigned int>& outStream, hls::stream<unsi
           outStream << stream_1.read();
       }
     }
+    if(stream_2.size() > 0){
+      // every first number of each component is the size of the component;
+      component_size = stream_2.read();
+      // if the size == 0, the end of the stream is reached, the total size can be written and the writing ended
+      if(component_size == 0){
+        str_2 = false;
+        if(!str_0 && !str_1 && !str_2 && !str_3){
+          outStream << 0;
+          strms = false;
+          break;
+        }
+      }
+      else{
+        // if the stream is still running, the size of the component is written, followed by all its node-indices
+        outStream << component_size;
+        merge_write_nodes_2:
+        for (unsigned int i = 0; i < component_size; i++)
+          outStream << stream_2.read();
+      }
+    }
+    if(stream_3.size() > 0){
+      // every first number of each component is the size of the component;
+      component_size = stream_3.read();
+      // if the size == 0, the end of the stream is reached, the total size can be written and the writing ended
+      if(component_size == 0){
+        str_3 = false;
+        if(!str_0 && !str_1 && !str_2 && !str_3){
+          outStream << 0;
+          strms = false;
+          break;
+        }
+      }
+      else{
+        // if the stream is still running, the size of the component is written, followed by all its node-indices
+        outStream << component_size;
+        merge_write_nodes_3:
+        for (unsigned int i = 0; i < component_size; i++)
+          outStream << stream_3.read();
+      }
+    }
   }
-  // ctrl_graph << false;
-  std::cout << "[KRNL] merge 1" << std::endl;
 }
 
 static void write_components(unsigned int* out, hls::stream<unsigned int>& outStream, unsigned int size) {
@@ -543,7 +576,7 @@ static void write_components(unsigned int* out, hls::stream<unsigned int>& outSt
     }
 }
 
-/* static void graph_reader( hls::vector<uint32_t, 16>* full_graph, hls::stream<bool>& ctrl,
+/* void graph_reader( hls::vector<uint32_t, 16>* full_graph, hls::stream<bool>& ctrl,
                           hls::stream<uint32_t>& idx_0, hls::stream<hls::vector<uint32_t, 16>>& graph_0,
                           hls::stream<uint32_t>& idx_1, hls::stream<hls::vector<uint32_t, 16>>& graph_1){
   std::cout << "[KRNL] graph_reader 0" << std::endl;
@@ -570,10 +603,14 @@ static void write_components(unsigned int* out, hls::stream<unsigned int>& outSt
 extern "C" {
 
   void CCL(
-            hls::vector<uint32_t, 16>* in_full_graph_0, hls::vector<uint32_t, 16>* in_full_graph_1, ap_uint<512>* in_full_graph_cons_0,
-            ap_uint<512>* in_full_graph_cons_1,  hls::vector<float, 16>* in_scores_0,  hls::vector<float, 16>* in_scores_1,
+            hls::vector<uint32_t, 16>* in_full_graph_0, ap_uint<512>* in_full_graph_cons_0, hls::vector<float, 16>* in_scores_0,
+            hls::vector<uint32_t, 16>* in_full_graph_1, ap_uint<512>* in_full_graph_cons_1, hls::vector<float, 16>* in_scores_1,
+            hls::vector<uint32_t, 16>* in_full_graph_2, ap_uint<512>* in_full_graph_cons_2, hls::vector<float, 16>* in_scores_2,
+            hls::vector<uint32_t, 16>* in_full_graph_3, ap_uint<512>* in_full_graph_cons_3, hls::vector<float, 16>* in_scores_3,
             unsigned int* out_components, unsigned int num_nodes, float cutoff) {
     
+    #pragma HLS dataflow
+
     #pragma HLS INTERFACE m_axi port = in_full_graph_0      bundle=gmem0
     #pragma HLS INTERFACE m_axi port = in_full_graph_1      bundle=gmem1
     #pragma HLS INTERFACE m_axi port = in_full_graph_cons_0 bundle=gmem2
@@ -585,23 +622,19 @@ extern "C" {
     static hls::stream<unsigned int> outStream_components("output_stream_components");
     static hls::stream<unsigned int> stream_out_0("stream_0");
     static hls::stream<unsigned int> stream_out_1("stream_1");
+    static hls::stream<unsigned int> stream_out_2("stream_2");
+    static hls::stream<unsigned int> stream_out_3("stream_3");
 
-    // static hls::stream<bool> graph_ctrl("graph_ctrl");
-    // static hls::stream<uint32_t> graph_idx_0("graph_idx_0");
-    // static hls::stream<uint32_t> graph_idx_1("graph_idx_1");
-    // static hls::stream<hls::vector<uint32_t, 16>> graph_0("graph_0");
-    // static hls::stream<hls::vector<uint32_t, 16>> graph_1("graph_1");
+    static const unsigned int factor = 4;
 
-    #pragma HLS dataflow
-
-    // graph_reader(in_full_graph_0, graph_ctrl, graph_idx_0, graph_0, graph_idx_1, graph_1);
-
-    sub_direct(cutoff, in_full_graph_0/* graph_idx_0, graph_0 */, in_full_graph_cons_0, in_scores_0, stream_out_0, 0, (num_nodes / 2) - ((num_nodes / 2) % 64));
-    sub_direct(cutoff, in_full_graph_1/* graph_idx_1, graph_1 */, in_full_graph_cons_1, in_scores_1, stream_out_1, (num_nodes / 2) - ((num_nodes / 2) % 64), num_nodes);
+    sub_direct(cutoff, in_full_graph_0, in_full_graph_cons_0, in_scores_0, stream_out_0, 0, (num_nodes / factor) - ((num_nodes / factor) % 64));
+    sub_direct(cutoff, in_full_graph_1, in_full_graph_cons_1, in_scores_1, stream_out_1, (num_nodes * 1 / factor) - ((num_nodes * 1 / factor) % 64), (num_nodes * 2 / factor) - ((num_nodes * 2 / factor) % 64));
+    sub_direct(cutoff, in_full_graph_2, in_full_graph_cons_2, in_scores_2, stream_out_2, (num_nodes * 2 / factor) - ((num_nodes * 2 / factor) % 64), (num_nodes * 3 / factor) - ((num_nodes * 3 / factor) % 64));
+    sub_direct(cutoff, in_full_graph_3, in_full_graph_cons_3, in_scores_3, stream_out_3, (num_nodes * 3 / factor) - ((num_nodes * 3 / factor) % 64), num_nodes);
 
     // compute_direct(cutoff, in_full_graph_0, in_full_graph_cons_0, in_scores_0, outStream_components, num_nodes);
 
-    merge_streams(outStream_components, stream_out_0, stream_out_1/* , graph_ctrl */);
+    merge_streams(outStream_components, stream_out_0, stream_out_1, stream_out_2, stream_out_3);
 
     write_components(out_components, outStream_components, num_nodes);
 

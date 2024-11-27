@@ -9,7 +9,7 @@
 #include "large_kernels.hpp"
 
 static void filter_memory(float m_cutoff, hls::vector<uint32_t, 16>* full_graph, ap_uint<512>* full_graph_cons, hls::vector<float, 16>* m_scores, unsigned int m_num_nodes,
-                          unsigned int* m_graph, ap_uint<512>* graph_cons, unsigned int& m_graph_size, hls::stream<bool>& ctrl) {
+                          unsigned int* m_graph, ap_uint<512>* graph_cons, unsigned int& m_graph_size, hls::vector<uint32_t, 16>* node_list, hls::stream<bool>& ctrl) {
 
   ap_uint<8> connections = 0;
   bool new_row = true;
@@ -32,6 +32,11 @@ static void filter_memory(float m_cutoff, hls::vector<uint32_t, 16>* full_graph,
   #pragma HLS array_partition variable=multi_nodes complete
   #pragma HLS array_partition variable=mask complete
   #pragma HLS array_partition variable=prefix_sum complete
+
+  hls::vector<uint32_t, 16> multi_list;
+  multi_list = hls::vector<uint32_t, 16>(0);
+  uint8_t list_fill = 0;
+  uint32_t list_ptr = 0;
 
   unsigned int con_iterations = m_num_nodes / 64; // number of 512-bit-values that need to be read
   unsigned int con_residue = m_num_nodes % 64; // number of 8-bit-values that are missing after the last complete 512-bit-value
@@ -90,7 +95,6 @@ static void filter_memory(float m_cutoff, hls::vector<uint32_t, 16>* full_graph,
           // set bool to write #connections later
           if(prefix_sum[15] > 0 && new_row){
             new_row = false;
-            m_graph_size++;
           }
         }
         if(!new_row){
@@ -100,15 +104,25 @@ static void filter_memory(float m_cutoff, hls::vector<uint32_t, 16>* full_graph,
             #pragma HLS loop_tripcount min=1 avg=2 max=16
             m_graph[row * MAX_EDGES + i] = multi_nodes[i];
           }
+          m_graph_size++;
+          multi_list[list_fill] = row;
+          list_fill++;
+          if(list_fill >= 16){
+            node_list[list_ptr] = multi_list;
+            list_ptr++;
+            list_fill = 0;
+          }
         }
       }
     }
     graph_cons[c] = multi_graph_con;
   }
+  if(list_fill > 0)
+    node_list[list_ptr] = multi_list;
   ctrl << true;
 }
 
-static void compute_core(unsigned int* m_graph, ap_uint<512>* graph_cons, unsigned int m_num_nodes, hls::stream<unsigned int>& outStream, hls::stream<bool>& ctrl){
+static void compute_core(unsigned int* m_graph, ap_uint<512>* graph_cons, unsigned int m_num_nodes, hls::stream<unsigned int>& outStream, hls::vector<uint32_t, 16>* node_list, hls::stream<bool>& ctrl){
 
   static unsigned int component[MAX_COMPONENT_SIZE];
   static bool processed[MAX_TOTAL_NODES];
@@ -122,27 +136,33 @@ static void compute_core(unsigned int* m_graph, ap_uint<512>* graph_cons, unsign
   unsigned int potential_node = 0;
   ap_uint<8> next_node_cons = 0;
 
+  hls::vector<uint32_t, 16> multi_rows;
+  multi_rows = hls::vector<uint32_t, 16>(0);
+
   unsigned int row = 0;
-  ap_uint<512> multi_graph_con = 0;
+  // ap_uint<512> multi_graph_con = 0;
   ap_uint<8> single_graph_con = 0;
   unsigned int pos_multi = 0;
   unsigned int pos_single = 0;
-  unsigned int con_iterations = m_num_nodes / 64; // number of 512-bit-values that need to be read
-  unsigned int con_residue = m_num_nodes % 64; // number of 8-bit-values that are missing after the last complete 512-bit-value
+  unsigned int con_iterations = m_num_nodes / 16; // number of 512-bit-values that need to be read
+  unsigned int con_residue = m_num_nodes % 16; // number of 8-bit-values that are missing after the last complete 512-bit-value
 
   bool temp = ctrl.read();
 
   compute_rows_outer:
   for (unsigned int c = 0; c < con_iterations + 1 ; c++){
-    #pragma HLS loop_tripcount min=31000/64 avg=36000/64 max=MAX_TRUE_NODES/64
-    multi_graph_con = graph_cons[c];
+    multi_rows = node_list[c];
     compute_rows_inner:
-    for (unsigned int k = 0; k < 64 ; k++){
+    for (unsigned int k = 0; k < 16 ; k++){
       if(c == con_iterations && k == con_residue){
         break;
       }
-      single_graph_con = multi_graph_con.range((k + 1) * 8 - 1, k * 8);
-      row = c * 64 + k;
+      row = multi_rows[k];
+      
+      pos_multi = row / 64;
+      pos_single = row % 64;
+      single_graph_con = graph_cons[pos_multi].range((pos_single + 1) * 8 - 1, pos_single * 8);
+
       if(single_graph_con == 0){
         processed[row] = true;
       }
@@ -238,7 +258,7 @@ extern "C" {
   void CCL(
             hls::vector<uint32_t, 16>* in_full_graph, ap_uint<512>* in_full_graph_cons,  hls::vector<float, 16>* in_scores,
             unsigned int* io_graph, ap_uint<512>* io_graph_cons,
-            unsigned int* out_components, unsigned int num_nodes, float cutoff) {
+            unsigned int* out_components, hls::vector<uint32_t, 16>* io_node_list, unsigned int num_nodes, float cutoff) {
     
     #pragma HLS INTERFACE m_axi port = in_full_graph      bundle=gmem0
     #pragma HLS INTERFACE m_axi port = in_full_graph_cons bundle=gmem1
@@ -246,6 +266,7 @@ extern "C" {
     #pragma HLS INTERFACE m_axi port = io_graph           bundle=gmem3
     #pragma HLS INTERFACE m_axi port = io_graph_cons      bundle=gmem4
     #pragma HLS INTERFACE m_axi port = out_components     bundle=gmem5
+    #pragma HLS INTERFACE m_axi port = io_node_list       bundle=gmem6
 
     static hls::stream<unsigned int> outStream_components("output_stream_components");
     static hls::stream<bool> control_stream("control_stream");
@@ -253,8 +274,8 @@ extern "C" {
     #pragma HLS STREAM variable=graph_size type=pipo
 
     #pragma HLS dataflow
-    filter_memory(cutoff, in_full_graph, in_full_graph_cons, in_scores, num_nodes, io_graph, io_graph_cons, graph_size, control_stream);
-    compute_core(io_graph, io_graph_cons, num_nodes, outStream_components, control_stream);
+    filter_memory(cutoff, in_full_graph, in_full_graph_cons, in_scores, num_nodes, io_graph, io_graph_cons, graph_size, io_node_list, control_stream);
+    compute_core(io_graph, io_graph_cons, graph_size, outStream_components, io_node_list, control_stream);
     write_components(out_components, outStream_components, num_nodes);
 
   }

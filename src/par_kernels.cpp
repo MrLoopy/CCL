@@ -1,12 +1,14 @@
 // HLS-related includes
+#include "ap_int.h"
 #include "hls_math.h"
 #include "hls_vector.h"
 #include <hls_stream.h>
 
 // Custom includes
-// #include <iostream>
+#include <iostream>
 #include "par_kernels.hpp"
 
+/*
 static void filter_memory(float m_cutoff, unsigned int* full_graph, float* m_scores, unsigned int m_num_nodes,
                           unsigned int* m_graph, unsigned int* m_lookup, unsigned int* m_lookup_filter, unsigned int& m_graph_size) {
 
@@ -209,9 +211,10 @@ static void compute_direct(float m_cutoff, unsigned int* full_graph, float* scor
   }
   outStream << 0;
 }
+*/
 
-static void sub_direct(float m_cutoff, unsigned int* full_graph, float* scores, hls::stream<unsigned int>& outStream, unsigned int start, unsigned int end){
-  // use lookup_filter as processed, has same length = MAX_TOTAL_NODES
+/* static void compute_direct( float m_cutoff, hls::vector<uint32_t, 16>* full_graph, ap_uint<512>* full_graph_cons, hls::vector<float, 16>* m_scores,
+                        hls::stream<unsigned int>& outStream, unsigned int num_nodes){
 
   unsigned int component[MAX_COMPONENT_SIZE];
   unsigned int current_component_size = 0;
@@ -220,78 +223,243 @@ static void sub_direct(float m_cutoff, unsigned int* full_graph, float* scores, 
   bool found_component = true;
   bool new_row = true;
   bool processed[MAX_TOTAL_NODES];
-  direct_reset_processed: for(unsigned int i = 0; i < MAX_TOTAL_NODES; i++)
+  direct_reset_processed:
+  for(unsigned int i = 0; i < MAX_TOTAL_NODES; i++)
     processed[i] = false;
 
-  direct_rows: for(unsigned int row = start; row < end; row++){
-    if(full_graph[row * MAX_FULL_GRAPH_EDGES] > 0 && processed[row] == 0){
-      if(found_component){
-        found_component = false;
-        new_row = true;
-        current_component_size = 0;
-        processed_nodes = 0;
-        direct_reset: for(unsigned int i = 0; i < MAX_COMPONENT_SIZE; i++){
-          // #pragma HLS unroll
-          component[i] = 4294967295;
-        }
-      }
-      direct_nodes: for (unsigned int i = 0; i < full_graph[row * MAX_FULL_GRAPH_EDGES]; i++)
-        if(scores[row * MAX_FULL_GRAPH_EDGES + i] > m_cutoff){
-          found_component = true;
-          bool new_node = true;
-          direct_check_row: for(unsigned int j = 0 ; j < current_component_size; j++){
-            // #pragma HLS unroll
-            if(component[j] == row)
-              new_row = false;
-            if(component[j] == full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i])
-              new_node = false;
-          }
-          if(new_row){
-            component[current_component_size] = row;
-            current_component_size++;
-          }
-          if(new_node){
-            component[current_component_size] = full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i];
-            current_component_size++;
-          }
-        }
-      if(found_component){
-        // row already processed
-        processed[row] = 1;
-        processed_nodes++;
+  bool duplicate = false;
+  unsigned int row = 0;
+  ap_uint<512> multi_full_con = 0;
+  ap_uint<8> single_full_con = 0;
+  ap_uint<8> next_node_cons = 0;
+  hls::vector<float, 16> multi_scores;
+  multi_scores = hls::vector<float, 16>(0.0);
+  hls::vector<uint32_t, 16> multi_edges;
+  multi_edges = hls::vector<uint32_t, 16>(0);
+  unsigned int pos_multi = 0;
+  unsigned int pos_single = 0;
+  unsigned int con_iterations = num_nodes / 64;
+  unsigned int con_residue = num_nodes % 64;
+  unsigned int scr_iterations = 0;
+  unsigned int scr_residue = 0;
 
-        direct_while: while(current_component_size != processed_nodes){
-          next_node = component[processed_nodes];
-          direct_connections: for(unsigned int i = 0 ; i < full_graph[next_node * MAX_FULL_GRAPH_EDGES]; i++){
-            if(scores[next_node * MAX_FULL_GRAPH_EDGES + i] > m_cutoff 
-            && processed[full_graph[next_node * MAX_FULL_GRAPH_EDGES + 1 + i]] == 0 
-            && current_component_size < MAX_COMPONENT_SIZE){
-              bool new_node = true;
-              direct_check_component: for(unsigned int j = 0 ; j < current_component_size; j++){
-                // #pragma HLS unroll
-                  if(component[j] == full_graph[next_node * MAX_FULL_GRAPH_EDGES + 1 + i])
-                    new_node = false;
-              }
-              if(new_node){
-                component[current_component_size] = full_graph[next_node * MAX_FULL_GRAPH_EDGES + 1 + i];
+  for (unsigned int c = 0; c < con_iterations + 1 ; c++){
+    multi_full_con = full_graph_cons[c];
+    for (unsigned int k = 0; k < 64 ; k++){
+      if(c == con_iterations && k == con_residue){
+        break;
+      }
+      single_full_con = multi_full_con.range((k + 1) * 8 - 1, k * 8);
+      row = c * 64 + k;
+      if(single_full_con > 0 && !processed[row]){
+        if(found_component){
+          found_component = false;
+          new_row = true;
+          current_component_size = 0;
+          processed_nodes = 0;
+        }
+        scr_iterations = single_full_con / 16;
+        scr_residue = single_full_con % 16;
+        for (unsigned int s = 0; s < scr_iterations + 1 ; s++){
+          multi_scores = m_scores[row * MAX_FULL_GRAPH_BLOCKS + s];
+          multi_edges = full_graph[row * MAX_FULL_GRAPH_BLOCKS + s];
+          for (unsigned int i = 0; i < 16 ; i++){
+            if(s == scr_iterations && i == scr_residue){
+              break;
+            }
+            if(multi_scores[i] > m_cutoff){
+              found_component = true;
+              if(new_row){
+                new_row = false;
+                component[current_component_size] = row;
                 current_component_size++;
               }
+              component[current_component_size] = multi_edges[i];
+              current_component_size++;
             }
           }
-          processed[next_node] = 1;
-          processed_nodes++;
         }
-        // write output
-        outStream << current_component_size;
-        direct_write_output: for (unsigned int i = 0; i < current_component_size; i++)
-          outStream << component[i];
+        if(found_component){
+          processed[row] = true;
+          processed_nodes++;
+          while(current_component_size != processed_nodes){
+            next_node = component[processed_nodes];
+
+            pos_multi = next_node / 64;
+            pos_single = next_node % 64;
+            next_node_cons = full_graph_cons[pos_multi].range((pos_single + 1) * 8 - 1, pos_single * 8);
+            if(next_node_cons > 0){
+              scr_iterations = next_node_cons / 16;
+              scr_residue = next_node_cons % 16;
+              for (unsigned int s = 0; s < scr_iterations + 1 ; s++){
+                multi_scores = m_scores[next_node * MAX_FULL_GRAPH_BLOCKS + s];
+                multi_edges = full_graph[next_node * MAX_FULL_GRAPH_BLOCKS + s];
+                for (unsigned int i = 0; i < 16 ; i++){
+                  if(s == scr_iterations && i == scr_residue){
+                    break;
+                  }
+                  if(multi_scores[i] > m_cutoff && !processed[multi_edges[i]] && current_component_size < MAX_COMPONENT_SIZE){
+                    bool new_node = true;
+                    direct_check_component:
+                    for(unsigned int j = 0 ; j < current_component_size; j++){
+                      if(component[j] == multi_edges[i])
+                        new_node = false;
+                    }
+                    if(new_node){
+                      component[current_component_size] = multi_edges[i];
+                      current_component_size++;
+                    }
+                  }
+                }
+              }
+            }
+            processed[next_node] = true;
+            processed_nodes++;
+          }
+          if(duplicate)
+            duplicate = false;
+          else{
+            outStream << current_component_size;
+            direct_write_output:
+            for (unsigned int i = 0; i < current_component_size; i++)
+              outStream << component[i];
+          }
+        }
       }
     }
   }
   outStream << 0;
+} */
+
+static void sub_direct( float m_cutoff, hls::vector<uint32_t, 16>* full_graph/* hls::stream<uint32_t>& req_graph, hls::stream<hls::vector<uint32_t, 16>>& graph */, ap_uint<512>* full_graph_cons, hls::vector<float, 16>* m_scores,
+                        hls::stream<unsigned int>& outStream, unsigned int start, unsigned int end){
+  std::cout << "[KRNL] sub_direct 0" << std::endl;
+
+  unsigned int component[MAX_COMPONENT_SIZE];
+  unsigned int current_component_size = 0;
+  unsigned int processed_nodes = 0;
+  unsigned int next_node = 0;
+  bool found_component = true;
+  bool new_row = true;
+  bool processed[MAX_TOTAL_NODES];
+  direct_reset_processed:
+  for(unsigned int i = 0; i < MAX_TOTAL_NODES; i++)
+    processed[i] = false;
+
+  bool duplicate = false;
+  unsigned int row = 0;
+  ap_uint<512> multi_full_con = 0;
+  ap_uint<8> single_full_con = 0;
+  ap_uint<8> next_node_cons = 0;
+  hls::vector<float, 16> multi_scores;
+  multi_scores = hls::vector<float, 16>(0.0);
+  hls::vector<uint32_t, 16> multi_edges;
+  multi_edges = hls::vector<uint32_t, 16>(0);
+  unsigned int pos_multi = 0;
+  unsigned int pos_single = 0;
+  unsigned int con_iterations = end / 64;
+  unsigned int con_residue = end % 64;
+  unsigned int start_iterations = start / 64;
+  unsigned int scr_iterations = 0;
+  unsigned int scr_residue = 0;
+
+  for (unsigned int c = start_iterations; c < con_iterations + 1 ; c++){
+    multi_full_con = full_graph_cons[c];
+    for (unsigned int k = 0; k < 64 ; k++){
+      if(c == con_iterations && k == con_residue){
+        break;
+      }
+      single_full_con = multi_full_con.range((k + 1) * 8 - 1, k * 8);
+      row = c * 64 + k;
+      if(single_full_con > 0 && !processed[row]){
+        if(found_component){
+          found_component = false;
+          new_row = true;
+          current_component_size = 0;
+          processed_nodes = 0;
+        }
+        scr_iterations = single_full_con / 16;
+        scr_residue = single_full_con % 16;
+        for (unsigned int s = 0; s < scr_iterations + 1 ; s++){
+          multi_scores = m_scores[row * MAX_FULL_GRAPH_BLOCKS + s];
+          // req_graph << row * MAX_FULL_GRAPH_BLOCKS + s;
+          // multi_edges = graph.read();
+          multi_edges = full_graph[row * MAX_FULL_GRAPH_BLOCKS + s];
+          for (unsigned int i = 0; i < 16 ; i++){
+            if(s == scr_iterations && i == scr_residue){
+              break;
+            }
+            if(multi_scores[i] > m_cutoff){
+              found_component = true;
+              if(new_row){
+                new_row = false;
+                component[current_component_size] = row;
+                current_component_size++;
+              }
+              component[current_component_size] = multi_edges[i];
+              current_component_size++;
+            }
+          }
+        }
+        if(found_component){
+          processed[row] = true;
+          processed_nodes++;
+          while(current_component_size != processed_nodes){
+            next_node = component[processed_nodes];
+            if(next_node < start)
+              duplicate = true;
+
+            pos_multi = next_node / 64;
+            pos_single = next_node % 64;
+            next_node_cons = full_graph_cons[pos_multi].range((pos_single + 1) * 8 - 1, pos_single * 8);
+            if(next_node_cons > 0){
+              scr_iterations = next_node_cons / 16;
+              scr_residue = next_node_cons % 16;
+              for (unsigned int s = 0; s < scr_iterations + 1 ; s++){
+                multi_scores = m_scores[next_node * MAX_FULL_GRAPH_BLOCKS + s];
+                // req_graph << next_node * MAX_FULL_GRAPH_BLOCKS + s;
+                // multi_edges = graph.read();
+                multi_edges = full_graph[next_node * MAX_FULL_GRAPH_BLOCKS + s];
+                for (unsigned int i = 0; i < 16 ; i++){
+                  if(s == scr_iterations && i == scr_residue){
+                    break;
+                  }
+                  if(multi_scores[i] > m_cutoff && !processed[multi_edges[i]] && current_component_size < MAX_COMPONENT_SIZE){
+                    bool new_node = true;
+                    direct_check_component:
+                    for(unsigned int j = 0 ; j < current_component_size; j++){
+                      if(component[j] == multi_edges[i])
+                        new_node = false;
+                    }
+                    if(new_node){
+                      component[current_component_size] = multi_edges[i];
+                      current_component_size++;
+                    }
+                  }
+                }
+              }
+            }
+            processed[next_node] = true;
+            processed_nodes++;
+          }
+          if(duplicate)
+            duplicate = false;
+          else{
+            outStream << current_component_size;
+            direct_write_output:
+            for (unsigned int i = 0; i < current_component_size; i++)
+              outStream << component[i];
+          }
+        }
+      }
+    }
+  }
+  outStream << 0;
+  std::cout << "[KRNL] sub_direct 1" << std::endl;
 }
 
-static void merge_streams(hls::stream<unsigned int>& outStream, hls::stream<unsigned int>& stream_0, hls::stream<unsigned int>& stream_1) {
+static void merge_streams(hls::stream<unsigned int>& outStream, hls::stream<unsigned int>& stream_0, hls::stream<unsigned int>& stream_1/* , hls::stream<bool>& ctrl_graph */) {
+  std::cout << "[KRNL] merge 0" << std::endl;
 
   bool str_0 = true;
   bool str_1 = true;
@@ -341,6 +509,8 @@ static void merge_streams(hls::stream<unsigned int>& outStream, hls::stream<unsi
       }
     }
   }
+  // ctrl_graph << false;
+  std::cout << "[KRNL] merge 1" << std::endl;
 }
 
 static void write_components(unsigned int* out, hls::stream<unsigned int>& outStream, unsigned int size) {
@@ -373,35 +543,65 @@ static void write_components(unsigned int* out, hls::stream<unsigned int>& outSt
     }
 }
 
+/* static void graph_reader( hls::vector<uint32_t, 16>* full_graph, hls::stream<bool>& ctrl,
+                          hls::stream<uint32_t>& idx_0, hls::stream<hls::vector<uint32_t, 16>>& graph_0,
+                          hls::stream<uint32_t>& idx_1, hls::stream<hls::vector<uint32_t, 16>>& graph_1){
+  std::cout << "[KRNL] graph_reader 0" << std::endl;
+  bool running = true;
+  uint32_t address = 0;
+  while(running){
+    if(ctrl.size() > 0){
+      running = ctrl.read();
+      running = false;
+      break;
+    }
+    if(idx_0.size() > 0){
+      address = idx_0.read();
+      graph_0 << full_graph[address];
+    }
+    if(idx_1.size() > 0){
+      address = idx_1.read();
+      graph_1 << full_graph[address];
+    }
+  }
+  std::cout << "[KRNL] graph_reader 1" << std::endl;
+} */
+
 extern "C" {
 
-  void CCL( unsigned int* in_full_graph_0, unsigned int* in_full_graph_1, float* in_scores_0, float* in_scores_1, unsigned int* io_graph, unsigned int* io_lookup, unsigned int* io_lookup_filter, unsigned int* out_components, unsigned int num_nodes, float cutoff) {
+  void CCL(
+            hls::vector<uint32_t, 16>* in_full_graph_0, hls::vector<uint32_t, 16>* in_full_graph_1, ap_uint<512>* in_full_graph_cons_0,
+            ap_uint<512>* in_full_graph_cons_1,  hls::vector<float, 16>* in_scores_0,  hls::vector<float, 16>* in_scores_1,
+            unsigned int* out_components, unsigned int num_nodes, float cutoff) {
     
-    #pragma HLS INTERFACE m_axi port = in_full_graph_0   bundle=gmem0 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = in_full_graph_1   bundle=gmem1 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = in_scores_0       bundle=gmem2 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = in_scores_1       bundle=gmem3 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_graph          bundle=gmem4 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_lookup         bundle=gmem5 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = io_lookup_filter  bundle=gmem6 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = out_components    bundle=gmem7 max_widen_bitwidth=512
-
+    #pragma HLS INTERFACE m_axi port = in_full_graph_0      bundle=gmem0
+    #pragma HLS INTERFACE m_axi port = in_full_graph_1      bundle=gmem1
+    #pragma HLS INTERFACE m_axi port = in_full_graph_cons_0 bundle=gmem2
+    #pragma HLS INTERFACE m_axi port = in_full_graph_cons_1 bundle=gmem3
+    #pragma HLS INTERFACE m_axi port = in_scores_0          bundle=gmem4
+    #pragma HLS INTERFACE m_axi port = in_scores_1          bundle=gmem5
+    #pragma HLS INTERFACE m_axi port = out_components       bundle=gmem6
+    
     static hls::stream<unsigned int> outStream_components("output_stream_components");
     static hls::stream<unsigned int> stream_out_0("stream_0");
     static hls::stream<unsigned int> stream_out_1("stream_1");
-    static unsigned int graph_size;
-    #pragma HLS STREAM variable=graph_size type=pipo
+
+    // static hls::stream<bool> graph_ctrl("graph_ctrl");
+    // static hls::stream<uint32_t> graph_idx_0("graph_idx_0");
+    // static hls::stream<uint32_t> graph_idx_1("graph_idx_1");
+    // static hls::stream<hls::vector<uint32_t, 16>> graph_0("graph_0");
+    // static hls::stream<hls::vector<uint32_t, 16>> graph_1("graph_1");
 
     #pragma HLS dataflow
-    // filter_memory(cutoff, in_full_graph, in_scores, num_nodes, io_graph, io_lookup, io_lookup_filter, graph_size);
-    // compute_core(io_graph, graph_size, outStream_components, io_lookup);
 
-    // compute_direct(cutoff, in_full_graph, in_scores, io_lookup_filter, outStream_components, num_nodes);
+    // graph_reader(in_full_graph_0, graph_ctrl, graph_idx_0, graph_0, graph_idx_1, graph_1);
 
-    sub_direct(cutoff, in_full_graph_0, in_scores_0, stream_out_0, 0, num_nodes / 2);
-    sub_direct(cutoff, in_full_graph_1, in_scores_1, stream_out_1, num_nodes / 2, num_nodes);
+    sub_direct(cutoff, in_full_graph_0/* graph_idx_0, graph_0 */, in_full_graph_cons_0, in_scores_0, stream_out_0, 0, (num_nodes / 2) - ((num_nodes / 2) % 64));
+    sub_direct(cutoff, in_full_graph_1/* graph_idx_1, graph_1 */, in_full_graph_cons_1, in_scores_1, stream_out_1, (num_nodes / 2) - ((num_nodes / 2) % 64), num_nodes);
 
-    merge_streams(outStream_components, stream_out_0, stream_out_1);
+    // compute_direct(cutoff, in_full_graph_0, in_full_graph_cons_0, in_scores_0, outStream_components, num_nodes);
+
+    merge_streams(outStream_components, stream_out_0, stream_out_1/* , graph_ctrl */);
 
     write_components(out_components, outStream_components, num_nodes);
 

@@ -34,18 +34,13 @@ const std::vector<std::string> csv_names = {"dat/reg/r_event005008301.csv", "dat
 const u_int32_t num_events = (const u_int32_t)csv_names.size();
 const float cutoff = 0.8;
 
-u_int32_t size_full_graph = MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES / 16;
-u_int32_t size_event_full_graph = size_full_graph * 16;
-u_int32_t size_full_graph_cons = MAX_TOTAL_NODES / 64;
-u_int32_t size_event_full_graph_cons = size_full_graph_cons * 64;
-u_int32_t size_scores = MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES / 16;
-u_int32_t size_event_scores = size_scores * 16;
+u_int32_t size_full_graph = MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;
+u_int32_t size_scores = MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;
 u_int32_t size_components = MAX_TRUE_NODES + MAX_COMPONENTS;
 
-size_t size_full_graph_byte = sizeof(hls::vector<uint32_t, 16>) * size_full_graph;
-size_t size_full_graph_cons_byte = sizeof(ap_uint<512>) * size_full_graph_cons;
-size_t size_scores_byte = sizeof(hls::vector<float, 16>) * size_scores;
-size_t size_components_byte = sizeof(unsigned int) * size_components;
+size_t size_full_graph_byte = sizeof(uint16_t) * size_full_graph;
+size_t size_scores_byte = sizeof(bool) * size_scores;
+size_t size_components_byte = sizeof(uint16_t) * size_components;
 
 template <typename S>
 std::ostream& operator<<(std::ostream& os, const std::vector<S>& vector){
@@ -77,65 +72,25 @@ struct thread_timing{
 struct kernel_buffers{
   xrt::device device;
   xrt::kernel kernel;
-  xrt::bo in_full_graph_0;
-  xrt::bo in_full_graph_cons_0;
-  xrt::bo in_scores_0;
-  xrt::bo in_full_graph_1;
-  xrt::bo in_full_graph_cons_1;
-  xrt::bo in_scores_1;
-  // xrt::bo in_full_graph_2;
-  // xrt::bo in_full_graph_cons_2;
-  // xrt::bo in_scores_2;
-  // xrt::bo in_full_graph_3;
-  // xrt::bo in_full_graph_cons_3;
-  // xrt::bo in_scores_3;
+  xrt::bo in_full_graph;
+  xrt::bo in_scores;
   xrt::bo out_components;
   kernel_buffers(xrt::device &m_device, xrt::kernel &m_kernel){
     device = m_device;
     kernel = m_kernel;
-    in_full_graph_0 = xrt::bo(device, size_full_graph_byte, kernel.group_id(0));
-    in_full_graph_cons_0 = xrt::bo(device, size_full_graph_cons_byte, kernel.group_id(1));
-    in_scores_0 = xrt::bo(device, size_scores_byte, kernel.group_id(2));
-    in_full_graph_1 = xrt::bo(device, size_full_graph_byte, kernel.group_id(3));
-    in_full_graph_cons_1 = xrt::bo(device, size_full_graph_cons_byte, kernel.group_id(4));
-    in_scores_1 = xrt::bo(device, size_scores_byte, kernel.group_id(5));
-    // in_full_graph_2 = xrt::bo(device, size_full_graph_byte, kernel.group_id(6));
-    // in_full_graph_cons_2 = xrt::bo(device, size_full_graph_cons_byte, kernel.group_id(7));
-    // in_scores_2 = xrt::bo(device, size_scores_byte, kernel.group_id(8));
-    // in_full_graph_3 = xrt::bo(device, size_full_graph_byte, kernel.group_id(9));
-    // in_full_graph_cons_3 = xrt::bo(device, size_full_graph_cons_byte, kernel.group_id(10));
-    // in_scores_3 = xrt::bo(device, size_scores_byte, kernel.group_id(11));
-    out_components = xrt::bo(device, size_components_byte, kernel.group_id(6));
+    in_full_graph = xrt::bo(device, size_full_graph_byte, kernel.group_id(0));
+    in_scores = xrt::bo(device, size_scores_byte, kernel.group_id(1));
+    out_components = xrt::bo(device, size_components_byte, kernel.group_id(2));
   }
 };
 struct kernel_maps{
-  hls::vector<uint32_t, 16>* in_full_graph_0;
-  ap_uint<512>* in_full_graph_cons_0;
-  hls::vector<float, 16>* in_scores_0;
-  hls::vector<uint32_t, 16>* in_full_graph_1;
-  ap_uint<512>* in_full_graph_cons_1;
-  hls::vector<float, 16>* in_scores_1;
-  // hls::vector<uint32_t, 16>* in_full_graph_2;
-  // ap_uint<512>* in_full_graph_cons_2;
-  // hls::vector<float, 16>* in_scores_2;
-  // hls::vector<uint32_t, 16>* in_full_graph_3;
-  // ap_uint<512>* in_full_graph_cons_3;
-  // hls::vector<float, 16>* in_scores_3;
-  unsigned int* out_components;
+  uint16_t* in_full_graph;
+  bool* in_scores;
+  uint16_t* out_components;
   kernel_maps(kernel_buffers &m_bo){
-    in_full_graph_0 = m_bo.in_full_graph_0.map<hls::vector<uint32_t, 16>*>();
-    in_full_graph_cons_0 = m_bo.in_full_graph_cons_0.map<ap_uint<512>*>();
-    in_scores_0 = m_bo.in_scores_0.map<hls::vector<float, 16>*>();
-    in_full_graph_1 = m_bo.in_full_graph_1.map<hls::vector<uint32_t, 16>*>();
-    in_full_graph_cons_1 = m_bo.in_full_graph_cons_1.map<ap_uint<512>*>();
-    in_scores_1 = m_bo.in_scores_1.map<hls::vector<float, 16>*>();
-    // in_full_graph_2 = m_bo.in_full_graph_2.map<hls::vector<uint32_t, 16>*>();
-    // in_full_graph_cons_2 = m_bo.in_full_graph_cons_2.map<ap_uint<512>*>();
-    // in_scores_2 = m_bo.in_scores_2.map<hls::vector<float, 16>*>();
-    // in_full_graph_3 = m_bo.in_full_graph_3.map<hls::vector<uint32_t, 16>*>();
-    // in_full_graph_cons_3 = m_bo.in_full_graph_cons_3.map<ap_uint<512>*>();
-    // in_scores_3 = m_bo.in_scores_3.map<hls::vector<float, 16>*>();
-    out_components = m_bo.out_components.map<unsigned int*>();
+    in_full_graph = m_bo.in_full_graph.map<uint16_t*>();
+    in_scores = m_bo.in_scores.map<bool*>();
+    out_components = m_bo.out_components.map<uint16_t*>();
   }
 };
 
@@ -345,15 +300,14 @@ int main (int argc, char ** argv){
   // Allocate Host Memory for each event
   //
   //============================================
-  std::vector<unsigned int*> ev_in_full_graph;
-  std::vector<unsigned int*> ev_in_full_graph_cons;
+  std::vector<uint16_t*> ev_in_full_graph;
   std::vector<float*> ev_in_scores;
-  std::vector<unsigned int*> ev_out_components;
-  std::vector<unsigned int> ev_num_edges;
-  std::vector<unsigned int> ev_real_edges;
-  std::vector<unsigned int> ev_true_edges;
-  std::vector<unsigned int> ev_num_nodes;
-  std::vector<std::vector<unsigned int>> ev_ref_labels;
+  std::vector<uint16_t*> ev_out_components;
+  std::vector<uint16_t> ev_num_edges;
+  std::vector<uint16_t> ev_real_edges;
+  std::vector<uint16_t> ev_true_edges;
+  std::vector<uint16_t> ev_num_nodes;
+  std::vector<std::vector<uint16_t>> ev_ref_labels;
 
   //============================================
   //
@@ -366,9 +320,9 @@ int main (int argc, char ** argv){
     // Read CSV-file
     //
     std::string csv_file_name = csv_names[ev];
-    std::vector<unsigned int> edge_from;
-    std::vector<unsigned int> edge_to;
-    std::vector<unsigned int> ref_labels;
+    std::vector<uint16_t> edge_from;
+    std::vector<uint16_t> edge_to;
+    std::vector<uint16_t> ref_labels;
     std::vector<float> scores;
     // create an input file stream from the csv-file
     std::ifstream csv_file(csv_file_name);
@@ -378,10 +332,10 @@ int main (int argc, char ** argv){
     if(csv_file.good()){
       std::cout << "[    ] [" << ev << "] CSV-file opened ";
       std::string line, field_0, field_1, field_2, field_3, word;
-      unsigned int num_0 = 0;
-      unsigned int num_1 = 0;
-      unsigned int num_2 = 0;
-      unsigned int num_3 = 0;
+      uint16_t num_0 = 0;
+      uint16_t num_1 = 0;
+      uint16_t num_2 = 0;
+      uint16_t num_3 = 0;
       // read first line
       std::getline(csv_file, line);
       std::stringstream linestream_first(line);
@@ -429,7 +383,7 @@ int main (int argc, char ** argv){
         scores.push_back(std::stof(word));
         if(std::getline(linestream, word, ',')){
           if(std::stoi(word) < 0)
-            ref_labels.push_back(4294967295); // if -1 -> set to max_value
+            ref_labels.push_back(65535); // 4294967295 // if -1 -> set to max_value
           else
             ref_labels.push_back(std::stoi(word));
         }
@@ -443,76 +397,103 @@ int main (int argc, char ** argv){
     ev_real_edges.push_back(0);
     ev_true_edges.push_back(0);
     ev_ref_labels.push_back(ref_labels);
-    ev_in_full_graph.push_back(new unsigned int[size_event_full_graph]);
-    std::fill(ev_in_full_graph[ev], ev_in_full_graph[ev] + size_event_full_graph, 0);
-    ev_in_full_graph_cons.push_back(new unsigned int[size_event_full_graph_cons]);
-    std::fill(ev_in_full_graph_cons[ev], ev_in_full_graph_cons[ev] + size_event_full_graph_cons, 0);
-    ev_in_scores.push_back(new float[size_event_scores]);
-    std::fill(ev_in_scores[ev], ev_in_scores[ev] + size_event_scores, 0.0);
-    ev_out_components.push_back(new unsigned int[size_components]);
+    ev_in_full_graph.push_back(new uint16_t[size_full_graph]);
+    std::fill(ev_in_full_graph[ev], ev_in_full_graph[ev] + size_full_graph, 0);
+    ev_in_scores.push_back(new float[size_scores]);
+    std::fill(ev_in_scores[ev], ev_in_scores[ev] + size_scores, 0.0);
+    ev_out_components.push_back(new uint16_t[size_components]);
     std::fill(ev_out_components[ev], ev_out_components[ev] + size_components, 0);
 
+    std::vector<uint16_t> exceeded_by;
+    std::vector<uint16_t> ex_row;
     //
     // Fill event buffers with data from CSV
     //
     std::cout << "; CSV-data -> event buffers";
-    unsigned int score_missmatch = 0;
+    uint16_t score_missmatch = 0;
+    bool new_node = true;
     for(unsigned int i = 0; i < ev_num_edges[ev] ; i++){
-      // if size of table is exceeded write a warning
-      if(ev_in_full_graph_cons[ev][edge_from[i]] < MAX_FULL_GRAPH_EDGES - 1){
-        // check if node is already present in row, to filter out duplicate edges
-        bool new_node = true;
-        for(unsigned int j = 0 ; j < ev_in_full_graph_cons[ev][edge_from[i]] ; j++)
-          if(ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + j] == edge_to[i]){
-            new_node = false;
-            if(missmatch_found(ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + j], scores[i], cutoff)){
-              score_missmatch++;
-              if(ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + j] < cutoff)
-                ev_true_edges[ev]++;
-              ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + j] = 1.0;
-            }
+      // check if node is already present in row, to filter out duplicate edges
+      new_node = true;
+      for(unsigned int j = 0 ; j < ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES] ; j++)
+        if(ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + 1 + j] == edge_to[i]){
+          new_node = false;
+          if(missmatch_found(ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + j], scores[i], 0.5)){
+            score_missmatch++;
+            if(ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + j] < 0.5)
+              ev_true_edges[ev]++;
+            ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + j] = 1.0;
           }
-        if(new_node){
+        }
+      if(new_node){
+        // if size of table is exceeded write a warning
+        if(ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES] < MAX_FULL_GRAPH_EDGES - 1){
           // fill tables with connections and scores of the edges and keep the number of connections for each node up to date
-          ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + ev_in_full_graph_cons[ev][edge_from[i]]] = edge_to[i];
-          ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + ev_in_full_graph_cons[ev][edge_from[i]]] = scores[i];
-          ev_in_full_graph_cons[ev][edge_from[i]]++;
+          ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_to[i];
+          ev_in_scores[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES + ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES]] = scores[i];
+          ev_in_full_graph[ev][edge_from[i] * MAX_FULL_GRAPH_EDGES]++;
           ev_real_edges[ev]++;
-          if(scores[i] > cutoff)
+          if(scores[i] > 0.5)
             ev_true_edges[ev]++;
         }
+        else{
+          // std::cout << "[WARNING] Full graph data structure is exceeded!\n[       ] Row " << edge_from[i] << " is already full and can not take in node " << edge_to[i] << " anymore" << std::endl;
+          bool new_row = true;
+          for(unsigned int k = 0; k < ex_row.size(); k++)
+            if(ex_row[k] == edge_from[i]){
+              exceeded_by[k]++;
+              new_row = false;
+            }
+          if(new_row){
+            ex_row.push_back(edge_from[i]);
+            exceeded_by.push_back(1);
+          }
+        }
       }
-      else
-          std::cout << "[WARNING] Full graph data structure is exceeded!\n[       ] Row " << edge_from[i] << " is already full and can not take in node " << edge_to[i] << " anymore" << std::endl;
 
-      // if size of table is exceeded write a warning
-      if(ev_in_full_graph_cons[ev][edge_to[i]] < MAX_FULL_GRAPH_EDGES - 1){
-        // check if node is already present in row, to filter out duplicate edges
-        bool new_node = true;
-        for(unsigned int j = 0 ; j < ev_in_full_graph_cons[ev][edge_to[i]] ; j++)
-          if(ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + j] == edge_from[i]){
-            new_node = false;
-            if(missmatch_found(ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + j], scores[i], cutoff)){
-              score_missmatch++;
-              if(ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + j] < cutoff)
-                ev_true_edges[ev]++;
-              ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + j] = 1.0;
-            }
+      // check if node is already present in row, to filter out duplicate edges
+      new_node = true;
+      for(unsigned int j = 0 ; j < ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES] ; j++)
+        if(ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + 1 + j] == edge_from[i]){
+          new_node = false;
+          if(missmatch_found(ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + j], scores[i], 0.5)){
+            score_missmatch++;
+            if(ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + j] < 0.5)
+              ev_true_edges[ev]++;
+            ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + j] = 1.0;
           }
-        if(new_node){
+        }
+      if(new_node){
+        // if size of table is exceeded write a warning
+        if(ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES] < MAX_FULL_GRAPH_EDGES - 1){
           // fill tables with connections and scores of the edges and keep the number of connections for each node up to date
-          ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + ev_in_full_graph_cons[ev][edge_to[i]]] = edge_from[i];
-          ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + ev_in_full_graph_cons[ev][edge_to[i]]] = scores[i];
-          ev_in_full_graph_cons[ev][edge_to[i]]++;
+          ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES] + 1] = edge_from[i];
+          ev_in_scores[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES + ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES]] = scores[i];
+          ev_in_full_graph[ev][edge_to[i] * MAX_FULL_GRAPH_EDGES]++;
           ev_real_edges[ev]++;
-          if(scores[i] > cutoff)
+          if(scores[i] > 0.5)
             ev_true_edges[ev]++;
         }
+        else{
+          // std::cout << "[WARNING] Full graph data structure is exceeded!\n[       ] Row " << edge_to[i] << " is already full and can not take in node " << edge_from[i] << " anymore" << std::endl;
+          bool new_row = true;
+          for(unsigned int k = 0; k < ex_row.size(); k++)
+            if(ex_row[k] == edge_to[i]){
+              exceeded_by[k]++;
+              new_row = false;
+            }
+          if(new_row){
+            ex_row.push_back(edge_to[i]);
+            exceeded_by.push_back(1);
+          }
+        }
       }
-      else
-          std::cout << "[WARNING] Full graph data structure is exceeded!\n[       ] Row " << edge_to[i] << " is already full and can not take in node " << edge_from[i] << " anymore" << std::endl;
     }
-    std::cout << "; real #edges: " << ev_real_edges[ev] / 2 << "; #true-edges: " << ev_true_edges[ev] / 2 << "; score missmatches: " << score_missmatch << "; done" << std::endl;
+    std::cout << "; real #edges: " << ev_real_edges[ev] / 2 << "; #true-edges: " << ev_true_edges[ev] / 2 << "; score missmatches: " << score_missmatch;
+    std::cout << "; " << ex_row.size() << " exceeded rows by ";
+    // for(uint16_t i = 0; i < ex_row.size() ; i++)
+    //   std::cout << exceeded_by[i] << " ";
+    std::cout << "; done" << std::endl;
   }
 
   //============================================
@@ -541,25 +522,12 @@ int main (int argc, char ** argv){
     //
     std::cout << "[    ] [" << ev << "] Write Event to Global Memory Buffer" << std::endl;
     
-    for(unsigned int i = 0; i < size_full_graph_cons; i++)
-      for(unsigned int j = 0; j < 64 ; j++){
-        maps.in_full_graph_cons_0[i].range((j + 1) * 8 - 1, j * 8) = ev_in_full_graph_cons[ev][i * 64 + j];
-        maps.in_full_graph_cons_1[i].range((j + 1) * 8 - 1, j * 8) = ev_in_full_graph_cons[ev][i * 64 + j];
-        // maps.in_full_graph_cons_2[i].range((j + 1) * 8 - 1, j * 8) = ev_in_full_graph_cons[ev][i * 64 + j];
-        // maps.in_full_graph_cons_3[i].range((j + 1) * 8 - 1, j * 8) = ev_in_full_graph_cons[ev][i * 64 + j];
-      }
-
-    for (unsigned int i = 0; i < size_scores; i++){
-      for (unsigned int j = 0; j < 16 ; j++){
-        maps.in_full_graph_0[i][j] = ev_in_full_graph[ev][i * 16 + j];
-        maps.in_full_graph_1[i][j] = ev_in_full_graph[ev][i * 16 + j];
-        // maps.in_full_graph_2[i][j] = ev_in_full_graph[ev][i * 16 + j];
-        // maps.in_full_graph_3[i][j] = ev_in_full_graph[ev][i * 16 + j];
-        maps.in_scores_0[i][j] = ev_in_scores[ev][i * 16 + j];
-        maps.in_scores_1[i][j] = ev_in_scores[ev][i * 16 + j];
-        // maps.in_scores_2[i][j] = ev_in_scores[ev][i * 16 + j];
-        // maps.in_scores_3[i][j] = ev_in_scores[ev][i * 16 + j];
-      }
+    for(unsigned int i = 0; i < size_scores ; i++){
+      maps.in_full_graph[i] = ev_in_full_graph[ev][i];
+      if(ev_in_scores[ev][i] > cutoff)
+        maps.in_scores[i] = true;
+      else
+        maps.in_scores[i] = false;
     }
 
     std::fill(maps.out_components, maps.out_components + size_components, 0);
@@ -569,18 +537,8 @@ int main (int argc, char ** argv){
     // Synchronize input buffer data to device global memory
     //
     std::cout << "[    ] [" << ev << "] Synchronize input buffer data to device global memory" << std::endl;
-    bo.in_full_graph_0.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.in_full_graph_cons_0.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.in_scores_0.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.in_full_graph_1.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.in_full_graph_cons_1.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    bo.in_scores_1.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    // bo.in_full_graph_2.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    // bo.in_full_graph_cons_2.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    // bo.in_scores_2.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    // bo.in_full_graph_3.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    // bo.in_full_graph_cons_3.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    // bo.in_scores_3.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.in_full_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.in_scores.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     bo.out_components.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     timing.in_synced.push_back(std::chrono::system_clock::now());
 
@@ -589,10 +547,7 @@ int main (int argc, char ** argv){
     //
     std::cout << "[    ] [" << ev << "] Start Kernel" << std::endl;
     auto run = bo.kernel(
-                          bo.in_full_graph_0, bo.in_full_graph_cons_0, bo.in_scores_0,
-                          bo.in_full_graph_1, bo.in_full_graph_cons_1, bo.in_scores_1,
-                          // bo.in_full_graph_2, bo.in_full_graph_cons_2, bo.in_scores_2,
-                          // bo.in_full_graph_3, bo.in_full_graph_cons_3, bo.in_scores_3,
+                          bo.in_full_graph, bo.in_scores,
                           bo.out_components, ev_num_nodes[ev], cutoff);
     timing.krnl_started.push_back(std::chrono::system_clock::now());
     std::cout << "[    ] [" << ev << "] Wait for Kernel to finish" << std::endl;
@@ -770,7 +725,6 @@ int main (int argc, char ** argv){
   //============================================
   for(unsigned int ev = 0; ev < num_events ; ev++){
     delete ev_in_full_graph[ev];
-    delete ev_in_full_graph_cons[ev];
     delete ev_in_scores[ev];
     delete ev_out_components[ev];
   }

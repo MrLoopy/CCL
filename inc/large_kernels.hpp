@@ -12,7 +12,11 @@
 
 extern "C" {
   void CCL(
-            hls::vector<uint32_t, 16>* in_full_graph, ap_uint<512>* in_full_graph_cons,  hls::vector<float, 16>* in_scores, unsigned int* io_graph,
-            ap_uint<512>* io_graph_cons, unsigned int* out_components, hls::vector<uint32_t, 16>* io_node_list, unsigned int num_nodes, float cutoff);
+            hls::vector<uint32_t, 16>* in_full_graph, ap_uint<512>* in_full_graph_cons,  hls::vector<float, 16>* in_scores,
+            hls::vector<uint32_t, 16>* io_graph_0, ap_uint<512>* io_graph_cons_0,
+            hls::vector<uint32_t, 16>* io_graph_1, ap_uint<512>* io_graph_cons_1,
+            // hls::vector<uint32_t, 16>* io_graph_2, ap_uint<512>* io_graph_cons_2,
+            // hls::vector<uint32_t, 16>* io_graph_3, ap_uint<512>* io_graph_cons_3,
+            unsigned int* out_components, unsigned int num_nodes, float cutoff);
 }
 #endif // LARGE_KERNELS_H

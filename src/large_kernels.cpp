@@ -9,11 +9,14 @@
 #include "large_kernels.hpp"
 
 static void filter_memory(float m_cutoff, hls::vector<uint32_t, 16>* full_graph, ap_uint<512>* full_graph_cons, hls::vector<float, 16>* m_scores, unsigned int m_num_nodes,
-                          unsigned int* m_graph, ap_uint<512>* graph_cons, unsigned int& m_graph_size, hls::vector<uint32_t, 16>* node_list, hls::stream<bool>& ctrl) {
+                          hls::vector<uint32_t, 16>* m_graph_0, ap_uint<512>* graph_cons_0, hls::stream<bool>& ctrl_0,
+                          hls::vector<uint32_t, 16>* m_graph_1, ap_uint<512>* graph_cons_1, hls::stream<bool>& ctrl_1
+                          // hls::vector<uint32_t, 16>* m_graph_2, ap_uint<512>* graph_cons_2, hls::stream<bool>& ctrl_2,
+                          // hls::vector<uint32_t, 16>* m_graph_3, ap_uint<512>* graph_cons_3, hls::stream<bool>& ctrl_3
+                          ) {
 
   ap_uint<8> connections = 0;
   bool new_row = true;
-  m_graph_size = 1; // has to start at 1, cause 0 indicates that no index has been given yet
   unsigned int row = 0;
   
   ap_uint<512> multi_full_con = 0;
@@ -24,7 +27,8 @@ static void filter_memory(float m_cutoff, hls::vector<uint32_t, 16>* full_graph,
   multi_scores = hls::vector<float, 16>(0.0);
   hls::vector<uint32_t, 16> multi_edges;
   multi_edges = hls::vector<uint32_t, 16>(0);
-  uint32_t multi_nodes[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  hls::vector<uint32_t, 16> multi_nodes;
+  multi_nodes = hls::vector<uint32_t, 16>(0);
   bool mask[16];
   ap_uint<8> prefix_sum[16];
   #pragma HLS array_partition variable=multi_scores complete
@@ -32,11 +36,6 @@ static void filter_memory(float m_cutoff, hls::vector<uint32_t, 16>* full_graph,
   #pragma HLS array_partition variable=multi_nodes complete
   #pragma HLS array_partition variable=mask complete
   #pragma HLS array_partition variable=prefix_sum complete
-
-  hls::vector<uint32_t, 16> multi_list;
-  multi_list = hls::vector<uint32_t, 16>(0);
-  uint8_t list_fill = 0;
-  uint32_t list_ptr = 0;
 
   unsigned int con_iterations = m_num_nodes / 64; // number of 512-bit-values that need to be read
   unsigned int con_residue = m_num_nodes % 64; // number of 8-bit-values that are missing after the last complete 512-bit-value
@@ -99,30 +98,25 @@ static void filter_memory(float m_cutoff, hls::vector<uint32_t, 16>* full_graph,
         }
         if(!new_row){
           multi_graph_con.range((k + 1) * 8 - 1, k * 8) = connections;
-          filter_write:
-          for (unsigned int i = 0; i < connections ; i++){
-            #pragma HLS loop_tripcount min=1 avg=2 max=16
-            m_graph[row * MAX_EDGES + i] = multi_nodes[i];
-          }
-          m_graph_size++;
-          multi_list[list_fill] = row;
-          list_fill++;
-          if(list_fill >= 16){
-            node_list[list_ptr] = multi_list;
-            list_ptr++;
-            list_fill = 0;
-          }
+          m_graph_0[row] = multi_nodes;
+          m_graph_1[row] = multi_nodes;
+          // m_graph_2[row] = multi_nodes;
+          // m_graph_3[row] = multi_nodes;
         }
       }
     }
-    graph_cons[c] = multi_graph_con;
+    graph_cons_0[c] = multi_graph_con;
+    graph_cons_1[c] = multi_graph_con;
+    // graph_cons_2[c] = multi_graph_con;
+    // graph_cons_3[c] = multi_graph_con;
   }
-  if(list_fill > 0)
-    node_list[list_ptr] = multi_list;
-  ctrl << true;
+  ctrl_0 << true;
+  ctrl_1 << true;
+  // ctrl_2 << true;
+  // ctrl_3 << true;
 }
 
-static void compute_core(unsigned int* m_graph, ap_uint<512>* graph_cons, unsigned int m_num_nodes, hls::stream<unsigned int>& outStream, hls::vector<uint32_t, 16>* node_list, hls::stream<bool>& ctrl){
+/* static void compute_core(hls::vector<uint32_t, 16>* m_graph, ap_uint<512>* graph_cons, unsigned int m_num_nodes, hls::stream<unsigned int>& outStream, hls::stream<bool>& ctrl){
 
   static unsigned int component[MAX_COMPONENT_SIZE];
   static bool processed[MAX_TOTAL_NODES];
@@ -133,35 +127,30 @@ static void compute_core(unsigned int* m_graph, ap_uint<512>* graph_cons, unsign
   unsigned int current_component_size = 0;
   unsigned int processed_nodes = 0;
   unsigned int next_node = 0;
-  unsigned int potential_node = 0;
   ap_uint<8> next_node_cons = 0;
 
-  hls::vector<uint32_t, 16> multi_rows;
-  multi_rows = hls::vector<uint32_t, 16>(0);
-
   unsigned int row = 0;
-  // ap_uint<512> multi_graph_con = 0;
+  ap_uint<512> multi_graph_con = 0;
   ap_uint<8> single_graph_con = 0;
+  hls::vector<uint32_t, 16> multi_nodes;
+  multi_nodes = hls::vector<uint32_t, 16>(0);
   unsigned int pos_multi = 0;
   unsigned int pos_single = 0;
-  unsigned int con_iterations = m_num_nodes / 16; // number of 512-bit-values that need to be read
-  unsigned int con_residue = m_num_nodes % 16; // number of 8-bit-values that are missing after the last complete 512-bit-value
+  unsigned int con_iterations = m_num_nodes / 64; // number of 512-bit-values that need to be read
+  unsigned int con_residue = m_num_nodes % 64; // number of 8-bit-values that are missing after the last complete 512-bit-value
 
   bool temp = ctrl.read();
 
   compute_rows_outer:
   for (unsigned int c = 0; c < con_iterations + 1 ; c++){
-    multi_rows = node_list[c];
+    multi_graph_con = graph_cons[c];
     compute_rows_inner:
-    for (unsigned int k = 0; k < 16 ; k++){
+    for (unsigned int k = 0; k < 64 ; k++){
       if(c == con_iterations && k == con_residue){
         break;
       }
-      row = multi_rows[k];
-      
-      pos_multi = row / 64;
-      pos_single = row % 64;
-      single_graph_con = graph_cons[pos_multi].range((pos_single + 1) * 8 - 1, pos_single * 8);
+      single_graph_con = multi_graph_con.range((k + 1) * 8 - 1, k * 8);
+      row = c * 64 + k;
 
       if(single_graph_con == 0){
         processed[row] = true;
@@ -185,21 +174,21 @@ static void compute_core(unsigned int* m_graph, ap_uint<512>* graph_cons, unsign
           pos_single = next_node % 64;
           next_node_cons = graph_cons[pos_multi].range((pos_single + 1) * 8 - 1, pos_single * 8);
           if(next_node_cons > 0){
+            multi_nodes = m_graph[next_node];
             compute_connections:
             for(unsigned int i = 0 ; i < next_node_cons; i++){
               #pragma HLS loop_tripcount min=1 avg=2 max=MAX_EDGES
-              potential_node = m_graph[next_node * MAX_EDGES + i];
-              if(!processed[potential_node] && current_component_size < MAX_COMPONENT_SIZE){
+              if(!processed[multi_nodes[i]] && current_component_size < MAX_COMPONENT_SIZE){
                 bool new_node = true;
                 compute_check_component:
                 for(unsigned int j = 0 ; j < current_component_size; j++){
                   #pragma HLS loop_tripcount min=1 avg=4 max=MAX_COMPONENT_SIZE
-                    if(component[j] == potential_node){
+                    if(component[j] == multi_nodes[i]){
                       new_node = false;
                     }
                 }
                 if(new_node){
-                  component[current_component_size] = potential_node;
+                  component[current_component_size] = multi_nodes[i];
                   current_component_size++;
                 }
               }
@@ -221,6 +210,205 @@ static void compute_core(unsigned int* m_graph, ap_uint<512>* graph_cons, unsign
     }
   }
   outStream << 0;
+} */
+
+static void sub_core(
+                      hls::vector<uint32_t, 16>* m_graph, ap_uint<512>* graph_cons, hls::stream<unsigned int>& outStream, hls::stream<bool>& ctrl,
+                      unsigned int* component, bool* processed, unsigned int start, unsigned int end){
+
+  core_reset_processed:
+  for (unsigned int i = 0; i < MAX_TOTAL_NODES; i++)
+    processed[i] = false;
+
+  unsigned int current_component_size = 0;
+  unsigned int processed_nodes = 0;
+  unsigned int next_node = 0;
+  ap_uint<8> next_node_cons = 0;
+
+  unsigned int row = 0;
+  ap_uint<512> multi_graph_con = 0;
+  ap_uint<8> single_graph_con = 0;
+  hls::vector<uint32_t, 16> multi_nodes;
+  multi_nodes = hls::vector<uint32_t, 16>(0);
+  unsigned int pos_multi = 0;
+  unsigned int pos_single = 0;
+  unsigned int con_iterations = end / 64;
+  unsigned int con_residue = end % 64;
+  unsigned int start_iterations = start / 64;
+  bool duplicate = false;
+
+  bool temp = ctrl.read();
+
+  core_rows_outer:
+  for (unsigned int c = start_iterations; c < con_iterations + 1 ; c++){
+    multi_graph_con = graph_cons[c];
+    core_rows_inner:
+    for (unsigned int k = 0; k < 64 ; k++){
+      if(c == con_iterations && k == con_residue){
+        break;
+      }
+      single_graph_con = multi_graph_con.range((k + 1) * 8 - 1, k * 8);
+      row = c * 64 + k;
+
+      if(single_graph_con == 0){
+        processed[row] = true;
+      }
+      // node with connections that has not been processed yet -> new component
+      else if (!processed[row]){
+        current_component_size = 0;
+        processed_nodes = 0;
+
+        // first node gets added to component
+        component[current_component_size] = row;
+        current_component_size++;
+
+        // main loop to iterate through the component
+        while (current_component_size != processed_nodes){
+          // get next node of the component that has not yet been processed
+          next_node = component[processed_nodes];
+          if(next_node < start)
+            duplicate = true;
+
+          // add all connections of current node to component if not already processed
+          pos_multi = next_node / 64;
+          pos_single = next_node % 64;
+          next_node_cons = graph_cons[pos_multi].range((pos_single + 1) * 8 - 1, pos_single * 8);
+          if(next_node_cons > 0){
+            multi_nodes = m_graph[next_node];
+            core_connections:
+            for(unsigned int i = 0 ; i < next_node_cons; i++){
+              #pragma HLS loop_tripcount min=1 avg=2 max=MAX_EDGES
+              if(!processed[multi_nodes[i]] && current_component_size < MAX_COMPONENT_SIZE){
+                bool new_node = true;
+                core_check_component:
+                for(unsigned int j = 0 ; j < current_component_size; j++){
+                  #pragma HLS loop_tripcount min=1 avg=4 max=MAX_COMPONENT_SIZE
+                    if(component[j] == multi_nodes[i]){
+                      new_node = false;
+                    }
+                }
+                if(new_node){
+                  component[current_component_size] = multi_nodes[i];
+                  current_component_size++;
+                }
+              }
+            }
+          }
+          // after all connections of node have been added, the node is done and can be marked as processed
+          processed[next_node] = true;
+          processed_nodes++;
+        }
+        if(duplicate)
+          duplicate = false;
+        else{
+          outStream << current_component_size;
+          core_write_output:
+          for (unsigned int i = 0; i < current_component_size; i++){
+            #pragma HLS loop_tripcount min=1 avg=8 max=MAX_COMPONENT_SIZE
+            outStream << component[i];
+          }
+        }
+      }
+    }
+  }
+  outStream << 0;
+}
+
+static void merge_streams(hls::stream<unsigned int>& outStream,
+                          hls::stream<unsigned int>& stream_0, hls::stream<unsigned int>& stream_1
+                          // hls::stream<unsigned int>& stream_2, hls::stream<unsigned int>& stream_3,
+                          ) {
+
+  bool str_0 = true;
+  bool str_1 = true;
+  // bool str_2 = true;
+  // bool str_3 = true;
+  bool strms = true;
+  unsigned int component_size = 0;
+
+  merge_while:
+  while(strms){
+    if(stream_0.size() > 0){
+      // every first number of each component is the size of the component;
+      component_size = stream_0.read();
+      // if the size == 0, the end of the stream is reached, the total size can be written and the writing ended
+      if(component_size == 0){
+        str_0 = false;
+        if(!str_0 && !str_1 /* && !str_2 && !str_3 */){
+          outStream << 0;
+          strms = false;
+          break;
+        }
+      }
+      else{
+        // if the stream is still running, the size of the component is written, followed by all its node-indices
+        outStream << component_size;
+        merge_write_nodes_0:
+        for (unsigned int i = 0; i < component_size; i++)
+          outStream << stream_0.read();
+      }
+    }
+    if(stream_1.size() > 0){
+      // every first number of each component is the size of the component;
+      component_size = stream_1.read();
+      // if the size == 0, the end of the stream is reached, the total size can be written and the writing ended
+      if(component_size == 0){
+        str_1 = false;
+        if(!str_0 && !str_1 /* && !str_2 && !str_3 */){
+          outStream << 0;
+          strms = false;
+          break;
+        }
+      }
+      else{
+        // if the stream is still running, the size of the component is written, followed by all its node-indices
+        outStream << component_size;
+        merge_write_nodes_1:
+        for (unsigned int i = 0; i < component_size; i++)
+          outStream << stream_1.read();
+      }
+    }
+    // if(stream_2.size() > 0){
+    //   // every first number of each component is the size of the component;
+    //   component_size = stream_2.read();
+    //   // if the size == 0, the end of the stream is reached, the total size can be written and the writing ended
+    //   if(component_size == 0){
+    //     str_2 = false;
+    //     if(!str_0 && !str_1 /* && !str_2 && !str_3 */){
+    //       outStream << 0;
+    //       strms = false;
+    //       break;
+    //     }
+    //   }
+    //   else{
+    //     // if the stream is still running, the size of the component is written, followed by all its node-indices
+    //     outStream << component_size;
+    //     merge_write_nodes_2:
+    //     for (unsigned int i = 0; i < component_size; i++)
+    //       outStream << stream_2.read();
+    //   }
+    // }
+    // if(stream_3.size() > 0){
+    //   // every first number of each component is the size of the component;
+    //   component_size = stream_3.read();
+    //   // if the size == 0, the end of the stream is reached, the total size can be written and the writing ended
+    //   if(component_size == 0){
+    //     str_3 = false;
+    //     if(!str_0 && !str_1 /* && !str_2 && !str_3 */){
+    //       outStream << 0;
+    //       strms = false;
+    //       break;
+    //     }
+    //   }
+    //   else{
+    //     // if the stream is still running, the size of the component is written, followed by all its node-indices
+    //     outStream << component_size;
+    //     merge_write_nodes_3:
+    //     for (unsigned int i = 0; i < component_size; i++)
+    //       outStream << stream_3.read();
+    //   }
+    // }
+  }
 }
 
 static void write_components(unsigned int* out, hls::stream<unsigned int>& outStream, unsigned int size) {
@@ -257,25 +445,63 @@ extern "C" {
 
   void CCL(
             hls::vector<uint32_t, 16>* in_full_graph, ap_uint<512>* in_full_graph_cons,  hls::vector<float, 16>* in_scores,
-            unsigned int* io_graph, ap_uint<512>* io_graph_cons,
-            unsigned int* out_components, hls::vector<uint32_t, 16>* io_node_list, unsigned int num_nodes, float cutoff) {
+            hls::vector<uint32_t, 16>* io_graph_0, ap_uint<512>* io_graph_cons_0,
+            hls::vector<uint32_t, 16>* io_graph_1, ap_uint<512>* io_graph_cons_1,
+            // hls::vector<uint32_t, 16>* io_graph_2, ap_uint<512>* io_graph_cons_2,
+            // hls::vector<uint32_t, 16>* io_graph_3, ap_uint<512>* io_graph_cons_3,
+            unsigned int* out_components, unsigned int num_nodes, float cutoff) {
     
     #pragma HLS INTERFACE m_axi port = in_full_graph      bundle=gmem0
     #pragma HLS INTERFACE m_axi port = in_full_graph_cons bundle=gmem1
     #pragma HLS INTERFACE m_axi port = in_scores          bundle=gmem2
-    #pragma HLS INTERFACE m_axi port = io_graph           bundle=gmem3
-    #pragma HLS INTERFACE m_axi port = io_graph_cons      bundle=gmem4
-    #pragma HLS INTERFACE m_axi port = out_components     bundle=gmem5
-    #pragma HLS INTERFACE m_axi port = io_node_list       bundle=gmem6
+    #pragma HLS INTERFACE m_axi port = io_graph_0         bundle=gmem3
+    #pragma HLS INTERFACE m_axi port = io_graph_cons_0    bundle=gmem4
+    #pragma HLS INTERFACE m_axi port = io_graph_1         bundle=gmem5
+    #pragma HLS INTERFACE m_axi port = io_graph_cons_1    bundle=gmem6
+    // #pragma HLS INTERFACE m_axi port = io_graph_2         bundle=gmem7
+    // #pragma HLS INTERFACE m_axi port = io_graph_cons_2    bundle=gmem8
+    // #pragma HLS INTERFACE m_axi port = io_graph_3         bundle=gmem9
+    // #pragma HLS INTERFACE m_axi port = io_graph_cons_3    bundle=gmem10
+    #pragma HLS INTERFACE m_axi port = out_components     bundle=gmem7
 
     static hls::stream<unsigned int> outStream_components("output_stream_components");
-    static hls::stream<bool> control_stream("control_stream");
-    static unsigned int graph_size = 0;
-    #pragma HLS STREAM variable=graph_size type=pipo
+    static hls::stream<bool> ctrl_0("ctrl_0");
+    static hls::stream<unsigned int> out_0("out_0");
+    static hls::stream<bool> ctrl_1("ctrl_1");
+    static hls::stream<unsigned int> out_1("out_1");
+    // static hls::stream<bool> ctrl_2("ctrl_2");
+    // static hls::stream<unsigned int> out_2("out_2");
+    // static hls::stream<bool> ctrl_3("ctrl_3");
+    // static hls::stream<unsigned int> out_3("out_3");
 
     #pragma HLS dataflow
-    filter_memory(cutoff, in_full_graph, in_full_graph_cons, in_scores, num_nodes, io_graph, io_graph_cons, graph_size, io_node_list, control_stream);
-    compute_core(io_graph, io_graph_cons, graph_size, outStream_components, io_node_list, control_stream);
+    filter_memory(cutoff, in_full_graph, in_full_graph_cons, in_scores, num_nodes,
+                  io_graph_0, io_graph_cons_0, ctrl_0,
+                  io_graph_1, io_graph_cons_1, ctrl_1
+                  // io_graph_2, io_graph_cons_2, ctrl_2,
+                  // io_graph_3, io_graph_cons_3, ctrl_3,
+                  );
+
+    // compute_core(io_graph, io_graph_cons, num_nodes, outStream_components, control_stream);
+
+    static const unsigned int factor = 2;
+
+    static unsigned int component_0[MAX_COMPONENT_SIZE];
+    static bool processed_0[MAX_TOTAL_NODES];
+    static unsigned int component_1[MAX_COMPONENT_SIZE];
+    static bool processed_1[MAX_TOTAL_NODES];
+    // static unsigned int component_2[MAX_COMPONENT_SIZE];
+    // static bool processed_2[MAX_TOTAL_NODES];
+    // static unsigned int component_3[MAX_COMPONENT_SIZE];
+    // static bool processed_3[MAX_TOTAL_NODES];
+
+    sub_core(io_graph_0, io_graph_cons_0, out_0, ctrl_0, component_0, processed_0, 0, (num_nodes * 1 / factor) - ((num_nodes * 1 / factor) % 64));
+    sub_core(io_graph_1, io_graph_cons_1, out_1, ctrl_1, component_1, processed_1, (num_nodes * 1 / factor) - ((num_nodes * 1 / factor) % 64), num_nodes);
+    // sub_core(io_graph_2, io_graph_cons_2, out_2, ctrl_2, component_2, processed_2, (num_nodes * 2 / factor) - ((num_nodes * 2 / factor) % 64), (num_nodes * 3 / factor) - ((num_nodes * 3 / factor) % 64));
+    // sub_core(io_graph_3, io_graph_cons_3, out_3, ctrl_3, component_3, processed_3, (num_nodes * 3 / factor) - ((num_nodes * 3 / factor) % 64), num_nodes);
+
+    merge_streams(outStream_components, out_0, out_1);
+
     write_components(out_components, outStream_components, num_nodes);
 
   }

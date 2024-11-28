@@ -452,12 +452,20 @@ static void sub_direct( float m_cutoff, hls::vector<uint32_t, 16>* full_graph, a
   outStream << 0;
 }
 
-static void merge_streams(hls::stream<unsigned int>& outStream, hls::stream<unsigned int>& stream_0, hls::stream<unsigned int>& stream_1, hls::stream<unsigned int>& stream_2, hls::stream<unsigned int>& stream_3) {
+static void merge_streams(hls::stream<unsigned int>& outStream,
+                          hls::stream<unsigned int>& stream_0, hls::stream<unsigned int>& stream_1,
+                          hls::stream<unsigned int>& stream_2, hls::stream<unsigned int>& stream_3,
+                          hls::stream<unsigned int>& stream_4, hls::stream<unsigned int>& stream_5,
+                          hls::stream<unsigned int>& stream_6, hls::stream<unsigned int>& stream_7) {
 
   bool str_0 = true;
   bool str_1 = true;
   bool str_2 = true;
   bool str_3 = true;
+  bool str_4 = true;
+  bool str_5 = true;
+  bool str_6 = true;
+  bool str_7 = true;
   bool strms = true;
   unsigned int component_size = 0;
 
@@ -469,7 +477,7 @@ static void merge_streams(hls::stream<unsigned int>& outStream, hls::stream<unsi
       // if the size == 0, the end of the stream is reached, the total size can be written and the writing ended
       if(component_size == 0){
         str_0 = false;
-        if(!str_0 && !str_1 && !str_2 && !str_3){
+        if(!str_0 && !str_1 && !str_2 && !str_3 && !str_4 && !str_5 && !str_6 && !str_7){
           outStream << 0;
           strms = false;
           break;
@@ -489,7 +497,7 @@ static void merge_streams(hls::stream<unsigned int>& outStream, hls::stream<unsi
       // if the size == 0, the end of the stream is reached, the total size can be written and the writing ended
       if(component_size == 0){
         str_1 = false;
-        if(!str_0 && !str_1 && !str_2 && !str_3){
+        if(!str_0 && !str_1 && !str_2 && !str_3 && !str_4 && !str_5 && !str_6 && !str_7){
           outStream << 0;
           strms = false;
           break;
@@ -509,7 +517,7 @@ static void merge_streams(hls::stream<unsigned int>& outStream, hls::stream<unsi
       // if the size == 0, the end of the stream is reached, the total size can be written and the writing ended
       if(component_size == 0){
         str_2 = false;
-        if(!str_0 && !str_1 && !str_2 && !str_3){
+        if(!str_0 && !str_1 && !str_2 && !str_3 && !str_4 && !str_5 && !str_6 && !str_7){
           outStream << 0;
           strms = false;
           break;
@@ -529,7 +537,7 @@ static void merge_streams(hls::stream<unsigned int>& outStream, hls::stream<unsi
       // if the size == 0, the end of the stream is reached, the total size can be written and the writing ended
       if(component_size == 0){
         str_3 = false;
-        if(!str_0 && !str_1 && !str_2 && !str_3){
+        if(!str_0 && !str_1 && !str_2 && !str_3 && !str_4 && !str_5 && !str_6 && !str_7){
           outStream << 0;
           strms = false;
           break;
@@ -541,6 +549,86 @@ static void merge_streams(hls::stream<unsigned int>& outStream, hls::stream<unsi
         merge_write_nodes_3:
         for (unsigned int i = 0; i < component_size; i++)
           outStream << stream_3.read();
+      }
+    }
+    if(stream_4.size() > 0){
+      // every first number of each component is the size of the component;
+      component_size = stream_4.read();
+      // if the size == 0, the end of the stream is reached, the total size can be written and the writing ended
+      if(component_size == 0){
+        str_4 = false;
+        if(!str_0 && !str_1 && !str_2 && !str_3 && !str_4 && !str_5 && !str_6 && !str_7){
+          outStream << 0;
+          strms = false;
+          break;
+        }
+      }
+      else{
+        // if the stream is still running, the size of the component is written, followed by all its node-indices
+        outStream << component_size;
+        merge_write_nodes_4:
+        for (unsigned int i = 0; i < component_size; i++)
+          outStream << stream_4.read();
+      }
+    }
+    if(stream_5.size() > 0){
+      // every first number of each component is the size of the component;
+      component_size = stream_5.read();
+      // if the size == 0, the end of the stream is reached, the total size can be written and the writing ended
+      if(component_size == 0){
+        str_5 = false;
+        if(!str_0 && !str_1 && !str_2 && !str_3 && !str_4 && !str_5 && !str_6 && !str_7){
+          outStream << 0;
+          strms = false;
+          break;
+        }
+      }
+      else{
+        // if the stream is still running, the size of the component is written, followed by all its node-indices
+        outStream << component_size;
+        merge_write_nodes_5:
+        for (unsigned int i = 0; i < component_size; i++)
+          outStream << stream_5.read();
+      }
+    }
+    if(stream_6.size() > 0){
+      // every first number of each component is the size of the component;
+      component_size = stream_6.read();
+      // if the size == 0, the end of the stream is reached, the total size can be written and the writing ended
+      if(component_size == 0){
+        str_6 = false;
+        if(!str_0 && !str_1 && !str_2 && !str_3 && !str_4 && !str_5 && !str_6 && !str_7){
+          outStream << 0;
+          strms = false;
+          break;
+        }
+      }
+      else{
+        // if the stream is still running, the size of the component is written, followed by all its node-indices
+        outStream << component_size;
+        merge_write_nodes_6:
+        for (unsigned int i = 0; i < component_size; i++)
+          outStream << stream_6.read();
+      }
+    }
+    if(stream_7.size() > 0){
+      // every first number of each component is the size of the component;
+      component_size = stream_7.read();
+      // if the size == 0, the end of the stream is reached, the total size can be written and the writing ended
+      if(component_size == 0){
+        str_7 = false;
+        if(!str_0 && !str_1 && !str_2 && !str_3 && !str_4 && !str_5 && !str_6 && !str_7){
+          outStream << 0;
+          strms = false;
+          break;
+        }
+      }
+      else{
+        // if the stream is still running, the size of the component is written, followed by all its node-indices
+        outStream << component_size;
+        merge_write_nodes_7:
+        for (unsigned int i = 0; i < component_size; i++)
+          outStream << stream_7.read();
       }
     }
   }
@@ -607,6 +695,10 @@ extern "C" {
             hls::vector<uint32_t, 16>* in_full_graph_1, ap_uint<512>* in_full_graph_cons_1, hls::vector<float, 16>* in_scores_1,
             hls::vector<uint32_t, 16>* in_full_graph_2, ap_uint<512>* in_full_graph_cons_2, hls::vector<float, 16>* in_scores_2,
             hls::vector<uint32_t, 16>* in_full_graph_3, ap_uint<512>* in_full_graph_cons_3, hls::vector<float, 16>* in_scores_3,
+            hls::vector<uint32_t, 16>* in_full_graph_4, ap_uint<512>* in_full_graph_cons_4, hls::vector<float, 16>* in_scores_4,
+            hls::vector<uint32_t, 16>* in_full_graph_5, ap_uint<512>* in_full_graph_cons_5, hls::vector<float, 16>* in_scores_5,
+            hls::vector<uint32_t, 16>* in_full_graph_6, ap_uint<512>* in_full_graph_cons_6, hls::vector<float, 16>* in_scores_6,
+            hls::vector<uint32_t, 16>* in_full_graph_7, ap_uint<512>* in_full_graph_cons_7, hls::vector<float, 16>* in_scores_7,
             unsigned int* out_components, unsigned int num_nodes, float cutoff) {
     
     #pragma HLS dataflow
@@ -623,24 +715,46 @@ extern "C" {
     #pragma HLS INTERFACE m_axi port = in_full_graph_3      bundle=gmem9
     #pragma HLS INTERFACE m_axi port = in_full_graph_cons_3 bundle=gmem10
     #pragma HLS INTERFACE m_axi port = in_scores_3          bundle=gmem11
-    #pragma HLS INTERFACE m_axi port = out_components       bundle=gmem12
+
+    #pragma HLS INTERFACE m_axi port = in_full_graph_4      bundle=gmem12
+    #pragma HLS INTERFACE m_axi port = in_full_graph_cons_4 bundle=gmem13
+    #pragma HLS INTERFACE m_axi port = in_scores_4          bundle=gmem14
+    #pragma HLS INTERFACE m_axi port = in_full_graph_5      bundle=gmem15
+    #pragma HLS INTERFACE m_axi port = in_full_graph_cons_5 bundle=gmem16
+    #pragma HLS INTERFACE m_axi port = in_scores_5          bundle=gmem17
+    #pragma HLS INTERFACE m_axi port = in_full_graph_6      bundle=gmem18
+    #pragma HLS INTERFACE m_axi port = in_full_graph_cons_6 bundle=gmem19
+    #pragma HLS INTERFACE m_axi port = in_scores_6          bundle=gmem20
+    #pragma HLS INTERFACE m_axi port = in_full_graph_7      bundle=gmem21
+    #pragma HLS INTERFACE m_axi port = in_full_graph_cons_7 bundle=gmem22
+    #pragma HLS INTERFACE m_axi port = in_scores_7          bundle=gmem23
+
+    #pragma HLS INTERFACE m_axi port = out_components       bundle=gmem24
     
     static hls::stream<unsigned int> outStream_components("output_stream_components");
     static hls::stream<unsigned int> stream_out_0("stream_0");
     static hls::stream<unsigned int> stream_out_1("stream_1");
     static hls::stream<unsigned int> stream_out_2("stream_2");
     static hls::stream<unsigned int> stream_out_3("stream_3");
+    static hls::stream<unsigned int> stream_out_4("stream_4");
+    static hls::stream<unsigned int> stream_out_5("stream_5");
+    static hls::stream<unsigned int> stream_out_6("stream_6");
+    static hls::stream<unsigned int> stream_out_7("stream_7");
 
-    static const unsigned int factor = 4;
+    static const unsigned int factor = 8;
 
     sub_direct(cutoff, in_full_graph_0, in_full_graph_cons_0, in_scores_0, stream_out_0, 0, (num_nodes / factor) - ((num_nodes / factor) % 64));
     sub_direct(cutoff, in_full_graph_1, in_full_graph_cons_1, in_scores_1, stream_out_1, (num_nodes * 1 / factor) - ((num_nodes * 1 / factor) % 64), (num_nodes * 2 / factor) - ((num_nodes * 2 / factor) % 64));
     sub_direct(cutoff, in_full_graph_2, in_full_graph_cons_2, in_scores_2, stream_out_2, (num_nodes * 2 / factor) - ((num_nodes * 2 / factor) % 64), (num_nodes * 3 / factor) - ((num_nodes * 3 / factor) % 64));
-    sub_direct(cutoff, in_full_graph_3, in_full_graph_cons_3, in_scores_3, stream_out_3, (num_nodes * 3 / factor) - ((num_nodes * 3 / factor) % 64), num_nodes);
+    sub_direct(cutoff, in_full_graph_3, in_full_graph_cons_3, in_scores_3, stream_out_3, (num_nodes * 3 / factor) - ((num_nodes * 3 / factor) % 64), (num_nodes * 4 / factor) - ((num_nodes * 4 / factor) % 64));
+    sub_direct(cutoff, in_full_graph_4, in_full_graph_cons_4, in_scores_4, stream_out_4, (num_nodes * 4 / factor) - ((num_nodes * 4 / factor) % 64), (num_nodes * 5 / factor) - ((num_nodes * 5 / factor) % 64));
+    sub_direct(cutoff, in_full_graph_5, in_full_graph_cons_5, in_scores_5, stream_out_5, (num_nodes * 5 / factor) - ((num_nodes * 5 / factor) % 64), (num_nodes * 6 / factor) - ((num_nodes * 6 / factor) % 64));
+    sub_direct(cutoff, in_full_graph_6, in_full_graph_cons_6, in_scores_6, stream_out_6, (num_nodes * 6 / factor) - ((num_nodes * 6 / factor) % 64), (num_nodes * 7 / factor) - ((num_nodes * 7 / factor) % 64));
+    sub_direct(cutoff, in_full_graph_7, in_full_graph_cons_7, in_scores_7, stream_out_7, (num_nodes * 7 / factor) - ((num_nodes * 7 / factor) % 64), num_nodes);
 
     // compute_direct(cutoff, in_full_graph_0, in_full_graph_cons_0, in_scores_0, outStream_components, num_nodes);
 
-    merge_streams(outStream_components, stream_out_0, stream_out_1, stream_out_2, stream_out_3);
+    merge_streams(outStream_components, stream_out_0, stream_out_1, stream_out_2, stream_out_3, stream_out_4, stream_out_5, stream_out_6, stream_out_7);
 
     write_components(out_components, outStream_components, num_nodes);
 

@@ -20,6 +20,10 @@ extern "C" {
             hls::vector<uint32_t, 16>* in_full_graph_1, ap_uint<512>* in_full_graph_cons_1, hls::vector<float, 16>* in_scores_1,
             hls::vector<uint32_t, 16>* in_full_graph_2, ap_uint<512>* in_full_graph_cons_2, hls::vector<float, 16>* in_scores_2,
             hls::vector<uint32_t, 16>* in_full_graph_3, ap_uint<512>* in_full_graph_cons_3, hls::vector<float, 16>* in_scores_3,
+            hls::vector<uint32_t, 16>* in_full_graph_4, ap_uint<512>* in_full_graph_cons_4, hls::vector<float, 16>* in_scores_4,
+            hls::vector<uint32_t, 16>* in_full_graph_5, ap_uint<512>* in_full_graph_cons_5, hls::vector<float, 16>* in_scores_5,
+            hls::vector<uint32_t, 16>* in_full_graph_6, ap_uint<512>* in_full_graph_cons_6, hls::vector<float, 16>* in_scores_6,
+            hls::vector<uint32_t, 16>* in_full_graph_7, ap_uint<512>* in_full_graph_cons_7, hls::vector<float, 16>* in_scores_7,
             unsigned int* out_components, unsigned int num_nodes, float cutoff);
 }
 #endif // PAR_KERNELS_H

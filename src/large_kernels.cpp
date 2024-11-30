@@ -241,6 +241,7 @@ static void sub_core(
 
   core_rows_outer:
   for (unsigned int c = start_iterations; c < con_iterations + 1 ; c++){
+    #pragma HLS loop_tripcount min=150000 / 64 avg=MAX_TOTAL_NODES / ( 64 * 2) max=MAX_TOTAL_NODES / 64
     multi_graph_con = graph_cons[c];
     core_rows_inner:
     for (unsigned int k = 0; k < 64 ; k++){
@@ -344,8 +345,10 @@ static void merge_streams(hls::stream<unsigned int>& outStream,
         // if the stream is still running, the size of the component is written, followed by all its node-indices
         outStream << component_size;
         merge_write_nodes_0:
-        for (unsigned int i = 0; i < component_size; i++)
+        for (unsigned int i = 0; i < component_size; i++){
+          #pragma HLS loop_tripcount min=2 avg=8 max=MAX_COMPONENT_SIZE
           outStream << stream_0.read();
+        }
       }
     }
     if(stream_1.size() > 0){
@@ -364,8 +367,10 @@ static void merge_streams(hls::stream<unsigned int>& outStream,
         // if the stream is still running, the size of the component is written, followed by all its node-indices
         outStream << component_size;
         merge_write_nodes_1:
-        for (unsigned int i = 0; i < component_size; i++)
+        for (unsigned int i = 0; i < component_size; i++){
+          #pragma HLS loop_tripcount min=2 avg=8 max=MAX_COMPONENT_SIZE
           outStream << stream_1.read();
+        }
       }
     }
     // if(stream_2.size() > 0){
@@ -384,8 +389,10 @@ static void merge_streams(hls::stream<unsigned int>& outStream,
     //     // if the stream is still running, the size of the component is written, followed by all its node-indices
     //     outStream << component_size;
     //     merge_write_nodes_2:
-    //     for (unsigned int i = 0; i < component_size; i++)
+    //     for (unsigned int i = 0; i < component_size; i++){
+    //       #pragma HLS loop_tripcount min=2 avg=8 max=MAX_COMPONENT_SIZE
     //       outStream << stream_2.read();
+    //     }
     //   }
     // }
     // if(stream_3.size() > 0){
@@ -404,8 +411,10 @@ static void merge_streams(hls::stream<unsigned int>& outStream,
     //     // if the stream is still running, the size of the component is written, followed by all its node-indices
     //     outStream << component_size;
     //     merge_write_nodes_3:
-    //     for (unsigned int i = 0; i < component_size; i++)
+    //     for (unsigned int i = 0; i < component_size; i++){
+    //       #pragma HLS loop_tripcount min=2 avg=8 max=MAX_COMPONENT_SIZE
     //       outStream << stream_3.read();
+    //     }
     //   }
     // }
   }

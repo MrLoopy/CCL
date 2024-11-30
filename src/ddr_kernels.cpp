@@ -5,7 +5,7 @@
 #include <hls_stream.h>
 
 // Custom includes
-#include <iostream>
+// #include <iostream>
 #include "ddr_kernels.hpp"
 
 static void compute_direct( float m_cutoff, hls::vector<uint32_t, 16>* full_graph, ap_uint<512>* full_graph_cons, hls::vector<float, 16>* m_scores,

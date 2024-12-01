@@ -97,40 +97,40 @@ ${OBJDIR}/host.o: ${SRCDIR}/host.cpp
 
 # Compile with V++
 # DEBUG
-${BINDIR}/kernels.xclbin: ${OBJDIR}/kernels.xo
-	@echo "[MAKE][$$(date +%H:%M:%S)] compile .xclbin"
-	$(VV) -g -l -t ${XCL_EMULATION_MODE_CHANGED} \
-	       	--platform ${FPGA_PLATFORM} \
-	       	--config ${FPGA_PATH2CONF}/u280.cfg \
-	       	${OBJDIR}/kernels.xo -o ${BINDIR}/kernels.xclbin
-	@rm -rf ${FPGA_PATH2EMU}/_x .Xil
-	@mv _x ${FPGA_PATH2EMU}/
-	@mv *.log $(LOGDIR)/
-${OBJDIR}/kernels.xo: ${FPGA_PATH2SRC}/kernels.cpp
-	@echo "[MAKE][$$(date +%H:%M:%S)] compile .xo"
-	$(VV) -g -c -t ${XCL_EMULATION_MODE_CHANGED} \
-	       	--platform ${FPGA_PLATFORM} \
-	       	--config ${FPGA_PATH2CONF}/u280.cfg \
-	       	-k CCL \
-	       	-I ${FPGA_PATH2INC} ${FPGA_PATH2SRC}/kernels.cpp -o ${OBJDIR}/kernels.xo
-# RELEASE
 # ${BINDIR}/kernels.xclbin: ${OBJDIR}/kernels.xo
 # 	@echo "[MAKE][$$(date +%H:%M:%S)] compile .xclbin"
-# 	$(VV) -l -t ${XCL_EMULATION_MODE_CHANGED} \
+# 	$(VV) -g -l -t ${XCL_EMULATION_MODE_CHANGED} \
 # 	       	--platform ${FPGA_PLATFORM} \
 # 	       	--config ${FPGA_PATH2CONF}/u280.cfg \
-# 			--optimize 3 \
 # 	       	${OBJDIR}/kernels.xo -o ${BINDIR}/kernels.xclbin
 # 	@rm -rf ${FPGA_PATH2EMU}/_x .Xil
 # 	@mv _x ${FPGA_PATH2EMU}/
 # 	@mv *.log $(LOGDIR)/
 # ${OBJDIR}/kernels.xo: ${FPGA_PATH2SRC}/kernels.cpp
 # 	@echo "[MAKE][$$(date +%H:%M:%S)] compile .xo"
-# 	$(VV) -c -t ${XCL_EMULATION_MODE_CHANGED} \
+# 	$(VV) -g -c -t ${XCL_EMULATION_MODE_CHANGED} \
 # 	       	--platform ${FPGA_PLATFORM} \
 # 	       	--config ${FPGA_PATH2CONF}/u280.cfg \
 # 	       	-k CCL \
 # 	       	-I ${FPGA_PATH2INC} ${FPGA_PATH2SRC}/kernels.cpp -o ${OBJDIR}/kernels.xo
+# RELEASE
+${BINDIR}/kernels.xclbin: ${OBJDIR}/kernels.xo
+	@echo "[MAKE][$$(date +%H:%M:%S)] compile .xclbin"
+	$(VV) -l -t ${XCL_EMULATION_MODE_CHANGED} \
+	       	--platform ${FPGA_PLATFORM} \
+	       	--config ${FPGA_PATH2CONF}/u280.cfg \
+			--optimize 3 \
+	       	${OBJDIR}/kernels.xo -o ${BINDIR}/kernels.xclbin
+	@rm -rf ${FPGA_PATH2EMU}/_x .Xil
+	@mv _x ${FPGA_PATH2EMU}/
+	@mv *.log $(LOGDIR)/
+${OBJDIR}/kernels.xo: ${FPGA_PATH2SRC}/kernels.cpp
+	@echo "[MAKE][$$(date +%H:%M:%S)] compile .xo"
+	$(VV) -c -t ${XCL_EMULATION_MODE_CHANGED} \
+	       	--platform ${FPGA_PLATFORM} \
+	       	--config ${FPGA_PATH2CONF}/u280.cfg \
+	       	-k CCL \
+	       	-I ${FPGA_PATH2INC} ${FPGA_PATH2SRC}/kernels.cpp -o ${OBJDIR}/kernels.xo
 
 #
 # Compile TEST files
@@ -148,40 +148,40 @@ ${OBJDIR}/test_host.o: ${SRCDIR}/test_host.cpp
 	$(CC) $(CFLAGS) -c ${SRCDIR}/test_host.cpp -o ${OBJDIR}/test_host.o
 
 # Compile with V++
-${BINDIR}/test_kernels.xclbin: ${OBJDIR}/test_kernels.xo
-	@echo "[MAKE TEST][$$(date +%H:%M:%S)] compile .xclbin"
-	$(VV) -g -l -t ${XCL_EMULATION_MODE_CHANGED} \
-	       	--platform ${FPGA_PLATFORM} \
-	       	--config ${FPGA_PATH2CONF}/test_u280.cfg \
-	       	${OBJDIR}/test_kernels.xo -o ${BINDIR}/test_kernels.xclbin
-	@rm -rf ${FPGA_PATH2EMU}/_x .Xil
-	@mv _x ${FPGA_PATH2EMU}/
-	@mv *.log $(LOGDIR)/
-${OBJDIR}/test_kernels.xo: ${FPGA_PATH2SRC}/test_kernels.cpp
-	@echo "[MAKE TEST][$$(date +%H:%M:%S)] compile .xo"
-	$(VV) -g -c -t ${XCL_EMULATION_MODE_CHANGED} \
-	       	--platform ${FPGA_PLATFORM} \
-	       	--config ${FPGA_PATH2CONF}/test_u280.cfg \
-	       	-k CCL \
-	       	-I ${FPGA_PATH2INC} ${FPGA_PATH2SRC}/test_kernels.cpp -o ${OBJDIR}/test_kernels.xo
-# RELEASE
 # ${BINDIR}/test_kernels.xclbin: ${OBJDIR}/test_kernels.xo
 # 	@echo "[MAKE TEST][$$(date +%H:%M:%S)] compile .xclbin"
-# 	$(VV) -l -t ${XCL_EMULATION_MODE_CHANGED} \
+# 	$(VV) -g -l -t ${XCL_EMULATION_MODE_CHANGED} \
 # 	       	--platform ${FPGA_PLATFORM} \
 # 	       	--config ${FPGA_PATH2CONF}/test_u280.cfg \
-# 			--optimize 3 \
 # 	       	${OBJDIR}/test_kernels.xo -o ${BINDIR}/test_kernels.xclbin
 # 	@rm -rf ${FPGA_PATH2EMU}/_x .Xil
 # 	@mv _x ${FPGA_PATH2EMU}/
 # 	@mv *.log $(LOGDIR)/
 # ${OBJDIR}/test_kernels.xo: ${FPGA_PATH2SRC}/test_kernels.cpp
 # 	@echo "[MAKE TEST][$$(date +%H:%M:%S)] compile .xo"
-# 	$(VV) -c -t ${XCL_EMULATION_MODE_CHANGED} \
+# 	$(VV) -g -c -t ${XCL_EMULATION_MODE_CHANGED} \
 # 	       	--platform ${FPGA_PLATFORM} \
 # 	       	--config ${FPGA_PATH2CONF}/test_u280.cfg \
 # 	       	-k CCL \
 # 	       	-I ${FPGA_PATH2INC} ${FPGA_PATH2SRC}/test_kernels.cpp -o ${OBJDIR}/test_kernels.xo
+# RELEASE
+${BINDIR}/test_kernels.xclbin: ${OBJDIR}/test_kernels.xo
+	@echo "[MAKE TEST][$$(date +%H:%M:%S)] compile .xclbin"
+	$(VV) -l -t ${XCL_EMULATION_MODE_CHANGED} \
+	       	--platform ${FPGA_PLATFORM} \
+	       	--config ${FPGA_PATH2CONF}/test_u280.cfg \
+			--optimize 3 \
+	       	${OBJDIR}/test_kernels.xo -o ${BINDIR}/test_kernels.xclbin
+	@rm -rf ${FPGA_PATH2EMU}/_x .Xil
+	@mv _x ${FPGA_PATH2EMU}/
+	@mv *.log $(LOGDIR)/
+${OBJDIR}/test_kernels.xo: ${FPGA_PATH2SRC}/test_kernels.cpp
+	@echo "[MAKE TEST][$$(date +%H:%M:%S)] compile .xo"
+	$(VV) -c -t ${XCL_EMULATION_MODE_CHANGED} \
+	       	--platform ${FPGA_PLATFORM} \
+	       	--config ${FPGA_PATH2CONF}/test_u280.cfg \
+	       	-k CCL \
+	       	-I ${FPGA_PATH2INC} ${FPGA_PATH2SRC}/test_kernels.cpp -o ${OBJDIR}/test_kernels.xo
 
 #
 # Compile DDR files
@@ -199,40 +199,40 @@ ${OBJDIR}/ddr_host.o: ${SRCDIR}/ddr_host.cpp
 	$(CC) $(CFLAGS) -c ${SRCDIR}/ddr_host.cpp -o ${OBJDIR}/ddr_host.o
 
 # Compile with V++
-${BINDIR}/ddr_kernels.xclbin: ${OBJDIR}/ddr_kernels.xo
-	@echo "[MAKE DDR][$$(date +%H:%M:%S)] compile .xclbin"
-	$(VV) -g -l -t ${XCL_EMULATION_MODE_CHANGED} \
-	       	--platform ${FPGA_PLATFORM} \
-	       	--config ${FPGA_PATH2CONF}/ddr_u280.cfg \
-	       	${OBJDIR}/ddr_kernels.xo -o ${BINDIR}/ddr_kernels.xclbin
-	@rm -rf ${FPGA_PATH2EMU}/_x .Xil
-	@mv _x ${FPGA_PATH2EMU}/
-	@mv *.log $(LOGDIR)/
-${OBJDIR}/ddr_kernels.xo: ${FPGA_PATH2SRC}/ddr_kernels.cpp
-	@echo "[MAKE DDR][$$(date +%H:%M:%S)] compile .xo"
-	$(VV) -g -c -t ${XCL_EMULATION_MODE_CHANGED} \
-	       	--platform ${FPGA_PLATFORM} \
-	       	--config ${FPGA_PATH2CONF}/ddr_u280.cfg \
-	       	-k CCL \
-	       	-I ${FPGA_PATH2INC} ${FPGA_PATH2SRC}/ddr_kernels.cpp -o ${OBJDIR}/ddr_kernels.xo
-# RELEASE
 # ${BINDIR}/ddr_kernels.xclbin: ${OBJDIR}/ddr_kernels.xo
 # 	@echo "[MAKE DDR][$$(date +%H:%M:%S)] compile .xclbin"
-# 	$(VV) -l -t ${XCL_EMULATION_MODE_CHANGED} \
+# 	$(VV) -g -l -t ${XCL_EMULATION_MODE_CHANGED} \
 # 	       	--platform ${FPGA_PLATFORM} \
 # 	       	--config ${FPGA_PATH2CONF}/ddr_u280.cfg \
-# 			--optimize 3 \
 # 	       	${OBJDIR}/ddr_kernels.xo -o ${BINDIR}/ddr_kernels.xclbin
 # 	@rm -rf ${FPGA_PATH2EMU}/_x .Xil
 # 	@mv _x ${FPGA_PATH2EMU}/
 # 	@mv *.log $(LOGDIR)/
 # ${OBJDIR}/ddr_kernels.xo: ${FPGA_PATH2SRC}/ddr_kernels.cpp
 # 	@echo "[MAKE DDR][$$(date +%H:%M:%S)] compile .xo"
-# 	$(VV) -c -t ${XCL_EMULATION_MODE_CHANGED} \
+# 	$(VV) -g -c -t ${XCL_EMULATION_MODE_CHANGED} \
 # 	       	--platform ${FPGA_PLATFORM} \
 # 	       	--config ${FPGA_PATH2CONF}/ddr_u280.cfg \
 # 	       	-k CCL \
 # 	       	-I ${FPGA_PATH2INC} ${FPGA_PATH2SRC}/ddr_kernels.cpp -o ${OBJDIR}/ddr_kernels.xo
+# RELEASE
+${BINDIR}/ddr_kernels.xclbin: ${OBJDIR}/ddr_kernels.xo
+	@echo "[MAKE DDR][$$(date +%H:%M:%S)] compile .xclbin"
+	$(VV) -l -t ${XCL_EMULATION_MODE_CHANGED} \
+	       	--platform ${FPGA_PLATFORM} \
+	       	--config ${FPGA_PATH2CONF}/ddr_u280.cfg \
+			--optimize 3 \
+	       	${OBJDIR}/ddr_kernels.xo -o ${BINDIR}/ddr_kernels.xclbin
+	@rm -rf ${FPGA_PATH2EMU}/_x .Xil
+	@mv _x ${FPGA_PATH2EMU}/
+	@mv *.log $(LOGDIR)/
+${OBJDIR}/ddr_kernels.xo: ${FPGA_PATH2SRC}/ddr_kernels.cpp
+	@echo "[MAKE DDR][$$(date +%H:%M:%S)] compile .xo"
+	$(VV) -c -t ${XCL_EMULATION_MODE_CHANGED} \
+	       	--platform ${FPGA_PLATFORM} \
+	       	--config ${FPGA_PATH2CONF}/ddr_u280.cfg \
+	       	-k CCL \
+	       	-I ${FPGA_PATH2INC} ${FPGA_PATH2SRC}/ddr_kernels.cpp -o ${OBJDIR}/ddr_kernels.xo
 
 #
 # Compile PAR files
@@ -250,40 +250,40 @@ ${OBJDIR}/par_host.o: ${SRCDIR}/par_host.cpp
 	$(CC) $(CFLAGS) -c ${SRCDIR}/par_host.cpp -o ${OBJDIR}/par_host.o
 
 # Compile with V++
-${BINDIR}/par_kernels.xclbin: ${OBJDIR}/par_kernels.xo
-	@echo "[MAKE PAR][$$(date +%H:%M:%S)] compile .xclbin"
-	$(VV) -g -l -t ${XCL_EMULATION_MODE_CHANGED} \
-	       	--platform ${FPGA_PLATFORM} \
-	       	--config ${FPGA_PATH2CONF}/par_u280.cfg \
-	       	${OBJDIR}/par_kernels.xo -o ${BINDIR}/par_kernels.xclbin
-	@rm -rf ${FPGA_PATH2EMU}/_x .Xil
-	@mv _x ${FPGA_PATH2EMU}/
-	@mv *.log $(LOGDIR)/
-${OBJDIR}/par_kernels.xo: ${FPGA_PATH2SRC}/par_kernels.cpp
-	@echo "[MAKE PAR][$$(date +%H:%M:%S)] compile .xo"
-	$(VV) -g -c -t ${XCL_EMULATION_MODE_CHANGED} \
-	       	--platform ${FPGA_PLATFORM} \
-	       	--config ${FPGA_PATH2CONF}/par_u280.cfg \
-	       	-k CCL \
-	       	-I ${FPGA_PATH2INC} ${FPGA_PATH2SRC}/par_kernels.cpp -o ${OBJDIR}/par_kernels.xo
-# RELEASE
 # ${BINDIR}/par_kernels.xclbin: ${OBJDIR}/par_kernels.xo
 # 	@echo "[MAKE PAR][$$(date +%H:%M:%S)] compile .xclbin"
-# 	$(VV) -l -t ${XCL_EMULATION_MODE_CHANGED} \
+# 	$(VV) -g -l -t ${XCL_EMULATION_MODE_CHANGED} \
 # 	       	--platform ${FPGA_PLATFORM} \
 # 	       	--config ${FPGA_PATH2CONF}/par_u280.cfg \
-# 			--optimize 3 \
 # 	       	${OBJDIR}/par_kernels.xo -o ${BINDIR}/par_kernels.xclbin
 # 	@rm -rf ${FPGA_PATH2EMU}/_x .Xil
 # 	@mv _x ${FPGA_PATH2EMU}/
 # 	@mv *.log $(LOGDIR)/
 # ${OBJDIR}/par_kernels.xo: ${FPGA_PATH2SRC}/par_kernels.cpp
 # 	@echo "[MAKE PAR][$$(date +%H:%M:%S)] compile .xo"
-# 	$(VV) -c -t ${XCL_EMULATION_MODE_CHANGED} \
+# 	$(VV) -g -c -t ${XCL_EMULATION_MODE_CHANGED} \
 # 	       	--platform ${FPGA_PLATFORM} \
 # 	       	--config ${FPGA_PATH2CONF}/par_u280.cfg \
 # 	       	-k CCL \
 # 	       	-I ${FPGA_PATH2INC} ${FPGA_PATH2SRC}/par_kernels.cpp -o ${OBJDIR}/par_kernels.xo
+# RELEASE
+${BINDIR}/par_kernels.xclbin: ${OBJDIR}/par_kernels.xo
+	@echo "[MAKE PAR][$$(date +%H:%M:%S)] compile .xclbin"
+	$(VV) -l -t ${XCL_EMULATION_MODE_CHANGED} \
+	       	--platform ${FPGA_PLATFORM} \
+	       	--config ${FPGA_PATH2CONF}/par_u280.cfg \
+			--optimize 3 \
+	       	${OBJDIR}/par_kernels.xo -o ${BINDIR}/par_kernels.xclbin
+	@rm -rf ${FPGA_PATH2EMU}/_x .Xil
+	@mv _x ${FPGA_PATH2EMU}/
+	@mv *.log $(LOGDIR)/
+${OBJDIR}/par_kernels.xo: ${FPGA_PATH2SRC}/par_kernels.cpp
+	@echo "[MAKE PAR][$$(date +%H:%M:%S)] compile .xo"
+	$(VV) -c -t ${XCL_EMULATION_MODE_CHANGED} \
+	       	--platform ${FPGA_PLATFORM} \
+	       	--config ${FPGA_PATH2CONF}/par_u280.cfg \
+	       	-k CCL \
+	       	-I ${FPGA_PATH2INC} ${FPGA_PATH2SRC}/par_kernels.cpp -o ${OBJDIR}/par_kernels.xo
 
 #
 # Compile LARGE files

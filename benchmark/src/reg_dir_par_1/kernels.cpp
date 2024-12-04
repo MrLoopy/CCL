@@ -500,7 +500,7 @@ extern "C" {
     // #pragma HLS INTERFACE m_axi port = in_full_graph_7      bundle=gmem21
     // #pragma HLS INTERFACE m_axi port = in_full_graph_cons_7 bundle=gmem22
     // #pragma HLS INTERFACE m_axi port = in_scores_7          bundle=gmem23
-    #pragma HLS INTERFACE m_axi port = out_components       bundle=gmem6
+    #pragma HLS INTERFACE m_axi port = out_components       bundle=gmem3
     
     static hls::stream<unsigned int> outStream_components("output_stream_components");
     // static hls::stream<unsigned int> stream_out_0("stream_0");

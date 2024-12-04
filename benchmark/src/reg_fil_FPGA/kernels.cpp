@@ -7,8 +7,10 @@
 #include <iostream>
 #include "test_kernels.hpp"
 
-static void in_ram_wrapper(uint16_t* in_graph, uint16_t* ram_graph, bool* in_scores, bool* ram_scores){
+static void in_ram_wrapper(uint16_t* in_graph, uint16_t* ram_graph, uint16_t* in_cons, uint16_t* ram_cons, bool* in_scores, bool* ram_scores){
 
+  for (unsigned int i = 0; i < MAX_TOTAL_NODES; i++)
+    ram_cons[i] = in_cons[i];
   for (unsigned int i = 0; i < MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES; i++){
     ram_graph[i] = in_graph[i];
     ram_scores[i] = in_scores[i];
@@ -19,8 +21,8 @@ static void out_ram_wrapper(uint16_t* out_components, uint16_t* ram_components){
     out_components[i] = ram_components[i];
 }
 
-static void filter_memory(uint16_t* full_graph, bool* m_scores, uint16_t m_num_nodes,
-                          uint16_t* m_graph, uint16_t* m_lookup, uint16_t* m_lookup_filter, uint16_t& m_graph_size) {
+static void filter_memory(uint16_t* full_graph, uint16_t* full_graph_cons, bool* m_scores, uint16_t m_num_nodes,
+                          uint16_t* m_graph, uint16_t* m_graph_cons, uint16_t* m_lookup, uint16_t* m_lookup_filter, uint16_t& m_graph_size) {
 
   uint16_t connections = 0;
   uint16_t new_from, new_to;
@@ -37,9 +39,9 @@ static void filter_memory(uint16_t* full_graph, bool* m_scores, uint16_t m_num_n
     connections = 0;
     new_from = 0;
     // for each connection of that node
-    if(full_graph[row * MAX_FULL_GRAPH_EDGES] > 0){ // avoid for-loop 0 times
+    if(full_graph_cons[row] > 0){ // avoid for-loop 0 times
       filter_nodes:
-      for (unsigned int i = 0; i < full_graph[row * MAX_FULL_GRAPH_EDGES]; i++){
+      for (unsigned int i = 0; i < full_graph_cons[row]; i++){
         #pragma HLS loop_tripcount min=1 avg=5 max=MAX_FULL_GRAPH_EDGES
         if(m_scores[row * MAX_FULL_GRAPH_EDGES + i]){
           // put row in lookup and get out new index
@@ -54,27 +56,27 @@ static void filter_memory(uint16_t* full_graph, bool* m_scores, uint16_t m_num_n
               new_from = m_lookup_filter[row];
           }
           // put i in lookup and get out new index
-          if(m_lookup_filter[full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i]] == 0){
-            m_lookup_filter[full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i]] = m_graph_size;
-            m_lookup[m_graph_size] = full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i];
+          if(m_lookup_filter[full_graph[row * MAX_FULL_GRAPH_EDGES + i]] == 0){
+            m_lookup_filter[full_graph[row * MAX_FULL_GRAPH_EDGES + i]] = m_graph_size;
+            m_lookup[m_graph_size] = full_graph[row * MAX_FULL_GRAPH_EDGES + i];
             new_to = m_graph_size;
             m_graph_size++;
           }
           else
-            new_to = m_lookup_filter[full_graph[row * MAX_FULL_GRAPH_EDGES + 1 + i]];
+            new_to = m_lookup_filter[full_graph[row * MAX_FULL_GRAPH_EDGES + i]];
 
           // Add new indices to the filtered graph
-          m_graph[new_from * MAX_EDGES + 1 + connections] = new_to;
+          m_graph[new_from * MAX_EDGES + connections] = new_to;
           connections++;
         }
       }
       if(new_from != 0)
-        m_graph[new_from * MAX_EDGES] = connections;
+        m_graph_cons[new_from] = connections;
     }
   }
 }
 
-static void compute_core(uint16_t* m_graph, uint16_t m_num_nodes, hls::stream<uint16_t>& outStream, uint16_t* m_lookup){
+static void compute_core(uint16_t* m_graph, uint16_t* m_graph_cons, uint16_t m_num_nodes, hls::stream<uint16_t>& outStream, uint16_t* m_lookup){
 
   static uint16_t component[MAX_COMPONENT_SIZE];
   static uint16_t processed[MAX_TRUE_NODES];
@@ -89,14 +91,10 @@ static void compute_core(uint16_t* m_graph, uint16_t m_num_nodes, hls::stream<ui
   compute_rows:
   for (unsigned int row = 0; row < m_num_nodes; row++){
     #pragma HLS loop_tripcount min=150 avg=200 max=MAX_TRUE_NODES
-    if(m_graph[row * MAX_EDGES] == 0)
+    if(m_graph_cons[row] == 0)
       processed[row] = true;
     // node with connections that has not been processed yet -> new component
     else if (!processed[row]){
-      // new component needs to reset parameters
-      compute_reset_component:
-      for (unsigned int i = 0; i < MAX_COMPONENT_SIZE; i++)
-        component[i] = 0;
       current_component_size = 0;
       processed_nodes = 0;
 
@@ -113,20 +111,20 @@ static void compute_core(uint16_t* m_graph, uint16_t m_num_nodes, hls::stream<ui
           // Conflict handler -> transfer current component from one core to the other
 
         // add all connections of current node to component if not already processed <- to many fills for highly connected components?
-        if(m_graph[next_node * MAX_EDGES] > 0) // avoid for-loop 0 times
+        if(m_graph_cons[next_node] > 0) // avoid for-loop 0 times
           compute_connections:
-          for(unsigned int i = 0 ; i < m_graph[next_node * MAX_EDGES]; i++){
+          for(unsigned int i = 0 ; i < m_graph_cons[next_node]; i++){
             #pragma HLS loop_tripcount min=1 avg=2 max=MAX_EDGES
-            if(!processed[m_graph[next_node * MAX_EDGES + 1 + i]] && current_component_size < MAX_COMPONENT_SIZE){
+            if(!processed[m_graph[next_node * MAX_EDGES + i]] && current_component_size < MAX_COMPONENT_SIZE){
               bool new_node = true;
               compute_check_component:
               for(unsigned int j = 0 ; j < current_component_size; j++){
                 #pragma HLS loop_tripcount min=1 avg=4 max=MAX_COMPONENT_SIZE
-                  if(component[j] == m_graph[next_node * MAX_EDGES + 1 + i])
+                  if(component[j] == m_graph[next_node * MAX_EDGES + i])
                     new_node = false;
               }
               if(new_node){
-                component[current_component_size] = m_graph[next_node * MAX_EDGES + 1 + i];
+                component[current_component_size] = m_graph[next_node * MAX_EDGES + i];
                 current_component_size++;
               }
             }
@@ -192,21 +190,28 @@ static void write_components(uint16_t* out, hls::stream<uint16_t>& outStream, ui
 
 extern "C" {
 
-  void CCL( uint16_t* in_full_graph, bool* in_scores, uint16_t* out_components, uint16_t num_nodes) {
+  void CCL( uint16_t* in_full_graph, uint16_t* in_full_graph_cons, bool* in_scores, uint16_t* out_components, uint16_t num_nodes) {
     
-    #pragma HLS INTERFACE m_axi port = in_full_graph     bundle=gmem0 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = in_scores         bundle=gmem1 max_widen_bitwidth=512
-    #pragma HLS INTERFACE m_axi port = out_components    bundle=gmem2 max_widen_bitwidth=512
+    #pragma HLS INTERFACE m_axi port = in_full_graph      bundle=gmem0
+    #pragma HLS INTERFACE m_axi port = in_full_graph_cons bundle=gmem1
+    #pragma HLS INTERFACE m_axi port = in_scores          bundle=gmem2
+    #pragma HLS INTERFACE m_axi port = out_components     bundle=gmem3
 
     static uint16_t full_graph[MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES]; // 8192 * 256 = 2M -> 4MB
     #pragma HLS bind_storage variable=full_graph type=RAM_T2P impl=URAM
     #pragma HLS STREAM variable=full_graph type=pipo
+    static uint16_t full_graph_cons[MAX_TOTAL_NODES]; // 8192 -> 16kB
+    #pragma HLS bind_storage variable=full_graph_cons type=RAM_T2P impl=BRAM
+    #pragma HLS STREAM variable=full_graph_cons type=pipo
     static bool scores[MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES]; // 8192 * 256 = 2M -> 256kB
     #pragma HLS bind_storage variable=scores type=RAM_T2P impl=URAM
     #pragma HLS STREAM variable=scores type=pipo
     static uint16_t graph[MAX_TRUE_NODES * MAX_EDGES]; // 512 * 8 = 4k -> 8kB
     #pragma HLS bind_storage variable=graph type=RAM_T2P impl=BRAM
     #pragma HLS STREAM variable=graph type=pipo
+    static uint16_t graph_cons[MAX_TRUE_NODES]; // 512 -> 1kB
+    #pragma HLS bind_storage variable=graph_cons type=RAM_2P impl=LUTRAM
+    #pragma HLS STREAM variable=graph_cons type=pipo
     static uint16_t lookup[MAX_TRUE_NODES]; // 512 -> 1 kB
     #pragma HLS bind_storage variable=lookup type=RAM_2P impl=LUTRAM
     #pragma HLS STREAM variable=lookup type=pipo
@@ -222,11 +227,11 @@ extern "C" {
     #pragma HLS STREAM variable=graph_size type=pipo
 
     #pragma HLS dataflow
-    in_ram_wrapper(in_full_graph, full_graph, in_scores, scores);
+    in_ram_wrapper(in_full_graph, full_graph, in_full_graph_cons, full_graph_cons, in_scores, scores);
 
-    filter_memory(full_graph, scores, num_nodes, graph, lookup, lookup_filter, graph_size);
+    filter_memory(full_graph, full_graph_cons, scores, num_nodes, graph, graph_cons, lookup, lookup_filter, graph_size);
 
-    compute_core(graph, graph_size, outStream_components, lookup);
+    compute_core(graph, graph_cons, graph_size, outStream_components, lookup);
     write_components(components, outStream_components, num_nodes);
 
     out_ram_wrapper(out_components, components);

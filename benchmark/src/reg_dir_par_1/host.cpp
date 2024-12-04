@@ -129,7 +129,7 @@ struct kernel_buffers{
     // in_full_graph_7 = xrt::bo(device, size_full_graph_byte, kernel.group_id(21));
     // in_full_graph_cons_7 = xrt::bo(device, size_full_graph_cons_byte, kernel.group_id(22));
     // in_scores_7 = xrt::bo(device, size_scores_byte, kernel.group_id(23));
-    out_components = xrt::bo(device, size_components_byte, kernel.group_id(6));
+    out_components = xrt::bo(device, size_components_byte, kernel.group_id(3));
   }
 };
 struct kernel_maps{

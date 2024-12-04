@@ -2,6 +2,7 @@
 
 path_output="out/hw.p_xilinx_u280_gen3x16.mode_debug"
 path_files="benchmark/src/"
+path_results="benchmark/results/"
 
 make_mode="adsf"
 
@@ -26,15 +27,42 @@ compile () {
     cp "${path_files}$1/u280.cfg" conf/${make_mode}u280.cfg
     echo "[$(date +%H:%M:%S)] make $2"
     make $2
+    echo "[$(date +%H:%M:%S)] copy results back to ${path_results}$1"
+    cp -R "${path_output}" "${path_results}$1"
     echo -e "\n\n##########################################################################################################################"
 }
 
+################# ToDo #################
+# prepare fe_fil_lookup
+# compile "reg_fil_par_8" "ddr"
 
-compile "fe_dir_par_8" "par"
-compile "fe_fil_par_8" ""
-compile "reg_dir_par_8" "test"
-compile "reg_fil_par_8" "large"
-compile "fe_dir_DDR" "ddr"
+compile "reg_fil_FPGA" "test"
 
 echo -e "\n[$(date +%H:%M:%S)] all compilation ended"
+
+################# Done #################
+# compile "fe_dir_NAIVE" "ddr"
+# compile "fe_dir_DDR_1" "ddr"
+# compile "fe_dir_DDR_4" "ddr"
+# compile "fe_dir_par_1" "par"
+# compile "fe_dir_par_2" "par"
+
+# compile "fe_dir_par_4" "par"
+# compile "fe_dir_par_8" "par"
+# compile "fe_fil_par_1" ""
+# compile "fe_fil_par_2" ""
+# compile "fe_fil_par_4" ""
+
+# compile "fe_fil_par_8" ""
+# compile "reg_dir_FPGA" ""
+# compile "reg_dir_par_1" "test"
+# compile "reg_dir_par_2" "test"
+# compile "reg_dir_par_4" "test"
+
+# compile "reg_dir_par_8" "test"
+# compile "reg_fil_FPGA" "test"
+# compile "reg_fil_par_1" "large"
+# compile "reg_fil_par_2" "large"
+# compile "reg_fil_par_4" "large"
+
 

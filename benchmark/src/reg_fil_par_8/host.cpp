@@ -21,7 +21,7 @@
 #include "args.hpp"
 
 // Custom includes
-#include "large_kernels.hpp"
+#include "ddr_kernels.hpp"
 
 //============================================
 //

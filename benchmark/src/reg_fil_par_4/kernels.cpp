@@ -48,7 +48,7 @@ static void filter_memory(float m_cutoff, hls::vector<uint32_t, 16>* full_graph,
 
   filter_rows_outer:
   for (unsigned int c = 0; c < con_iterations + 1 ; c++){
-    #pragma HLS loop_tripcount min=290000/64 avg=335000/64 max=MAX_TOTAL_NODES/64
+    // #pragma HLS loop_tripcount min=290000/64 avg=335000/64 max=MAX_TOTAL_NODES/64
     multi_full_con = full_graph_cons[c];
     multi_graph_con = 0;
     filter_rows_inner:
@@ -257,7 +257,7 @@ static void sub_core(
 
   core_rows_outer:
   for (unsigned int c = start_iterations; c < con_iterations + 1 ; c++){
-    #pragma HLS loop_tripcount min=150000 / 64 avg=MAX_TOTAL_NODES / ( 64 * 2) max=MAX_TOTAL_NODES / 64
+    // #pragma HLS loop_tripcount min=150000 / 64 avg=MAX_TOTAL_NODES / ( 64 * 2) max=MAX_TOTAL_NODES / 64
     multi_graph_con = graph_cons[c];
     core_rows_inner:
     for (unsigned int k = 0; k < 64 ; k++){

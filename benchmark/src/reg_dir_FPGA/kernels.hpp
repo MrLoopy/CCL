@@ -12,7 +12,7 @@
 
 extern "C" {
   void CCL( 
-            uint16_t* in_full_graph, bool* in_scores,
+            uint16_t* in_full_graph, uint16_t* in_full_graph_cons, bool* in_scores,
             uint16_t* out_components, uint16_t num_nodes, float cutoff);
 }
 #endif // KERNELS_H

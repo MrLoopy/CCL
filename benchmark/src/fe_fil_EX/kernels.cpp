@@ -6,7 +6,7 @@
 
 // Custom includes
 #include <iostream>
-#include "kernels.hpp"
+#include "par_kernels.hpp"
 
 static void filter_memory(float m_cutoff, hls::vector<uint32_t, 16>* full_graph, ap_uint<512>* full_graph_cons, hls::vector<float, 16>* m_scores, unsigned int m_num_nodes,
                           hls::vector<uint32_t, 16>* m_graph_0, ap_uint<512>* graph_cons_0, hls::stream<bool>& ctrl_0
@@ -33,18 +33,25 @@ static void filter_memory(float m_cutoff, hls::vector<uint32_t, 16>* full_graph,
   multi_edges = hls::vector<uint32_t, 16>(0);
   hls::vector<uint32_t, 16> multi_nodes;
   multi_nodes = hls::vector<uint32_t, 16>(0);
-  // bool mask[16];
-  // ap_uint<8> prefix_sum[16];
+  bool mask[16];
+  ap_uint<8> prefix_sum[16];
   #pragma HLS array_partition variable=multi_scores complete
   #pragma HLS array_partition variable=multi_edges complete
   #pragma HLS array_partition variable=multi_nodes complete
-  // #pragma HLS array_partition variable=mask complete
-  // #pragma HLS array_partition variable=prefix_sum complete
+  #pragma HLS array_partition variable=mask complete
+  #pragma HLS array_partition variable=prefix_sum complete
+
+  ap_uint<8> stage0[16];
+  ap_uint<8> stage1[16];
+  ap_uint<8> stage2[16];
+  #pragma HLS array_partition variable=stage0 complete
+  #pragma HLS array_partition variable=stage1 complete
+  #pragma HLS array_partition variable=stage2 complete
 
   unsigned int con_iterations = m_num_nodes / 64; // number of 512-bit-values that need to be read
   unsigned int con_residue = m_num_nodes % 64; // number of 8-bit-values that are missing after the last complete 512-bit-value
   unsigned int scr_iterations = 0;
-  unsigned int scr_residue = 0;
+  // unsigned int scr_residue = 0;
 
   filter_rows_outer:
   for (unsigned int c = 0; c < con_iterations + 1 ; c++){
@@ -64,22 +71,103 @@ static void filter_memory(float m_cutoff, hls::vector<uint32_t, 16>* full_graph,
         row = c * 64 + k;
 
         scr_iterations = single_full_con / 16;
-        scr_residue = single_full_con % 16;
+        // scr_residue = single_full_con % 16;
         filter_columns_outer:
         for (unsigned int s = 0; s < scr_iterations + 1 ; s++){
           #pragma HLS loop_tripcount min=1 avg=1 max=MAX_FULL_GRAPH_EDGES/16
           multi_scores = m_scores[row * MAX_FULL_GRAPH_BLOCKS + s];
           multi_edges = full_graph[row * MAX_FULL_GRAPH_BLOCKS + s];
+          filter_mask:
           for (unsigned int i = 0; i < 16 ; i++){
-            if(s == scr_iterations && i == scr_residue){
-              break;
-            }
-            if(multi_scores[i] > m_cutoff){
-              multi_nodes[connections] = multi_edges[i];
-              connections++;
-              if(new_row)
-                new_row = false;
-            }
+            #pragma HLS unroll
+            // bit mask
+            if(multi_scores[i] > m_cutoff)
+              mask[i] = true;
+            else
+              mask[i] = false;
+          }
+          { // calculate prefix_sum in 4 cycles with 24 adders
+            // stage 0
+            stage0[0] = mask[0];
+            stage0[1] = mask[1] + mask[0];
+            stage0[2] = mask[2];
+            stage0[3] = mask[3] + mask[2];
+            stage0[4] = mask[4];
+            stage0[5] = mask[5] + mask[4];
+            stage0[6] = mask[6];
+            stage0[7] = mask[7] + mask[6];
+            stage0[8] = mask[8];
+            stage0[9] = mask[9] + mask[8];
+            stage0[10] = mask[10];
+            stage0[11] = mask[11] + mask[10];
+            stage0[12] = mask[12];
+            stage0[13] = mask[13] + mask[12];
+            stage0[14] = mask[14];
+            stage0[15] = mask[15] + mask[14];
+
+            // stage 1
+            stage1[0] = stage0[0];
+            stage1[1] = stage0[1];
+            stage1[2] = stage0[2] + stage0[1];
+            stage1[3] = stage0[3] + stage0[1];
+            stage1[4] = stage0[4];
+            stage1[5] = stage0[5];
+            stage1[6] = stage0[6] + stage0[5];
+            stage1[7] = stage0[7] + stage0[5];
+            stage1[8] = stage0[8];
+            stage1[9] = stage0[9];
+            stage1[10] = stage0[10] + stage0[9];
+            stage1[11] = stage0[11] + stage0[9];
+            stage1[12] = stage0[12];
+            stage1[13] = stage0[13];
+            stage1[14] = stage0[14] + stage0[13];
+            stage1[15] = stage0[15] + stage0[13];
+            
+            // stage 2
+            stage2[0] = stage1[0];
+            stage2[1] = stage1[1];
+            stage2[2] = stage1[2];
+            stage2[3] = stage1[3];
+            stage2[4] = stage1[4] + stage1[3];
+            stage2[5] = stage1[5] + stage1[3];
+            stage2[6] = stage1[6] + stage1[3];
+            stage2[7] = stage1[7] + stage1[3];
+            stage2[8] = stage1[8];
+            stage2[9] = stage1[9];
+            stage2[10] = stage1[10];
+            stage2[11] = stage1[11];
+            stage2[12] = stage1[12] + stage1[11];
+            stage2[13] = stage1[13] + stage1[11];
+            stage2[14] = stage1[14] + stage1[11];
+            stage2[15] = stage1[15] + stage1[11];
+
+            // stage 3
+            prefix_sum[0] = stage2[0];
+            prefix_sum[1] = stage2[1];
+            prefix_sum[2] = stage2[2];
+            prefix_sum[3] = stage2[3];
+            prefix_sum[4] = stage2[4];
+            prefix_sum[5] = stage2[5];
+            prefix_sum[6] = stage2[6];
+            prefix_sum[7] = stage2[7];
+            prefix_sum[8] = stage2[8] + stage2[7];
+            prefix_sum[9] = stage2[9] + stage2[7];
+            prefix_sum[10] = stage2[10] + stage2[7];
+            prefix_sum[11] = stage2[11] + stage2[7];
+            prefix_sum[12] = stage2[12] + stage2[7];
+            prefix_sum[13] = stage2[13] + stage2[7];
+            prefix_sum[14] = stage2[14] + stage2[7];
+            prefix_sum[15] = stage2[15] + stage2[7];
+          }
+          // store indices
+          for (unsigned int i = 0; i < 16 ; i++){
+            #pragma HLS unroll
+            if(mask[i])
+              multi_nodes[connections + prefix_sum[i] - 1] = multi_edges[i];
+          }
+          connections += prefix_sum[15];
+          if(prefix_sum[15] > 0 && new_row){
+            new_row = false;
           }
         }
         if(!new_row){

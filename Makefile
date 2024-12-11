@@ -225,7 +225,7 @@ ${BINDIR}/ddr_kernels.xclbin: ${OBJDIR}/ddr_kernels.xo
 	$(VV) -l -t ${XCL_EMULATION_MODE_CHANGED} \
 	       	--platform ${FPGA_PLATFORM} \
 	       	--config ${FPGA_PATH2CONF}/ddr_u280.cfg \
-			--save-temps --profile.data all:all:all --profile.exec all:all --profile.memory all \
+			--save-temps --clock.freqHz 100000000:CCL --profile.data all:all:all --profile.exec all:all --profile.memory all \
 			--optimize 3 \
 	       	${OBJDIR}/ddr_kernels.xo -o ${BINDIR}/ddr_kernels.xclbin
 	@rm -rf ${FPGA_PATH2EMU}/_x .Xil
@@ -236,7 +236,7 @@ ${OBJDIR}/ddr_kernels.xo: ${FPGA_PATH2SRC}/ddr_kernels.cpp
 	$(VV) -c -t ${XCL_EMULATION_MODE_CHANGED} \
 	       	--platform ${FPGA_PLATFORM} \
 	       	--config ${FPGA_PATH2CONF}/ddr_u280.cfg \
-			--save-temps --profile.data all:all:all --profile.exec all:all --profile.memory all \
+			--save-temps --clock.freqHz 100000000:CCL --profile.data all:all:all --profile.exec all:all --profile.memory all \
 	       	-k CCL \
 	       	-I ${FPGA_PATH2INC} ${FPGA_PATH2SRC}/ddr_kernels.cpp -o ${OBJDIR}/ddr_kernels.xo
 

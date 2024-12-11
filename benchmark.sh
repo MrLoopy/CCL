@@ -36,7 +36,10 @@ compile () {
 # prepare fe_fil_lookup
 # compile "reg_fil_par_8" "ddr"
 
-compile "reg_fil_FPGA" "test"
+compile "reg_fil_par_8" "ddr"
+
+# compile "fe_fil_EX" "par"
+# compile "fe_fil_SEQ" ""
 
 echo -e "\n[$(date +%H:%M:%S)] all compilation ended"
 

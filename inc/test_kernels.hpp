@@ -9,9 +9,7 @@
 #define MAX_TRUE_NODES 512 // 65536 // 512
 #define MAX_COMPONENTS 64 // 8192 // 64
 
-#define CSV_FILE "dat/event005001514.csv"
-
 extern "C" {
-  void CCL( uint16_t* in_full_graph, bool* in_scores, uint16_t* out_components, uint16_t num_nodes);
+  void CCL( uint16_t* in_full_graph, uint16_t* in_full_graph_cons, bool* in_scores, uint16_t* out_components, uint16_t num_nodes);
 }
 #endif // TEST_KERNELS_H

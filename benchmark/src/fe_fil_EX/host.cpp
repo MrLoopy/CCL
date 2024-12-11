@@ -14,32 +14,43 @@
 #include <experimental/xrt_xclbin.h>
 #include "xrt/xrt_device.h"
 #include "xrt/xrt_kernel.h"
+#include "ap_int.h"
+#include "hls_vector.h"
 
 // External includes
 #include "args.hpp"
 
 // Custom includes
-#include "test_kernels.hpp"
+#include "par_kernels.hpp"
 
 //============================================
 //
 // Global parameters
 //
 //============================================
+// {"dat/dummy.csv"}; //
 const u_int32_t num_threads = 1;
-const std::vector<std::string> csv_names = {"dat/reg/r_event005008301.csv", "dat/reg/r_event005008302.csv", "dat/reg/r_event005008303.csv", "dat/reg/r_event005008304.csv", "dat/reg/r_event005008306.csv", "dat/reg/r_event005008308.csv", "dat/reg/r_event005008310.csv", "dat/reg/r_event005008312.csv"}; // {"dat/event005001514.csv", "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
+const std::vector<std::string> csv_names = {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/reg/r_event005008301.csv", "dat/reg/r_event005008302.csv", "dat/reg/r_event005008303.csv", "dat/reg/r_event005008304.csv", "dat/reg/r_event005008306.csv", "dat/reg/r_event005008308.csv", "dat/reg/r_event005008310.csv", "dat/reg/r_event005008312.csv"}; // {"dat/event005001514.csv", "dat/u_event005001604.csv", "dat/u_event005001608.csv", "dat/u_event005001614.csv", "dat/u_event005001664.csv", "dat/u_event005001670.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv"}; // {"dat/dummy.csv"}; // {"dat/event005001514.csv", "dat/event005001514.csv"}; // {"dat/dummy.csv", "dat/dummy.csv"};
 const u_int32_t num_events = (const u_int32_t)csv_names.size();
-const float cutoff = 0.8;
+const float cutoff = 0.5;
 
-u_int32_t size_full_graph = MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;
-u_int32_t size_full_graph_cons = MAX_TOTAL_NODES;
-u_int32_t size_scores = MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES;
+u_int32_t size_full_graph = MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES / 16;
+u_int32_t size_event_full_graph = size_full_graph * 16;
+u_int32_t size_full_graph_cons = MAX_TOTAL_NODES / 64;
+u_int32_t size_event_full_graph_cons = size_full_graph_cons * 64;
+u_int32_t size_scores = MAX_TOTAL_NODES * MAX_FULL_GRAPH_EDGES / 16;
+u_int32_t size_event_scores = size_scores * 16;
+u_int32_t size_graph = MAX_TOTAL_NODES * MAX_EDGES / 16;
+u_int32_t size_event_graph = size_graph * 16;
+u_int32_t size_graph_cons = MAX_TOTAL_NODES / 64;
 u_int32_t size_components = MAX_TRUE_NODES + MAX_COMPONENTS;
 
-size_t size_full_graph_byte = sizeof(uint16_t) * size_full_graph;
-size_t size_full_graph_cons_byte = sizeof(uint16_t) * size_full_graph_cons;
-size_t size_scores_byte = sizeof(bool) * size_scores;
-size_t size_components_byte = sizeof(uint16_t) * size_components;
+size_t size_full_graph_byte = sizeof(hls::vector<uint32_t, 16>) * size_full_graph;
+size_t size_full_graph_cons_byte = sizeof(ap_uint<512>) * size_full_graph_cons;
+size_t size_scores_byte = sizeof(hls::vector<float, 16>) * size_scores;
+size_t size_graph_byte = sizeof(hls::vector<uint32_t, 16>) * size_graph;
+size_t size_graph_cons_byte = sizeof(ap_uint<512>) * size_graph_cons;
+size_t size_components_byte = sizeof(unsigned int) * size_components;
 
 template <typename S>
 std::ostream& operator<<(std::ostream& os, const std::vector<S>& vector){
@@ -74,6 +85,22 @@ struct kernel_buffers{
   xrt::bo in_full_graph;
   xrt::bo in_full_graph_cons;
   xrt::bo in_scores;
+  xrt::bo inout_graph_0;
+  xrt::bo inout_graph_cons_0;
+  // xrt::bo inout_graph_1;
+  // xrt::bo inout_graph_cons_1;
+  // xrt::bo inout_graph_2;
+  // xrt::bo inout_graph_cons_2;
+  // xrt::bo inout_graph_3;
+  // xrt::bo inout_graph_cons_3;
+  // xrt::bo inout_graph_4;
+  // xrt::bo inout_graph_cons_4;
+  // xrt::bo inout_graph_5;
+  // xrt::bo inout_graph_cons_5;
+  // xrt::bo inout_graph_6;
+  // xrt::bo inout_graph_cons_6;
+  // xrt::bo inout_graph_7;
+  // xrt::bo inout_graph_cons_7;
   xrt::bo out_components;
   kernel_buffers(xrt::device &m_device, xrt::kernel &m_kernel){
     device = m_device;
@@ -81,25 +108,67 @@ struct kernel_buffers{
     in_full_graph = xrt::bo(device, size_full_graph_byte, kernel.group_id(0));
     in_full_graph_cons = xrt::bo(device, size_full_graph_cons_byte, kernel.group_id(1));
     in_scores = xrt::bo(device, size_scores_byte, kernel.group_id(2));
-    out_components = xrt::bo(device, size_components_byte, kernel.group_id(3));
+    inout_graph_0 = xrt::bo(device, size_graph_byte, kernel.group_id(3));
+    inout_graph_cons_0 = xrt::bo(device, size_graph_cons_byte, kernel.group_id(4));
+    // inout_graph_1 = xrt::bo(device, size_graph_byte, kernel.group_id(5));
+    // inout_graph_cons_1 = xrt::bo(device, size_graph_cons_byte, kernel.group_id(6));
+    // inout_graph_2 = xrt::bo(device, size_graph_byte, kernel.group_id(7));
+    // inout_graph_cons_2 = xrt::bo(device, size_graph_cons_byte, kernel.group_id(8));
+    // inout_graph_3 = xrt::bo(device, size_graph_byte, kernel.group_id(9));
+    // inout_graph_cons_3 = xrt::bo(device, size_graph_cons_byte, kernel.group_id(10));
+    // inout_graph_4 = xrt::bo(device, size_graph_byte, kernel.group_id(11));
+    // inout_graph_cons_4 = xrt::bo(device, size_graph_cons_byte, kernel.group_id(12));
+    // inout_graph_5 = xrt::bo(device, size_graph_byte, kernel.group_id(13));
+    // inout_graph_cons_5 = xrt::bo(device, size_graph_cons_byte, kernel.group_id(14));
+    // inout_graph_6 = xrt::bo(device, size_graph_byte, kernel.group_id(15));
+    // inout_graph_cons_6 = xrt::bo(device, size_graph_cons_byte, kernel.group_id(16));
+    // inout_graph_7 = xrt::bo(device, size_graph_byte, kernel.group_id(17));
+    // inout_graph_cons_7 = xrt::bo(device, size_graph_cons_byte, kernel.group_id(18));
+    out_components = xrt::bo(device, size_components_byte, kernel.group_id(5));
   }
 };
 struct kernel_maps{
-  uint16_t* in_full_graph;
-  uint16_t* in_full_graph_cons;
-  bool* in_scores;
-  // uint16_t* inout_graph;
-  // uint16_t* inout_lookup;
-  // uint16_t* inout_lookup_filter;
-  uint16_t* out_components;
+  hls::vector<uint32_t, 16>* in_full_graph;
+  ap_uint<512>* in_full_graph_cons;
+  hls::vector<float, 16>* in_scores;
+  hls::vector<uint32_t, 16>* inout_graph_0;
+  ap_uint<512>* inout_graph_cons_0;
+  // hls::vector<uint32_t, 16>* inout_graph_1;
+  // ap_uint<512>* inout_graph_cons_1;
+  // hls::vector<uint32_t, 16>* inout_graph_2;
+  // ap_uint<512>* inout_graph_cons_2;
+  // hls::vector<uint32_t, 16>* inout_graph_3;
+  // ap_uint<512>* inout_graph_cons_3;
+  // hls::vector<uint32_t, 16>* inout_graph_4;
+  // ap_uint<512>* inout_graph_cons_4;
+  // hls::vector<uint32_t, 16>* inout_graph_5;
+  // ap_uint<512>* inout_graph_cons_5;
+  // hls::vector<uint32_t, 16>* inout_graph_6;
+  // ap_uint<512>* inout_graph_cons_6;
+  // hls::vector<uint32_t, 16>* inout_graph_7;
+  // ap_uint<512>* inout_graph_cons_7;
+  unsigned int* out_components;
   kernel_maps(kernel_buffers &m_bo){
-    in_full_graph = m_bo.in_full_graph.map<uint16_t*>();
-    in_full_graph_cons = m_bo.in_full_graph_cons.map<uint16_t*>();
-    in_scores = m_bo.in_scores.map<bool*>();
-    // inout_graph = m_bo.inout_graph.map<uint16_t*>();
-    // inout_lookup = m_bo.inout_lookup.map<uint16_t*>();
-    // inout_lookup_filter = m_bo.inout_lookup_filter.map<uint16_t*>();
-    out_components = m_bo.out_components.map<uint16_t*>();
+    in_full_graph = m_bo.in_full_graph.map<hls::vector<uint32_t, 16>*>();
+    in_full_graph_cons = m_bo.in_full_graph_cons.map<ap_uint<512>*>();
+    in_scores = m_bo.in_scores.map<hls::vector<float, 16>*>();
+    inout_graph_0 = m_bo.inout_graph_0.map<hls::vector<uint32_t, 16>*>();
+    inout_graph_cons_0 = m_bo.inout_graph_cons_0.map<ap_uint<512>*>();
+    // inout_graph_1 = m_bo.inout_graph_1.map<hls::vector<uint32_t, 16>*>();
+    // inout_graph_cons_1 = m_bo.inout_graph_cons_1.map<ap_uint<512>*>();
+    // inout_graph_2 = m_bo.inout_graph_2.map<hls::vector<uint32_t, 16>*>();
+    // inout_graph_cons_2 = m_bo.inout_graph_cons_2.map<ap_uint<512>*>();
+    // inout_graph_3 = m_bo.inout_graph_3.map<hls::vector<uint32_t, 16>*>();
+    // inout_graph_cons_3 = m_bo.inout_graph_cons_3.map<ap_uint<512>*>();
+    // inout_graph_4 = m_bo.inout_graph_4.map<hls::vector<uint32_t, 16>*>();
+    // inout_graph_cons_4 = m_bo.inout_graph_cons_4.map<ap_uint<512>*>();
+    // inout_graph_5 = m_bo.inout_graph_5.map<hls::vector<uint32_t, 16>*>();
+    // inout_graph_cons_5 = m_bo.inout_graph_cons_5.map<ap_uint<512>*>();
+    // inout_graph_6 = m_bo.inout_graph_6.map<hls::vector<uint32_t, 16>*>();
+    // inout_graph_cons_6 = m_bo.inout_graph_cons_6.map<ap_uint<512>*>();
+    // inout_graph_7 = m_bo.inout_graph_7.map<hls::vector<uint32_t, 16>*>();
+    // inout_graph_cons_7 = m_bo.inout_graph_cons_7.map<ap_uint<512>*>();
+    out_components = m_bo.out_components.map<unsigned int*>();
   }
 };
 
@@ -121,6 +190,10 @@ void print_global_prameters(void){
   if(size_scores_byte > 1024 * 1024) std::cout << size_scores_byte / (1024 * 1024) << " MB" << std::endl;
   else if(size_scores_byte > 1024) std::cout << size_scores_byte / 1024 << " KB" << std::endl;
   else std::cout << size_scores_byte / 1024 << " Bytes" << std::endl;
+  std::cout << "[    ] Size of graph:         ";
+  if(size_graph_byte > 1024 * 1024) std::cout << size_graph_byte / (1024 * 1024) << " MB" << std::endl;
+  else if(size_graph_byte > 1024) std::cout << size_graph_byte / 1024 << " KB" << std::endl;
+  else std::cout << size_graph_byte / 1024 << " Bytes" << std::endl;
   std::cout << "[    ] Size of components:    ";
   if(size_components_byte > 1024 * 1024) std::cout << size_components_byte / (1024 * 1024) << " MB" << std::endl;
   else if(size_components_byte > 1024) std::cout << size_components_byte / 1024 << " KB" << std::endl;
@@ -309,15 +382,18 @@ int main (int argc, char ** argv){
   // Allocate Host Memory for each event
   //
   //============================================
-  std::vector<uint16_t*> ev_in_full_graph;
-  std::vector<uint16_t*> ev_in_full_graph_cons;
+  std::vector<unsigned int*> ev_out_graph;
+  std::vector<ap_uint<512>*> ev_out_cons;
+
+  std::vector<unsigned int*> ev_in_full_graph;
+  std::vector<unsigned int*> ev_in_full_graph_cons;
   std::vector<float*> ev_in_scores;
-  std::vector<uint16_t*> ev_out_components;
-  std::vector<uint16_t> ev_num_edges;
-  std::vector<uint16_t> ev_real_edges;
-  std::vector<uint16_t> ev_true_edges;
-  std::vector<uint16_t> ev_num_nodes;
-  std::vector<std::vector<uint16_t>> ev_ref_labels;
+  std::vector<unsigned int*> ev_out_components;
+  std::vector<unsigned int> ev_num_edges;
+  std::vector<unsigned int> ev_real_edges;
+  std::vector<unsigned int> ev_true_edges;
+  std::vector<unsigned int> ev_num_nodes;
+  std::vector<std::vector<unsigned int>> ev_ref_labels;
 
   //============================================
   //
@@ -325,14 +401,14 @@ int main (int argc, char ** argv){
   //
   //============================================
   std::cout << "[INFO] Prepare Event Data with Data from CSV files" << std::endl;
-  for(uint16_t ev = 0; ev < num_events ; ev++){
+  for(unsigned int ev = 0; ev < num_events ; ev++){
     //
     // Read CSV-file
     //
     std::string csv_file_name = csv_names[ev];
-    std::vector<uint16_t> edge_from;
-    std::vector<uint16_t> edge_to;
-    std::vector<uint16_t> ref_labels;
+    std::vector<unsigned int> edge_from;
+    std::vector<unsigned int> edge_to;
+    std::vector<unsigned int> ref_labels;
     std::vector<float> scores;
     // create an input file stream from the csv-file
     std::ifstream csv_file(csv_file_name);
@@ -342,10 +418,10 @@ int main (int argc, char ** argv){
     if(csv_file.good()){
       std::cout << "[    ] [" << ev << "] CSV-file opened ";
       std::string line, field_0, field_1, field_2, field_3, word;
-      uint16_t num_0 = 0;
-      uint16_t num_1 = 0;
-      uint16_t num_2 = 0;
-      uint16_t num_3 = 0;
+      unsigned int num_0 = 0;
+      unsigned int num_1 = 0;
+      unsigned int num_2 = 0;
+      unsigned int num_3 = 0;
       // read first line
       std::getline(csv_file, line);
       std::stringstream linestream_first(line);
@@ -393,7 +469,7 @@ int main (int argc, char ** argv){
         scores.push_back(std::stof(word));
         if(std::getline(linestream, word, ',')){
           if(std::stoi(word) < 0)
-            ref_labels.push_back(65535); // 4294967295); // if -1 -> set to max_value
+            ref_labels.push_back(4294967295); // if -1 -> set to max_value
           else
             ref_labels.push_back(std::stoi(word));
         }
@@ -407,25 +483,25 @@ int main (int argc, char ** argv){
     ev_real_edges.push_back(0);
     ev_true_edges.push_back(0);
     ev_ref_labels.push_back(ref_labels);
-    ev_in_full_graph.push_back(new uint16_t[size_full_graph]);
-    std::fill(ev_in_full_graph[ev], ev_in_full_graph[ev] + size_full_graph, 0);
-    ev_in_full_graph_cons.push_back(new uint16_t[size_full_graph_cons]);
-    std::fill(ev_in_full_graph_cons[ev], ev_in_full_graph_cons[ev] + size_full_graph_cons, 0);
-    ev_in_scores.push_back(new float[size_scores]);
-    std::fill(ev_in_scores[ev], ev_in_scores[ev] + size_scores, 0.0);
-    ev_out_components.push_back(new uint16_t[size_components]);
+    ev_in_full_graph.push_back(new unsigned int[size_event_full_graph]);
+    std::fill(ev_in_full_graph[ev], ev_in_full_graph[ev] + size_event_full_graph, 0);
+    ev_in_full_graph_cons.push_back(new unsigned int[size_event_full_graph_cons]);
+    std::fill(ev_in_full_graph_cons[ev], ev_in_full_graph_cons[ev] + size_event_full_graph_cons, 0);
+    ev_in_scores.push_back(new float[size_event_scores]);
+    std::fill(ev_in_scores[ev], ev_in_scores[ev] + size_event_scores, 0.0);
+    ev_out_components.push_back(new unsigned int[size_components]);
     std::fill(ev_out_components[ev], ev_out_components[ev] + size_components, 0);
 
-    std::vector<uint16_t> exceeded_by;
-    std::vector<uint16_t> ex_row;
+    ev_out_graph.push_back(new unsigned int[size_event_graph]);
+    std::fill(ev_out_graph[ev], ev_out_graph[ev] + size_event_graph, 0);
+    ev_out_cons.push_back(new ap_uint<512>[size_graph_cons]);
+    std::fill(ev_out_cons[ev], ev_out_cons[ev] + size_graph_cons, 0);
 
     //
     // Fill event buffers with data from CSV
     //
     std::cout << "; CSV-data -> event buffers";
-    uint16_t score_missmatch = 0;
-    bool new_node = true;
-    
+    unsigned int score_missmatch = 0;
     for(unsigned int i = 0; i < ev_num_edges[ev] ; i++){
       // if size of table is exceeded write a warning
       if(ev_in_full_graph_cons[ev][edge_from[i]] < MAX_FULL_GRAPH_EDGES - 1){
@@ -451,18 +527,8 @@ int main (int argc, char ** argv){
             ev_true_edges[ev]++;
         }
       }
-      else{
-        bool new_row = true;
-        for(uint16_t k = 0; k < ex_row.size(); k++)
-          if(ex_row[k] == edge_from[i]){
-            exceeded_by[k]++;
-            new_row = false;
-          }
-        if(new_row){
-          ex_row.push_back(edge_from[i]);
-          exceeded_by.push_back(1);
-        }
-      }
+      else
+          std::cout << "[WARNING] Full graph data structure is exceeded!\n[       ] Row " << edge_from[i] << " is already full and can not take in node " << edge_to[i] << " anymore" << std::endl;
 
       // if size of table is exceeded write a warning
       if(ev_in_full_graph_cons[ev][edge_to[i]] < MAX_FULL_GRAPH_EDGES - 1){
@@ -488,24 +554,10 @@ int main (int argc, char ** argv){
             ev_true_edges[ev]++;
         }
       }
-      else{
-        bool new_row = true;
-        for(uint16_t k = 0; k < ex_row.size(); k++)
-          if(ex_row[k] == edge_to[i]){
-            exceeded_by[k]++;
-            new_row = false;
-          }
-        if(new_row){
-          ex_row.push_back(edge_to[i]);
-          exceeded_by.push_back(1);
-        }
-      }
+      else
+          std::cout << "[WARNING] Full graph data structure is exceeded!\n[       ] Row " << edge_to[i] << " is already full and can not take in node " << edge_from[i] << " anymore" << std::endl;
     }
-    std::cout << "; real #edges: " << ev_real_edges[ev] / 2 << "; #true-edges: " << ev_true_edges[ev] / 2 << "; score missmatches: " << score_missmatch;
-    std::cout << "; " << ex_row.size() << " exceeded rows by ";
-    // for(uint16_t i = 0; i < ex_row.size() ; i++)
-    //   std::cout << exceeded_by[i] << " ";
-    std::cout << "; done" << std::endl;
+    std::cout << "; real #edges: " << ev_real_edges[ev] / 2 << "; #true-edges: " << ev_true_edges[ev] / 2 << "; score missmatches: " << score_missmatch << "; done" << std::endl;
   }
 
   //============================================
@@ -528,21 +580,64 @@ int main (int argc, char ** argv){
   timing.init_start = std::chrono::system_clock::now();
 
   // Event loop
-  for(uint16_t ev = 0; ev < num_events ; ev++){
+  for(unsigned int ev = 0; ev < num_events ; ev++){
     //
     // Write event buffer to global memory buffer
     //
     std::cout << "[    ] [" << ev << "] Write Event to Global Memory Buffer" << std::endl;
-    for(unsigned int i = 0; i < size_full_graph_cons; i++)
-      maps.in_full_graph_cons[i] = ev_in_full_graph_cons[ev][i];
 
-    for(unsigned int i = 0; i < size_scores ; i++){
-      maps.in_full_graph[i] = ev_in_full_graph[ev][i];
-      if(ev_in_scores[ev][i] > cutoff)
-        maps.in_scores[i] = true;
-      else
-        maps.in_scores[i] = false;
+    for(unsigned int i = 0; i < size_full_graph_cons; i++)
+      for(unsigned int j = 0; j < 64 ; j++)
+        maps.in_full_graph_cons[i].range((j + 1) * 8 - 1, j * 8) = ev_in_full_graph_cons[ev][i * 64 + j];
+
+    for (unsigned int i = 0; i < size_scores; i++){
+      for (unsigned int j = 0; j < 16 ; j++){
+        maps.in_full_graph[i][j] = ev_in_full_graph[ev][i * 16 + j];
+        maps.in_scores[i][j] = ev_in_scores[ev][i * 16 + j];
+      }
     }
+
+  // ###########################################
+  // {
+  //   std::cout << "[INFO] [" << ev << "] Cons, full_graph and scores" << std::endl;
+  //   unsigned int height = 8;
+  //   unsigned int width = 4;
+  //   for(unsigned int i = 0; i < height; i++){
+  //     std::cout << "[    ] [ ] " << maps.in_full_graph_cons[0].range((i + 1) * 8 - 1, i * 8) << " - ";
+  //     for(unsigned int j = 0; j < width; j++)
+  //       std::cout << maps.in_full_graph[i * MAX_FULL_GRAPH_BLOCKS][j] << " ";
+  //     std::cout << " - ";
+  //     for(unsigned int j = 0; j < width; j++){
+  //       if(maps.in_scores[i * MAX_FULL_GRAPH_BLOCKS][j] > cutoff)
+  //         std::cout << "1 ";
+  //       else
+  //         std::cout << "0 ";
+  //     }
+  //     std::cout << std::endl;
+  //   }
+  // }
+  // ###########################################
+
+    // for(unsigned int i = 0; i < size_scores ; i++){
+    //   maps.in_full_graph[i] = ev_in_full_graph[ev][i];
+    //   maps.in_scores[i] = ev_in_scores[ev][i];
+    // }
+    std::fill(maps.inout_graph_0, maps.inout_graph_0 + size_graph, hls::vector<uint32_t, 16>(0));
+    std::fill(maps.inout_graph_cons_0, maps.inout_graph_cons_0 + size_graph_cons, 0);
+    // std::fill(maps.inout_graph_1, maps.inout_graph_1 + size_graph, hls::vector<uint32_t, 16>(0));
+    // std::fill(maps.inout_graph_cons_1, maps.inout_graph_cons_1 + size_graph_cons, 0);
+    // std::fill(maps.inout_graph_2, maps.inout_graph_2 + size_graph, hls::vector<uint32_t, 16>(0));
+    // std::fill(maps.inout_graph_cons_2, maps.inout_graph_cons_2 + size_graph_cons, 0);
+    // std::fill(maps.inout_graph_3, maps.inout_graph_3 + size_graph, hls::vector<uint32_t, 16>(0));
+    // std::fill(maps.inout_graph_cons_3, maps.inout_graph_cons_3 + size_graph_cons, 0);
+    // std::fill(maps.inout_graph_4, maps.inout_graph_4 + size_graph, hls::vector<uint32_t, 16>(0));
+    // std::fill(maps.inout_graph_cons_4, maps.inout_graph_cons_4 + size_graph_cons, 0);
+    // std::fill(maps.inout_graph_5, maps.inout_graph_5 + size_graph, hls::vector<uint32_t, 16>(0));
+    // std::fill(maps.inout_graph_cons_5, maps.inout_graph_cons_5 + size_graph_cons, 0);
+    // std::fill(maps.inout_graph_6, maps.inout_graph_6 + size_graph, hls::vector<uint32_t, 16>(0));
+    // std::fill(maps.inout_graph_cons_6, maps.inout_graph_cons_6 + size_graph_cons, 0);
+    // std::fill(maps.inout_graph_7, maps.inout_graph_7 + size_graph, hls::vector<uint32_t, 16>(0));
+    // std::fill(maps.inout_graph_cons_7, maps.inout_graph_cons_7 + size_graph_cons, 0);
     std::fill(maps.out_components, maps.out_components + size_components, 0);
     timing.in_written.push_back(std::chrono::system_clock::now());
 
@@ -553,17 +648,40 @@ int main (int argc, char ** argv){
     bo.in_full_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     bo.in_full_graph_cons.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     bo.in_scores.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    // bo.inout_graph.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    // bo.inout_lookup.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    // bo.inout_lookup_filter.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.inout_graph_0.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.inout_graph_cons_0.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    // bo.inout_graph_1.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    // bo.inout_graph_cons_1.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    // bo.inout_graph_2.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    // bo.inout_graph_cons_2.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    // bo.inout_graph_3.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    // bo.inout_graph_cons_3.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    // bo.inout_graph_4.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    // bo.inout_graph_cons_4.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    // bo.inout_graph_5.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    // bo.inout_graph_cons_5.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    // bo.inout_graph_6.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    // bo.inout_graph_cons_6.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    // bo.inout_graph_7.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    // bo.inout_graph_cons_7.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bo.out_components.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     timing.in_synced.push_back(std::chrono::system_clock::now());
 
     //
     // Execute Kernel
     //
     std::cout << "[    ] [" << ev << "] Start Kernel" << std::endl;
-    auto run = bo.kernel(bo.in_full_graph, bo.in_full_graph_cons, bo.in_scores, bo.out_components, ev_num_nodes[ev]);
-    // auto run = bo.kernel(bo.in_full_graph, bo.in_scores, bo.inout_graph, bo.inout_lookup, bo.inout_lookup_filter, bo.out_components, ev_num_nodes[ev], cutoff);
+    auto run = bo.kernel(
+                          bo.in_full_graph, bo.in_full_graph_cons, bo.in_scores,
+                          bo.inout_graph_0, bo.inout_graph_cons_0,
+                          // bo.inout_graph_1, bo.inout_graph_cons_1,
+                          // bo.inout_graph_2, bo.inout_graph_cons_2,
+                          // bo.inout_graph_3, bo.inout_graph_cons_3,
+                          // bo.inout_graph_4, bo.inout_graph_cons_4,
+                          // bo.inout_graph_5, bo.inout_graph_cons_5,
+                          // bo.inout_graph_6, bo.inout_graph_cons_6,
+                          // bo.inout_graph_7, bo.inout_graph_cons_7,
+                          bo.out_components, ev_num_nodes[ev], cutoff);
     timing.krnl_started.push_back(std::chrono::system_clock::now());
     std::cout << "[    ] [" << ev << "] Wait for Kernel to finish" << std::endl;
     run.wait();
@@ -574,14 +692,20 @@ int main (int argc, char ** argv){
     //
     std::cout << "[    ] [" << ev << "] Read back data from Kernel" << std::endl;
     bo.out_components.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+    bo.inout_graph_0.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+    bo.inout_graph_cons_0.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
     timing.out_synced.push_back(std::chrono::system_clock::now());
 
     //
     // Read event buffer from global memory buffer
     //
     std::cout << "[    ] [" << ev << "] Write results from global memory back to event buffer" << std::endl;
-    for(uint16_t i = 0; i < size_components ; i++)
+    for(unsigned int i = 0; i < size_components ; i++)
       ev_out_components[ev][i] = maps.out_components[i];
+    for(unsigned int i = 0; i < size_event_graph ; i++)
+      ev_out_graph[ev][i] = maps.inout_graph_0[i / 16][i % 16];
+    for(unsigned int i = 0; i < size_graph_cons ; i++)
+      ev_out_cons[ev][i] = maps.inout_graph_cons_0[i];
     timing.out_written.push_back(std::chrono::system_clock::now());
   }
 
@@ -603,16 +727,16 @@ int main (int argc, char ** argv){
   {
     bool correct = true;
     std::vector<bool> k_correct;
-    uint16_t num_errors = 0;
-    uint16_t num_errors_0 = 0;
-    uint16_t num_errors_1 = 0;
-    uint16_t num_errors_2 = 0;
-    std::vector<uint16_t> k_errors;
-    std::vector<uint16_t> k_errors_0;
-    std::vector<uint16_t> k_errors_1;
-    std::vector<uint16_t> k_errors_2;
+    unsigned int num_errors = 0;
+    unsigned int num_errors_0 = 0;
+    unsigned int num_errors_1 = 0;
+    unsigned int num_errors_2 = 0;
+    std::vector<unsigned int> k_errors;
+    std::vector<unsigned int> k_errors_0;
+    std::vector<unsigned int> k_errors_1;
+    std::vector<unsigned int> k_errors_2;
 
-    for(uint16_t ev = 0; ev < num_events ; ev++){
+    for(unsigned int ev = 0; ev < num_events ; ev++){
       k_correct.push_back(true);
       k_errors.push_back(0);
       k_errors_0.push_back(0);
@@ -622,22 +746,156 @@ int main (int argc, char ** argv){
       bool end_reached = false;
       bool first_free_node = true;
       bool processed[ev_num_nodes[ev]];
-      for(uint16_t i = 0; i < ev_num_nodes[ev] ; i++)
+      for(unsigned int i = 0; i < ev_num_nodes[ev] ; i++)
         processed[i] = false;
-      uint16_t component_size = 0;
-      uint16_t node = 0;
-      uint16_t first_node = 0;
-      uint16_t label = 0;
-      uint16_t idx = 1;
-      uint16_t output_size = ev_out_components[ev][0];
+      unsigned int component_size = 0;
+      unsigned int node = 0;
+      unsigned int first_node = 0;
+      unsigned int label = 0;
+      unsigned int idx = 1;
+      unsigned int output_size = ev_out_components[ev][0];
 
+/* 
+      unsigned int idx_0 = 80 + 1;
+      unsigned int idx_1 = 80 + 1 + 12;
+
+      std::cout << "[    ] [ ] " << idx_0 << " " << idx_1 << " " << idx << " - " << ev_out_components[ev][0] << std::endl;
+      std::cout << "[    ] [ ]" << std::endl;
+
+      std::cout << "[    ] [ ] cons + full_graph + scores" << std::endl;
+      for(unsigned int i = 1; i < idx_0 ; i+=10){
+        std::cout << "[    ] [ ] " << ev_out_components[ev][i + 1] << " - ";
+        std::cout << ev_out_components[ev][i + 2] << " " << ev_out_components[ev][i + 3] << " " << ev_out_components[ev][i + 4] << " " << ev_out_components[ev][i + 5] << " - ";
+        std::cout << ev_out_components[ev][i + 6] << " " << ev_out_components[ev][i + 7] << " " << ev_out_components[ev][i + 8] << " " << ev_out_components[ev][i + 9];
+        std::cout << std::endl;
+      }
+      std::cout << "[    ] [ ]" << std::endl;
+
+      std::cout << "[    ] [ ] reached parameters" << std::endl;
+      std::cout << "[    ] [ ] m_num_nodes:    " << ev_out_components[ev][idx_0 + 1] << std::endl;
+      std::cout << "[    ] [ ] con_iterations: " << ev_out_components[ev][idx_0 + 2] << std::endl;
+      std::cout << "[    ] [ ] con_residue:    " << ev_out_components[ev][idx_0 + 3] << std::endl;
+      std::cout << "[    ] [ ] reached_c:      " << ev_out_components[ev][idx_0 + 4] << std::endl;
+      std::cout << "[    ] [ ] reached_k:      " << ev_out_components[ev][idx_0 + 5] << std::endl;
+      std::cout << "[    ] [ ] reached_s:      " << ev_out_components[ev][idx_0 + 6] << std::endl;
+      std::cout << "[    ] [ ] reached_i:      " << ev_out_components[ev][idx_0 + 7] << std::endl;
+      std::cout << "[    ] [ ] reached_hs:     " << ev_out_components[ev][idx_0 + 8] << std::endl;
+      std::cout << "[    ] [ ] reached_nr:     " << ev_out_components[ev][idx_0 + 9] << std::endl;
+      std::cout << "[    ] [ ] reached_wcs:    " << ev_out_components[ev][idx_0 + 10] << std::endl;
+      std::cout << "[    ] [ ] reached_wcm:    " << ev_out_components[ev][idx_0 + 11] << std::endl;
+
+      std::cout << "[    ] [ ]" << std::endl;
+
+      std::cout << "[    ] [ ] cons + graph" << std::endl;
+      for(unsigned int i = idx_1; i < idx ; i+=6){
+        std::cout << "[    ] [ ] " << ev_out_components[ev][i + 1] << " - ";
+        std::cout << ev_out_components[ev][i + 2] << " " << ev_out_components[ev][i + 3] << " " << ev_out_components[ev][i + 4] << " " << ev_out_components[ev][i + 5];
+        std::cout << std::endl;
+      }
+      std::cout << "[    ] [ ]" << std::endl;
+
+      unsigned int con_iterations = ev_num_nodes[ev] / 64;
+      unsigned int con_residue = ev_num_nodes[ev] % 64;
+      unsigned int row = 0;
+      unsigned int num_highscores = 0;
+      unsigned int num_graph = 0;
+      unsigned int err_cons = 0;
+      for(unsigned int i = 0; i < con_iterations ; i++){
+        cons = ev_out_cons[ev][i];
+        for (unsigned int k = 0; k < 64 ; k++){
+          if(i == con_iterations && k == con_residue){
+            break;
+          }
+          row = i * 64 + k;
+          num_highscores = 0;
+          num_graph = 0;
+          for(unsigned int j = 0; j < MAX_FULL_GRAPH_EDGES ; j++)
+            if(ev_in_scores[ev][row * MAX_FULL_GRAPH_EDGES + j] > cutoff)
+              num_highscores++;
+          for(unsigned int j = 0; j < MAX_EDGES ; j++)
+            if(ev_out_graph[ev][row * MAX_EDGES + j] > 0)
+              num_graph++;
+          if(cons.range((k + 1) * 8 - 1, k * 8) != num_highscores || num_graph != num_highscores){
+            if(err_cons < 5){
+              std::cout << "[    ] [ ] " << i << " " << k << " - " << " expected high_scores: " << num_highscores << " graph: " << num_graph << " graph_cons: " << cons.range((k + 1) * 8 - 1, k * 8) << std::endl;
+            }
+            err_cons++;
+          }
+        }
+      }
+      std::cout << "[    ] [" << ev << "] missmatches between expected high_scores, entries in graph and graph_cons: " << err_cons << std::endl;
+      std::cout << "[    ] [ ]" << std::endl;
+
+      std::cout << "[    ]" << std::endl;
+      std::cout << "[    ] [ ] output" << std::endl;
+      for(unsigned int i = 0; i < 5 ; i++)
+        std::cout << "[    ] [ ] " << ev_out_components[ev][i] << std::endl;
+      std::cout << "[    ]" << std::endl;
+      
+      hls::vector<uint32_t, 16> multi_rows;
+      multi_rows = hls::vector<uint32_t, 16>(0);
+      uint32_t row;
+      bool found[MAX_TOTAL_NODES];
+      for (unsigned int i = 0; i < MAX_TOTAL_NODES ; i++)
+        found[i] = false;
+
+      unsigned int row_iterations = ev_num_nodes[ev] / 16;
+      unsigned int row_residue = ev_num_nodes[ev] % 16;
+      unsigned int pos_multi;
+      unsigned int pos_single;
+      ap_uint<512> cons_multi;
+      ap_uint<8> cons_single;
+
+      unsigned int err_0 = 0;
+      unsigned int err_1 = 0;
+
+      for (unsigned int c = 0; c < row_iterations + 1 ; c++){
+        multi_rows = ev_out_list[ev][c];
+        for (unsigned int k = 0; k < 16 ; k++){
+          if(c == row_iterations && k == row_residue)
+            break;
+          row = multi_rows[k];
+          if(c > 0 && row == 0)
+            break;
+          if(row > 0){
+            found[row] = true;
+            pos_multi = row / 64;
+            pos_single = row % 64;
+            cons_single = ev_out_cons[ev][pos_multi].range((pos_single + 1) * 8 - 1, pos_single * 8);
+            if(c < 2 && k < 5)
+              std::cout << "[    ] [ ] " << c << " " << k << " - " << row  << " " << cons_single << std::endl;
+            if(cons_single == 0)
+              err_0++;
+          }
+        }
+        if(c > 0 && row == 0)
+          break;
+      }
+      unsigned int con_iterations = ev_num_nodes[ev] / 64;
+      unsigned int con_residue = ev_num_nodes[ev] % 64;
+      for(unsigned int i = 0; i < con_iterations ; i++){
+        cons_multi = ev_out_cons[ev][i];
+        for (unsigned int k = 0; k < 64 ; k++){
+          if(i == con_iterations && k == con_residue){
+            break;
+          }
+          row = i * 64 + k;
+          if(cons_multi.range((k + 1) * 8 - 1, k * 8) > 0 && !found[row]){
+            err_1++;
+          }
+        }
+      }
+      std::cout << "[    ] [ ] node_list analysis" << std::endl;
+      std::cout << "[    ] [ ] rows listed with no connections:  " << err_0 << std::endl;
+      std::cout << "[    ] [ ] rows with connections not listed: " << err_1 << std::endl;
+      std::cout << "[    ] [ ] " << std::endl;
+*/
       // count #components, #comp_nodes, comp_sizes
-      uint16_t num_components = 0;
-      uint16_t num_component_nodes = 0;
-      uint16_t size_of_components[MAX_COMPONENT_SIZE];
-      for(uint16_t i = 0; i < MAX_COMPONENT_SIZE ; i++)
+      unsigned int num_components = 0;
+      unsigned int num_component_nodes = 0;
+      unsigned int size_of_components[MAX_COMPONENT_SIZE];
+      for(unsigned int i = 0; i < MAX_COMPONENT_SIZE ; i++)
         size_of_components[i] = 0;
-
 
       while(!end_reached){
         // if the index reaches the size of the output, all found components have been processed
@@ -658,7 +916,7 @@ int main (int argc, char ** argv){
           processed[first_node] = true;
           // iterate through the rest of the component and compare each label to the one of the first node
           // this makes sure, that each found component is also a component in the reference
-          for(uint16_t i = 1; i < component_size ; i++){
+          for(unsigned int i = 1; i < component_size ; i++){
             node = ev_out_components[ev][idx];
             idx++;
             num_component_nodes++;
@@ -676,7 +934,7 @@ int main (int argc, char ** argv){
             processed[node] = true;
           }
           // iterate through all reference-labels and make sure that no other nodes were supposed to be part of that component
-          for(uint16_t i = 0; i < ev_num_nodes[ev] ; i++){
+          for(unsigned int i = 0; i < ev_num_nodes[ev] ; i++){
             if(!processed[i] && ev_ref_labels[ev][i] == label){
               num_errors++;
               num_errors_1++;
@@ -692,7 +950,7 @@ int main (int argc, char ** argv){
         }
       }
       // make sure no component has been forgotten
-      for(uint16_t i = 0; i < ev_num_nodes[ev] ; i++){
+      for(unsigned int i = 0; i < ev_num_nodes[ev] ; i++){
         if(!processed[i]){
           if(first_free_node){
             first_free_node = false;
@@ -715,7 +973,7 @@ int main (int argc, char ** argv){
         std::cout << "[    ]\n[    ] [" << ev << "] TEST PASSED" << std::endl;
         std::cout << "[    ] [" << ev << "] output-size: " << output_size << " #components: " << num_components << " #component-nodes: " << num_component_nodes << std::endl;
         std::cout << "[    ] [" << ev << "] #component / comp-size (starting at size 0): [" << size_of_components[0];
-        for(uint16_t i = 1; i < MAX_COMPONENT_SIZE ; i++)
+        for(unsigned int i = 1; i < MAX_COMPONENT_SIZE ; i++)
           std::cout << "," << size_of_components[i];
         std::cout << "]" << std::endl;
       } else {
@@ -733,18 +991,67 @@ int main (int argc, char ** argv){
     }
   }
 
+/*    if(num_events == 2){
+      bool graph_correct = true;
+      bool comp_correct = true;
+      bool cons_correct = true;
+      unsigned int graph_num_errors = 0;
+      unsigned int comp_num_errors = 0;
+      unsigned int cons_num_errors = 0;
+      unsigned int idx = 1; // 80 + 1 + 12  + 48; // 80 + 48 + 1 // 1;
+      for(unsigned int i = 0; i < size_graph ; i++){
+        if(ev_out_graph[0][i] != ev_out_graph[1][i]){
+          graph_correct = false;
+          graph_num_errors++;
+        }
+      }
+      for(unsigned int i = 0; i < size_components ; i++){
+        if(ev_out_components[0][i] != ev_out_components[1][i]){
+          comp_correct = false;
+          comp_num_errors++;
+        }
+      }
+      for(unsigned int i = 0; i < size_graph_cons ; i++){
+        if(ev_out_cons[0][i] != ev_out_cons[1][i]){
+          cons_correct = false;
+          cons_num_errors++;
+        }
+      }
+      std::cout << "[    ]" << std::endl;
+      if(!graph_correct || !comp_correct || !cons_correct){
+        std::cout << "[    ] MISSMATCH FAILED" << std::endl;
+        std::cout << "[    ] " << graph_num_errors << " missmatches in io_graph found between event 0 and 1" << std::endl;
+        std::cout << "[    ] " << comp_num_errors << " missmatches in out_components found between event 0 and 1" << std::endl;
+        std::cout << "[    ] " << cons_num_errors << " missmatches in io_graph_cons found between event 0 and 1" << std::endl;
+        std::cout << "[    ]" << std::endl;
+        for(unsigned int i = 0; i < idx + 20 ; i++){
+          std::cout << "[    ] " << i << " - " << ev_out_components[0][i] << " " << ev_out_components[1][i];
+          if(ev_out_components[0][i] != ev_out_components[1][i]) std::cout << " x";
+          std::cout << std::endl;
+        }
+      }
+      else{
+        std::cout << "[    ] MISSMATCH PASSED" << std::endl;
+        std::cout << "[    ] " << graph_num_errors << " missmatches in io_graph found between event 0 and 1" << std::endl;
+        std::cout << "[    ] " << comp_num_errors << " missmatches in out_components found between event 0 and 1" << std::endl;
+        std::cout << "[    ] " << cons_num_errors << " missmatches in io_graph_cons found between event 0 and 1" << std::endl;
+      }
+      std::cout << "[    ]" << std::endl;
+    } */
+
   //============================================
   //
   // Free allocated memory
   //
   //============================================
-  for(uint16_t ev = 0; ev < num_events ; ev++){
+  for(unsigned int ev = 0; ev < num_events ; ev++){
     delete ev_in_full_graph[ev];
     delete ev_in_full_graph_cons[ev];
     delete ev_in_scores[ev];
     delete ev_out_components[ev];
+    delete ev_out_graph[ev];
+    delete ev_out_cons[ev];
   }
-
 
   return 0;
 }
